@@ -87,13 +87,31 @@
 // tool's `checkCitations` (one `citation problem` line each and a count line),
 // and exits 1 if any item is unexplained or any citation problem is found.
 //
-// The walk is syntactic: inherited members, trait members supplied by a mixin,
-// aliases and unregistered exported classes are not seen, and a heritage
-// clause through an unregistered type, a qualified name or an expression
-// (`extends mixin(…)`) resolves to nothing. PHP built-in parents (`Countable`,
-// `Stringable`, `ArrayAccess`, …) are never compared, and a contract token's
-// runtime `parents` (contract()'s 3rd argument) is not compared with its
-// `extends`.
+// A registration's members also include those its heritage supplies
+// (ESC-14.8-1), each counted only under a name and static side the
+// registration does not declare, and never `extra` (Upstream lists inherited
+// members on their declaring class; a trait's on itself too). The walk reads
+// the emitted `.d.ts` rather than the sources, as tsc has already turned each
+// `class X extends mixin(Base, A, B)` into `declare const X_base:
+// Mixed<typeof Base, readonly [typeof A, typeof B]>` there; TypeScript 7 has
+// no JS checker API to ask for the merged type instead. In PHP's order: a
+// class's `extends` names a class (registered or not, in this package or
+// through an `@xaravel/<c>` import, resolved as a parent is) or a `Mixed`
+// const, which stands for its traits in order, then Base; an interface's
+// `extends` names interfaces; each supplier's own members, then its heritage's,
+// transitively. A supplied method's defaults come from its declaring class's
+// source. A function exported through an `export { f as g }` specifier (with or
+// without `from`) counts under its exported name; no other alias form occurs in
+// the packages. Another package's declarations are the ones `tsc -b` last
+// emitted under its `outDir` (the build covers every package the diffed one
+// references); a package never emitted supplies nothing.
+//
+// Still not seen: unregistered exported classes, and a heritage clause through
+// a qualified name or another expression; for parents, a heritage clause
+// through an unregistered type or an expression (`extends mixin(…)`) resolves
+// to nothing. PHP built-in parents (`Countable`, `Stringable`, `ArrayAccess`,
+// …) are never compared, and a contract token's runtime `parents`
+// (contract()'s 3rd argument) is not compared with its `extends`.
 //
 // Exit codes: 0 ok (report mode unless a tool failure; gate mode only when
 // nothing is unexplained and the citation files pass `checkCitations`),
@@ -189,6 +207,8 @@ export interface DiffInput {
   readonly packageSources?: (pkg: string) => readonly SourceFile[];
   /** A package's `package.json` `exports` map (`packages/<pkg>`), for an `@xaravel/<pkg>[/<sub>]` heritage import. Defaults to none. */
   readonly packageExports?: (pkg: string) => Readonly<Record<string, unknown>> | null;
+  /** Another package's emitted `.d.ts` texts (`packages/<pkg>`), for members supplied through an `@xaravel/<pkg>` heritage import. Defaults to none. */
+  readonly packageDeclarations?: (pkg: string) => readonly DeclarationFile[];
 }
 
 export type Category = "missing" | "extra" | "renamed" | "mismatch" | "div12" | "stale";
@@ -374,6 +394,10 @@ interface TsMember {
   /** A property (field, accessor, getter/setter, property signature) with its type; null when the member is not one. */
   property: { readonly type: Node | null; readonly optional: boolean } | null;
   matched: boolean;
+  /** Supplied by the registration's heritage (`Supplied`), not declared by it: never `extra`. */
+  readonly inherited: boolean;
+  /** The declaring class's defaults and type keys for a member read through heritage; null for the registration's own. */
+  readonly supplier: Supplier | null;
 }
 
 /** A default initializer from the source, with its text. */
@@ -418,9 +442,10 @@ function fnSignature(fn: Node, hasReturn: boolean): TsSignature {
 
 /**
  * Adds the public members of a class or interface body to `members` (by name; static and instance kept apart). With
- * `forceStatic` every member is static: the body of a contract's `<X>Static` declaration (ESC-10.2-1).
+ * `forceStatic` every member is static: the body of a contract's `<X>Static` declaration (ESC-10.2-1). A new member
+ * takes `supplier` (`Supplied` reading a heritage declaration).
  */
-function collectMembers(decl: Node, members: Map<string, TsMember[]>, forceStatic = false): void {
+function collectMembers(decl: Node, members: Map<string, TsMember[]>, forceStatic = false, supplier: Supplier | null = null): void {
   const body = node(decl["body"]);
   for (const member of nodes(body?.["body"])) {
     const key = node(member["key"]);
@@ -440,7 +465,7 @@ function collectMembers(decl: Node, members: Map<string, TsMember[]>, forceStati
       const list = members.get(name) ?? [];
       let found = list.find((m) => m.static === isStatic);
       if (found === undefined) {
-        found = { name, static: isStatic, signatures: [], property: null, matched: false };
+        found = { name, static: isStatic, signatures: [], property: null, matched: false, inherited: false, supplier };
         list.push(found);
         members.set(name, list);
       }
@@ -621,8 +646,11 @@ interface ParsedPackage {
   readonly declarations: Map<string, Node[]>;
   /** Source statements and text by file. */
   readonly sources: Map<string, { statements: Node[]; text: string }>;
-  /** Exported functions: name → signatures and the file declaring them. */
-  readonly functions: Map<string, { file: string; signatures: TsSignature[] }>;
+  /**
+   * Exported functions: name → signatures and the file declaring them. A function exported through an `export { … }`
+   * specifier (`Supplied.exportedFunction`) carries its implementation's parameter names and defaults instead.
+   */
+  readonly functions: Map<string, { file: string; signatures: TsSignature[]; implementation?: Implementation | null }>;
   /** Type literal keys by interface / type alias name, across the package's declarations. */
   readonly typeKeys: Map<string, LiteralKey[][]>;
 }
@@ -723,21 +751,27 @@ function parsePackage(declarations: readonly DeclarationFile[], sources: readonl
         const entry = parsed.functions.get(name) ?? { file, signatures: [] };
         entry.signatures.push(fnSignature(decl, true));
         parsed.functions.set(name, entry);
-      } else if (decl.type === "TSInterfaceDeclaration") {
-        const list = parsed.typeKeys.get(name) ?? [];
-        list.push(literalKeys(node(decl["body"])?.["body"]));
-        parsed.typeKeys.set(name, list);
-      } else if (decl.type === "TSTypeAliasDeclaration") {
-        const type = stripParens(decl["typeAnnotation"]);
-        if (type !== null && type.type === "TSTypeLiteral") {
-          const list = parsed.typeKeys.get(name) ?? [];
-          list.push(literalKeys(type["members"]));
-          parsed.typeKeys.set(name, list);
-        }
       }
     }
+    addTypeKeys(statements, parsed.typeKeys);
   }
   return parsed;
+}
+
+/** Adds the type-literal keys of each interface and type-literal alias among `statements` to `typeKeys`, by name. */
+function addTypeKeys(statements: readonly Node[], typeKeys: Map<string, LiteralKey[][]>): void {
+  for (const statement of statements) {
+    const decl = declarationOf(statement);
+    const name = decl === null ? null : nameOf(decl["id"]);
+    if (decl === null || name === null) {
+      continue;
+    }
+    const type = decl.type === "TSTypeAliasDeclaration" ? stripParens(decl["typeAnnotation"]) : null;
+    const keys = decl.type === "TSInterfaceDeclaration" ? literalKeys(node(decl["body"])?.["body"]) : type !== null && type.type === "TSTypeLiteral" ? literalKeys(type["members"]) : null;
+    if (keys !== null) {
+      typeKeys.set(name, [...(typeKeys.get(name) ?? []), keys]);
+    }
+  }
 }
 
 /**
@@ -763,7 +797,7 @@ function classMembers(statements: readonly Node[], local: string, statics: reado
     const list = members.get(name) ?? [];
     const found = list.find((m) => m.static);
     if (found === undefined) {
-      list.push({ name, static: true, signatures: [], property: { type: null, optional: false }, matched: false });
+      list.push({ name, static: true, signatures: [], property: { type: null, optional: false }, matched: false, inherited: false, supplier: null });
       members.set(name, list);
     } else if (found.property === null) {
       found.property = { type: null, optional: false };
@@ -830,6 +864,128 @@ function functionDefaults(source: { statements: Node[]; text: string } | undefin
 }
 
 // ---------------------------------------------------------------------------
+// Module names
+
+/**
+ * Resolves a name as a module of a package sees it to what `declared` finds where it is declared: a declaration in the
+ * same file, a named or default import from a relative module (`.ts`, `.js` → `.ts`, `/index.ts`; through
+ * `export {…} from` and `export * from` re-exports), or an `@xaravel/<c>[/<sub>]` import (the module its `package.json`
+ * `exports` or `src/<sub>.ts` / `src/<sub>/index.ts` names, else `unresolvedModule`). An unresolved name is null.
+ */
+abstract class ModuleNames<T> {
+  constructor(private readonly exportsOf: (pkg: string) => Readonly<Record<string, unknown>> | null) {}
+
+  /** The top-level statements of module `file` (`src/<path>.ts`) of `pkg`, or null when there is no such module. */
+  protected abstract statements(pkg: string, file: string): readonly Node[] | null;
+
+  /** What `name` stands for when module `file` of `pkg` declares it, else null. */
+  protected abstract declared(pkg: string, file: string, name: string): T | null;
+
+  /** Export `name` of an `@xaravel/<pkg>[/<sub>]` specifier no module of `pkg` matches: none. */
+  protected unresolvedModule(_pkg: string, _name: string): T | null {
+    return null;
+  }
+
+  /** A name as a file of `pkg` sees it: declared there, else what its import resolves to. */
+  protected resolveLocal(pkg: string, file: string, name: string, seen: Set<string>): T | null {
+    const here = this.declared(pkg, file, name);
+    if (here !== null) {
+      return here;
+    }
+    for (const statement of this.statements(pkg, file) ?? []) {
+      if (statement.type !== "ImportDeclaration") {
+        continue;
+      }
+      for (const specifier of nodes(statement["specifiers"])) {
+        if (nameOf(specifier["local"]) !== name) {
+          continue;
+        }
+        const imported = specifier.type === "ImportSpecifier" ? nameOf(specifier["imported"]) : specifier.type === "ImportDefaultSpecifier" ? "default" : null;
+        const source = node(statement["source"])?.["value"];
+        return imported === null || typeof source !== "string" ? null : this.resolveSpecifier(pkg, file, source, imported, seen);
+      }
+    }
+    return null;
+  }
+
+  /** Export `name` of module `specifier` imported from a file of `pkg`. */
+  protected resolveSpecifier(pkg: string, file: string, specifier: string, name: string, seen: Set<string>): T | null {
+    if (specifier.startsWith(".")) {
+      const target = this.moduleFile(pkg, file, specifier);
+      return target === null ? null : this.resolveExport(pkg, target, name, seen);
+    }
+    const match = /^@xaravel\/([^/]+)(\/.*)?$/.exec(specifier);
+    if (match === null) {
+      return null;
+    }
+    const target = this.packageModule(match[1]!, match[2] ?? "");
+    if (target !== null) {
+      return this.resolveExport(match[1]!, target, name, seen);
+    }
+    return name === "default" ? null : this.unresolvedModule(match[1]!, name);
+  }
+
+  /**
+   * The source file `@xaravel/<pkg><sub>` names: the target of `.<sub>` (or `.`) in the package's `exports` when it has
+   * one there (a string, or a condition object's `bun`, `import` or `default`), else `src<sub>.ts` or `src<sub>/index.ts`
+   * (`src/index.ts` for the bare package).
+   */
+  private packageModule(pkg: string, sub: string): string | null {
+    const entry = this.exportsOf(pkg)?.[`.${sub}`];
+    const conditions = typeof entry === "object" && entry !== null ? (entry as Record<string, unknown>) : null;
+    const target = typeof entry === "string" ? entry : [conditions?.["bun"], conditions?.["import"], conditions?.["default"]].find((value) => typeof value === "string");
+    const candidates = [...(typeof target === "string" ? [posix.normalize(target)] : []), ...(sub === "" ? ["src/index.ts"] : [`src${sub}.ts`, `src${sub}/index.ts`])];
+    return candidates.find((candidate) => this.statements(pkg, candidate) !== null) ?? null;
+  }
+
+  /** The source file a relative specifier names: itself when it ends in `.ts`, else `<path>.ts` or `<path>/index.ts`. */
+  private moduleFile(pkg: string, file: string, specifier: string): string | null {
+    const base = posix.normalize(posix.join(posix.dirname(file), specifier));
+    const candidates = base.endsWith(".ts") ? [base] : base.endsWith(".js") ? [`${base.slice(0, -".js".length)}.ts`] : [`${base}.ts`, `${base}/index.ts`];
+    return candidates.find((candidate) => this.statements(pkg, candidate) !== null) ?? null;
+  }
+
+  /** Export `name` of a file of `pkg`: an `export {…}` (from a module or of a local), a declaration there, then each `export * from`. */
+  private resolveExport(pkg: string, file: string, name: string, seen: Set<string>): T | null {
+    const key = `${pkg}\0${file}\0${name}`;
+    if (seen.has(key)) {
+      return null;
+    }
+    seen.add(key);
+    const statements = this.statements(pkg, file) ?? [];
+    for (const statement of statements) {
+      const source = node(statement["source"])?.["value"];
+      if (statement.type === "ExportNamedDeclaration") {
+        for (const specifier of nodes(statement["specifiers"])) {
+          const local = nameOf(specifier["local"]);
+          if (nameOf(specifier["exported"]) === name && local !== null) {
+            return typeof source === "string" ? this.resolveSpecifier(pkg, file, source, local, seen) : this.resolveLocal(pkg, file, local, seen);
+          }
+        }
+      } else if (statement.type === "ExportDefaultDeclaration" && name === "default") {
+        const decl = node(statement["declaration"]);
+        const local = decl === null ? null : decl.type === "Identifier" ? nameOf(decl) : nameOf(decl["id"]);
+        return local === null ? null : this.resolveLocal(pkg, file, local, seen);
+      }
+    }
+    const here = name === "default" ? null : this.declared(pkg, file, name);
+    if (here !== null) {
+      return here;
+    }
+    for (const statement of statements) {
+      const source = node(statement["source"])?.["value"];
+      if (statement.type === "ExportAllDeclaration" && node(statement["exported"]) === null && typeof source === "string") {
+        const resolved = this.resolveSpecifier(pkg, file, source, name, seen);
+        if (resolved !== null) {
+          return resolved;
+        }
+      }
+    }
+    return null;
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Heritage (epic-10-retro-item-5, part 3)
 
 /** A package's registrations and parsed sources, as the heritage walk reads them. */
@@ -862,8 +1018,11 @@ function heritagePackage(registrations: ReadonlyMap<string, Registration>, sourc
   return { registrations, sources, byFile, byLocal };
 }
 
-/** The names a class / interface `local` of a file extends or implements: `interface … extends`, `class … extends … implements` (identifiers only). */
-function heritageNames(statements: readonly Node[], local: string): string[] {
+/**
+ * The names a class / interface `local` of a file extends or implements: `interface … extends`, `class … extends … implements`
+ * (identifiers only); without `implementsToo`, a class's `extends` only.
+ */
+function heritageNames(statements: readonly Node[], local: string, implementsToo = true): string[] {
   const out: string[] = [];
   for (const statement of statements) {
     const decl = declarationOf(statement);
@@ -874,7 +1033,7 @@ function heritageNames(statements: readonly Node[], local: string): string[] {
       decl.type === "TSInterfaceDeclaration"
         ? nodes(decl["extends"]).map((h) => h["expression"])
         : decl.type === "ClassDeclaration"
-          ? [decl["superClass"], ...nodes(decl["implements"]).map((h) => h["expression"])]
+          ? [decl["superClass"], ...(implementsToo ? nodes(decl["implements"]).map((h) => h["expression"]) : [])]
           : [];
     for (const expression of expressions) {
       const n = node(expression);
@@ -887,12 +1046,12 @@ function heritageNames(statements: readonly Node[], local: string): string[] {
 }
 
 /**
- * The transitive TS heritage of registered declarations, read from the package sources and resolved to FQCNs: a
- * registration in the same file, a named or default import from a relative module (`.ts`, `/index.ts`, through
- * `export {…} from` and `export * from` re-exports), or an `@xaravel/<c>[/…]` import (that package's registrations by
- * local name, when unique). An unresolved name contributes nothing.
+ * The transitive TS heritage of registered declarations, read from the package sources and resolved to FQCNs by
+ * `ModuleNames`: a name stands for the registration of that local name in the module declaring it, and an
+ * `@xaravel/<c>[/…]` import no module matches for that package's registration of the name, when unique. An unresolved
+ * name contributes nothing.
  */
-class Heritage {
+class Heritage extends ModuleNames<Resolved> {
   private readonly packages = new Map<string, HeritagePackage | null>();
   private readonly closures = new Map<string, ReadonlySet<string>>();
 
@@ -900,8 +1059,9 @@ class Heritage {
     current: string,
     currentPackage: HeritagePackage,
     private readonly load: (pkg: string) => readonly SourceFile[],
-    private readonly exportsOf: (pkg: string) => Readonly<Record<string, unknown>> | null,
+    exportsOf: (pkg: string) => Readonly<Record<string, unknown>> | null,
   ) {
+    super(exportsOf);
     this.packages.set(current, currentPackage);
   }
 
@@ -931,6 +1091,21 @@ class Heritage {
     return out;
   }
 
+  protected statements(pkg: string, file: string): readonly Node[] | null {
+    return this.packageIndex(pkg)?.sources.get(file)?.statements ?? null;
+  }
+
+  protected declared(pkg: string, file: string, name: string): Resolved | null {
+    const fqcn = this.packageIndex(pkg)?.byFile.get(file)?.get(name);
+    return fqcn === undefined ? null : { pkg, fqcn };
+  }
+
+  /** No module for the specifier: the package's registration of that local name, when unique. */
+  protected override unresolvedModule(pkg: string, name: string): Resolved | null {
+    const fqcns = this.packageIndex(pkg)?.byLocal.get(name);
+    return fqcns !== undefined && fqcns.size === 1 ? { pkg, fqcn: [...fqcns][0]! } : null;
+  }
+
   private packageIndex(pkg: string): HeritagePackage | null {
     if (!this.packages.has(pkg)) {
       const sources = this.load(pkg);
@@ -943,115 +1118,234 @@ class Heritage {
     }
     return this.packages.get(pkg) ?? null;
   }
+}
 
-  /** A name as a file of `pkg` sees it: a registration there, else what its import resolves to. */
-  private resolveLocal(pkg: string, file: string, name: string, seen: Set<string>): Resolved | null {
-    const index = this.packageIndex(pkg);
-    const here = index?.byFile.get(file)?.get(name);
-    if (here !== undefined) {
-      return { pkg, fqcn: here };
+// ---------------------------------------------------------------------------
+// Supplied members (ESC-14.8-1)
+
+/** A declaration site: the class, interface, const or function `name` of module `file` (`src/<path>.ts`) of package `pkg`. */
+interface Site {
+  readonly pkg: string;
+  readonly file: string;
+  readonly name: string;
+}
+
+/** Where a supplied member is declared: its class's source defaults and its package's type-literal keys. */
+interface Supplier {
+  readonly defaults: ReadonlyMap<string, Implementation>;
+  readonly typeKeys: Map<string, LiteralKey[][]>;
+}
+
+/** The declaration of `name` among top-level statements: each class, interface, declared function or `const` declarator so named. */
+function declarationsNamed(statements: readonly Node[], name: string): Node[] {
+  const out: Node[] = [];
+  for (const statement of statements) {
+    const decl = declarationOf(statement);
+    if (decl === null) {
+      continue;
     }
-    for (const statement of index?.sources.get(file)?.statements ?? []) {
-      if (statement.type !== "ImportDeclaration") {
-        continue;
-      }
-      for (const specifier of nodes(statement["specifiers"])) {
-        if (nameOf(specifier["local"]) !== name) {
-          continue;
-        }
-        const imported = specifier.type === "ImportSpecifier" ? nameOf(specifier["imported"]) : specifier.type === "ImportDefaultSpecifier" ? "default" : null;
-        const source = node(statement["source"])?.["value"];
-        return imported === null || typeof source !== "string" ? null : this.resolveSpecifier(pkg, file, source, imported, seen);
-      }
+    if (decl.type === "VariableDeclaration") {
+      out.push(...nodes(decl["declarations"]).filter((declarator) => nameOf(declarator["id"]) === name));
+    } else if (nameOf(decl["id"]) === name) {
+      out.push(decl);
     }
-    return null;
   }
+  return out;
+}
 
-  /** Export `name` of module `specifier` imported from a file of `pkg`. */
-  private resolveSpecifier(pkg: string, file: string, specifier: string, name: string, seen: Set<string>): Resolved | null {
-    if (specifier.startsWith(".")) {
-      const target = this.moduleFile(pkg, file, specifier);
-      return target === null ? null : this.resolveExport(pkg, target, name, seen);
-    }
-    const match = /^@xaravel\/([^/]+)(\/.*)?$/.exec(specifier);
-    if (match === null) {
-      return null;
-    }
-    const target = this.packageModule(match[1]!, match[2] ?? "");
-    if (target !== null) {
-      return this.resolveExport(match[1]!, target, name, seen);
-    }
-    // No module file for the specifier: the package's registration of that local name, when unique.
-    const fqcns = name === "default" ? undefined : this.packageIndex(match[1]!)?.byLocal.get(name);
-    return fqcns !== undefined && fqcns.size === 1 ? { pkg: match[1]!, fqcn: [...fqcns][0]! } : null;
+/** The `typeof <name>` operand names of a type: itself, or each element of a (readonly) tuple. */
+function typeofNames(value: unknown): string[] {
+  let n = stripParens(value);
+  if (n !== null && n.type === "TSTypeOperator" && n["operator"] === "readonly") {
+    n = stripParens(n["typeAnnotation"]);
+  }
+  if (n === null) {
+    return [];
+  }
+  if (n.type === "TSTupleType") {
+    return nodes(n["elementTypes"]).flatMap(typeofNames);
+  }
+  const name = n.type === "TSTypeQuery" ? node(n["exprName"]) : null;
+  return name !== null && name.type === "Identifier" && typeof name["name"] === "string" ? [name["name"]] : [];
+}
+
+/**
+ * The public members a registration gets through its heritage, read from the emitted declarations (each package's
+ * `tsc -b` `.d.ts`, the registration's own and any its heritage reaches) and resolved by `ModuleNames`. A class's
+ * `extends` names a class, or the `<X>_base` const tsc emits for `extends mixin(Base, A, B)`, typed
+ * `Mixed<Base | null, readonly [typeof A, typeof B]>` (`@xaravel/runtime`'s `mixin`): that stands for its traits in
+ * order, then Base, PHP's resolution order after the class's own members. An interface's `extends` names interfaces.
+ */
+class Supplied extends ModuleNames<Site> {
+  private readonly declarations = new Map<string, ReadonlyMap<string, Node[]> | null>();
+  private readonly sources = new Map<string, Map<string, { statements: Node[]; text: string }>>();
+  private readonly sourceTexts = new Map<string, ReadonlyMap<string, string>>();
+  private readonly typeKeys = new Map<string, Map<string, LiteralKey[][]>>();
+  private readonly suppliers = new Map<string, Supplier>();
+
+  constructor(
+    current: string,
+    currentPackage: ParsedPackage,
+    private readonly loadDeclarations: (pkg: string) => readonly DeclarationFile[],
+    private readonly loadSources: (pkg: string) => readonly SourceFile[],
+    exportsOf: (pkg: string) => Readonly<Record<string, unknown>> | null,
+  ) {
+    super(exportsOf);
+    this.declarations.set(current, currentPackage.declarations);
+    this.sources.set(current, currentPackage.sources);
+    this.typeKeys.set(current, currentPackage.typeKeys);
   }
 
   /**
-   * The source file `@xaravel/<pkg><sub>` names: the target of `.<sub>` (or `.`) in the package's `exports` when it has
-   * one there (a string, or a condition object's `bun`, `import` or `default`), else `src<sub>.ts` or `src<sub>/index.ts`
-   * (`src/index.ts` for the bare package).
+   * Adds to `members`, a registration's own members, each member its heritage supplies under a name and static side it
+   * does not declare, marked `inherited`: the first in PHP's order (the class's traits, then its parent, transitively)
+   * wins.
    */
-  private packageModule(pkg: string, sub: string): string | null {
-    const sources = this.packageIndex(pkg)?.sources;
-    if (sources === undefined) {
-      return null;
-    }
-    const entry = this.exportsOf(pkg)?.[`.${sub}`];
-    const conditions = typeof entry === "object" && entry !== null ? (entry as Record<string, unknown>) : null;
-    const target = typeof entry === "string" ? entry : [conditions?.["bun"], conditions?.["import"], conditions?.["default"]].find((value) => typeof value === "string");
-    const candidates = [...(typeof target === "string" ? [posix.normalize(target)] : []), ...(sub === "" ? ["src/index.ts"] : [`src${sub}.ts`, `src${sub}/index.ts`])];
-    return candidates.find((candidate) => sources.has(candidate)) ?? null;
-  }
-
-  /** The source file a relative specifier names: itself when it ends in `.ts`, else `<path>.ts` or `<path>/index.ts`. */
-  private moduleFile(pkg: string, file: string, specifier: string): string | null {
-    const sources = this.packageIndex(pkg)?.sources;
-    const base = posix.normalize(posix.join(posix.dirname(file), specifier));
-    for (const candidate of base.endsWith(".ts") ? [base] : base.endsWith(".js") ? [`${base.slice(0, -".js".length)}.ts`] : [`${base}.ts`, `${base}/index.ts`]) {
-      if (sources?.has(candidate) === true) {
-        return candidate;
-      }
-    }
-    return null;
-  }
-
-  /** Export `name` of a file of `pkg`: an `export {…}` (from a module or of a local), a registration there, then each `export * from`. */
-  private resolveExport(pkg: string, file: string, name: string, seen: Set<string>): Resolved | null {
-    const key = `${pkg}\0${file}\0${name}`;
-    if (seen.has(key)) {
-      return null;
-    }
-    seen.add(key);
-    const statements = this.packageIndex(pkg)?.sources.get(file)?.statements ?? [];
-    for (const statement of statements) {
-      const source = node(statement["source"])?.["value"];
-      if (statement.type === "ExportNamedDeclaration") {
-        for (const specifier of nodes(statement["specifiers"])) {
-          const local = nameOf(specifier["local"]);
-          if (nameOf(specifier["exported"]) === name && local !== null) {
-            return typeof source === "string" ? this.resolveSpecifier(pkg, file, source, local, seen) : this.resolveLocal(pkg, file, local, seen);
+  supply(members: Map<string, TsMember[]>, site: Site): void {
+    const seen = new Set([`${site.pkg}\0${site.file}\0${site.name}`]);
+    for (const next of this.heritageOf(site)) {
+      for (const [name, list] of this.membersOf(next, seen)) {
+        const have = members.get(name) ?? [];
+        for (const member of list) {
+          if (!have.some((m) => m.static === member.static)) {
+            have.push({ ...member, inherited: true });
           }
         }
-      } else if (statement.type === "ExportDefaultDeclaration" && name === "default") {
-        const decl = node(statement["declaration"]);
-        const local = decl === null ? null : decl.type === "Identifier" ? nameOf(decl) : nameOf(decl["id"]);
-        return local === null ? null : this.resolveLocal(pkg, file, local, seen);
+        members.set(name, have);
       }
     }
-    const here = name === "default" ? undefined : this.packageIndex(pkg)?.byFile.get(file)?.get(name);
-    if (here !== undefined) {
-      return { pkg, fqcn: here };
+  }
+
+  /**
+   * The function `name` a module of the package exports as `exported` through an `export { … }` specifier, with or
+   * without `from` (`export { f as g }`, `export { f }` of a non-exported `declare function f`): its signatures and
+   * its implementation's parameter names and defaults; null when it resolves to no declared function.
+   */
+  exportedFunction(pkg: string, file: string, specifier: Node, source: string | null): { signatures: TsSignature[]; implementation: Implementation | null } | null {
+    const local = nameOf(specifier["local"]);
+    if (local === null) {
+      return null;
     }
-    for (const statement of statements) {
-      const source = node(statement["source"])?.["value"];
-      if (statement.type === "ExportAllDeclaration" && node(statement["exported"]) === null && typeof source === "string") {
-        const resolved = this.resolveSpecifier(pkg, file, source, name, seen);
-        if (resolved !== null) {
-          return resolved;
-        }
+    const site = source === null ? this.resolveLocal(pkg, file, local, new Set()) : this.resolveSpecifier(pkg, file, source, local, new Set());
+    if (site === null) {
+      return null;
+    }
+    const signatures: TsSignature[] = [];
+    for (const decl of declarationsNamed(this.statements(site.pkg, site.file) ?? [], site.name)) {
+      if (decl.type === "TSDeclareFunction") {
+        signatures.push(fnSignature(decl, true));
+      } else if (decl.type === "VariableDeclarator") {
+        signatures.push(...functionTypes(node(decl["id"])?.["typeAnnotation"]).map((fn) => fnSignature(fn, true)));
       }
     }
-    return null;
+    return signatures.length === 0 ? null : { signatures, implementation: functionDefaults(this.sourceOf(site.pkg, site.file), site.name) };
+  }
+
+  protected statements(pkg: string, file: string): readonly Node[] | null {
+    if (!this.declarations.has(pkg)) {
+      const files = this.loadDeclarations(pkg);
+      this.declarations.set(pkg, files.length === 0 ? null : new Map([...files].sort((a, b) => compareUnits(a.file, b.file)).map(({ file: name, text }) => [name, parse(name, text, "dts")])));
+    }
+    return this.declarations.get(pkg)?.get(file) ?? null;
+  }
+
+  protected declared(pkg: string, file: string, name: string): Site | null {
+    return declarationsNamed(this.statements(pkg, file) ?? [], name).length > 0 ? { pkg, file, name } : null;
+  }
+
+  /** Every public member of class / interface `site`, its own then those its heritage supplies, each with its supplier. */
+  private membersOf(site: Site, seen: Set<string>): Map<string, TsMember[]> {
+    const members = new Map<string, TsMember[]>();
+    const key = `${site.pkg}\0${site.file}\0${site.name}`;
+    if (seen.has(key)) {
+      return members;
+    }
+    seen.add(key);
+    const supplier = this.supplierOf(site);
+    for (const decl of declarationsNamed(this.statements(site.pkg, site.file) ?? [], site.name)) {
+      if (decl.type === "ClassDeclaration" || decl.type === "TSInterfaceDeclaration") {
+        collectMembers(decl, members, false, supplier);
+      }
+    }
+    for (const next of this.heritageOf(site)) {
+      for (const [name, list] of this.membersOf(next, seen)) {
+        const have = members.get(name) ?? [];
+        have.push(...list.filter((member) => !have.some((m) => m.static === member.static)));
+        members.set(name, have);
+      }
+    }
+    return members;
+  }
+
+  /** The class and interface sites `site`'s `extends` names, a `Mixed` const expanded (`expand`), in order. */
+  private heritageOf(site: Site): Site[] {
+    return heritageNames(this.statements(site.pkg, site.file) ?? [], site.name, false).flatMap((name) => this.expand(this.resolveLocal(site.pkg, site.file, name, new Set()), new Set()));
+  }
+
+  /**
+   * A heritage target: itself when it names a class or interface; for a `const` typed `Mixed<B, Ts>` (a
+   * `TSTypeReference` or `import("…").Mixed`), each `typeof T` of the `Ts` tuple, in order, then a `typeof B`; else none.
+   */
+  private expand(site: Site | null, seen: Set<string>): Site[] {
+    const key = site === null ? "" : `${site.pkg}\0${site.file}\0${site.name}`;
+    if (site === null || seen.has(key)) {
+      return [];
+    }
+    seen.add(key);
+    const decls = declarationsNamed(this.statements(site.pkg, site.file) ?? [], site.name);
+    if (decls.some((decl) => decl.type === "ClassDeclaration" || decl.type === "TSInterfaceDeclaration")) {
+      return [site];
+    }
+    const out: Site[] = [];
+    for (const decl of decls.filter((d) => d.type === "VariableDeclarator")) {
+      const type = stripParens(node(decl["id"])?.["typeAnnotation"]);
+      const tail = type === null ? null : type.type === "TSImportType" ? typeNameTail(type["qualifier"]) : type.type === "TSTypeReference" ? typeNameTail(type["typeName"]) : null;
+      const args = type === null ? [] : typeArgs(type);
+      if (tail !== "Mixed" || args.length !== 2) {
+        continue;
+      }
+      for (const name of [...typeofNames(args[1]), ...typeofNames(args[0])]) {
+        out.push(...this.expand(this.resolveLocal(site.pkg, site.file, name, new Set()), seen));
+      }
+    }
+    return out;
+  }
+
+  /** The source defaults of class `site` and its package's type-literal keys. */
+  private supplierOf(site: Site): Supplier {
+    const key = `${site.pkg}\0${site.file}\0${site.name}`;
+    let supplier = this.suppliers.get(key);
+    if (supplier === undefined) {
+      supplier = { defaults: classDefaults(this.sourceOf(site.pkg, site.file), site.name), typeKeys: this.typeKeysOf(site.pkg) };
+      this.suppliers.set(key, supplier);
+    }
+    return supplier;
+  }
+
+  /** Module `file` of `pkg`'s source, parsed when first read. */
+  private sourceOf(pkg: string, file: string): { statements: Node[]; text: string } | undefined {
+    if (!this.sources.has(pkg)) {
+      this.sources.set(pkg, new Map());
+      this.sourceTexts.set(pkg, new Map(this.loadSources(pkg).map(({ file: name, text }) => [name, text])));
+    }
+    const parsed = this.sources.get(pkg)!;
+    const text = this.sourceTexts.get(pkg)?.get(file);
+    if (!parsed.has(file) && text !== undefined) {
+      parsed.set(file, { statements: parse(file, text, "ts"), text });
+    }
+    return parsed.get(file);
+  }
+
+  private typeKeysOf(pkg: string): Map<string, LiteralKey[][]> {
+    let keys = this.typeKeys.get(pkg);
+    if (keys === undefined) {
+      keys = new Map();
+      for (const statements of this.declarations.get(pkg)?.values() ?? []) {
+        addTypeKeys(statements, keys);
+      }
+      this.typeKeys.set(pkg, keys);
+    }
+    return keys;
   }
 }
 
@@ -1475,6 +1769,7 @@ export function diffComponent(input: DiffInput): ComponentDiff {
   // Traits are left out: Upstream `parents` never lists one.
   const known = input.known ?? new Set([...declarations].filter(([, { decl }]) => decl.kind !== "trait").map(([fqcn]) => fqcn));
   const heritage = new Heritage(component, heritagePackage(pkg.registrations, pkg.sources), input.packageSources ?? (() => []), input.packageExports ?? (() => null));
+  const supplied = new Supplied(component, pkg, input.packageDeclarations ?? (() => []), input.packageSources ?? (() => []), input.packageExports ?? (() => null));
 
   for (const [fqcn, { decl, members: upstreamMembers }] of declarations) {
     const registration = pkg.registrations.get(fqcn);
@@ -1489,6 +1784,7 @@ export function diffComponent(input: DiffInput): ComponentDiff {
       add("mismatch", decl.kind, fqcn, null, parents);
     }
     const members = classMembers(pkg.declarations.get(registration.file) ?? [], registration.local, registration.statics);
+    supplied.supply(members, { pkg: component, file: registration.file, name: registration.local });
     const defaults = classDefaults(pkg.sources.get(registration.file), registration.local);
     const unmatched: UpstreamRecord[] = [];
     // Option pairs (AD-26) on a non-trait declaration whose neither form is declared: one `missing` is reported per name.
@@ -1533,7 +1829,8 @@ export function diffComponent(input: DiffInput): ComponentDiff {
       member.matched = true;
       let failures: string[];
       if (role === "method") {
-        const ctx = { typeKeys: pkg.typeKeys, implementation: defaults.get(`${member.static ? "static " : ""}${member.name}`) ?? null, signatures: member.signatures.length };
+        const key = `${member.static ? "static " : ""}${member.name}`;
+        const ctx = { typeKeys: member.supplier?.typeKeys ?? pkg.typeKeys, implementation: (member.supplier?.defaults ?? defaults).get(key) ?? null, signatures: member.signatures.length };
         failures = signatureFailures(up, member.signatures, member.static, ctx);
       } else {
         failures = propertyFailures(up, member);
@@ -1558,7 +1855,7 @@ export function diffComponent(input: DiffInput): ComponentDiff {
         add("missing", up.kind, fqcn, up.member, target === null ? null : `expected as ${target} (DIV-12)`);
       }
     }
-    for (const member of extras) {
+    for (const member of extras.filter((m) => !m.inherited)) {
       add("extra", member.signatures.length > 0 ? "method" : "property", fqcn, member.name);
     }
   }
@@ -1570,7 +1867,22 @@ export function diffComponent(input: DiffInput): ComponentDiff {
     }
   }
 
-  // Functions, by short name.
+  // Functions, by short name: those exported through an `export { … }` specifier too (`export { f as g }`).
+  for (const [file, statements] of pkg.declarations) {
+    for (const statement of statements) {
+      const source = node(statement["source"])?.["value"];
+      if (statement.type !== "ExportNamedDeclaration" || statement["exportKind"] === "type") {
+        continue;
+      }
+      for (const specifier of nodes(statement["specifiers"])) {
+        const exported = nameOf(specifier["exported"]);
+        const found = exported === null || pkg.functions.has(exported) || specifier["exportKind"] === "type" ? null : supplied.exportedFunction(component, file, specifier, typeof source === "string" ? source : null);
+        if (found !== null) {
+          pkg.functions.set(exported!, { file, ...found });
+        }
+      }
+    }
+  }
   for (const up of functions) {
     const name = camel(up.fqcn.slice(up.fqcn.lastIndexOf("\\") + 1));
     const fn = pkg.functions.get(name);
@@ -1578,7 +1890,7 @@ export function diffComponent(input: DiffInput): ComponentDiff {
       add("missing", "function", up.fqcn, null);
       continue;
     }
-    const ctx = { typeKeys: pkg.typeKeys, implementation: functionDefaults(pkg.sources.get(fn.file), name), signatures: fn.signatures.length };
+    const ctx = { typeKeys: pkg.typeKeys, implementation: fn.implementation !== undefined ? fn.implementation : functionDefaults(pkg.sources.get(fn.file), name), signatures: fn.signatures.length };
     const failures = signatureFailures(up, fn.signatures, false, ctx);
     if (failures.length > 0) {
       add("mismatch", "function", up.fqcn, null, failures.join("; "));
@@ -1817,6 +2129,22 @@ export function diffComponents(root: string, components: readonly string[]): Com
     const exports = (JSON.parse(readFileSync(path, "utf8")) as { exports?: unknown }).exports;
     return typeof exports === "string" ? { ".": exports } : isObject(exports) ? exports : null;
   };
+  // Another package's last emitted declarations (`tsc -b` above built every package the diffed ones reference), or none.
+  const declared = new Map<string, readonly DeclarationFile[]>();
+  const declarationsOf = (pkg: string): readonly DeclarationFile[] => {
+    if (!declared.has(pkg)) {
+      let files: readonly DeclarationFile[] = [];
+      if (/^[a-z0-9-]+$/.test(pkg) && existsSync(join(root, "packages", pkg, "tsconfig.json"))) {
+        try {
+          files = packageDeclarations(root, pkg);
+        } catch {
+          files = [];
+        }
+      }
+      declared.set(pkg, files);
+    }
+    return declared.get(pkg)!;
+  };
   return components.map((component) => {
     const has = withPackage.includes(component);
     try {
@@ -1831,6 +2159,7 @@ export function diffComponents(root: string, components: readonly string[]): Com
         known: fqcns,
         packageSources: sourcesOf,
         packageExports: exportsOf,
+        packageDeclarations: declarationsOf,
       });
     } catch (error) {
       throw new Error(`${component}: ${(error as Error).message}`);
