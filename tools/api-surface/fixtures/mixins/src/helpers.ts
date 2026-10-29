@@ -10,4 +10,9 @@ export function murmur(words: string): string {
   return words.toLowerCase();
 }
 
+/** Upstream `Mix\data_tap($text)`: exported under its PHP name, which PORTING.md keeps verbatim, matched. */
+export function data_tap(text: string): string {
+  return text;
+}
+
 export { shout as loud };

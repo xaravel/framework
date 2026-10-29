@@ -1,6 +1,8 @@
 {"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"contains","citation":"DIV-12.20"}
+{"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"dd","citation":"deferred:20-2-global-helpers-and-env"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"doesntContain","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"doesntContainStrict","citation":"DIV-12.20"}
+{"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"dump","citation":"deferred:20-2-global-helpers-and-env"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"every","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"first","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"firstOrFail","citation":"DIV-12.20"}
@@ -11,11 +13,14 @@
 {"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"partition","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"sole","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"some","citation":"DIV-12.20"}
+{"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"toResourceCollection","citation":"deferred:46-2-responses-redirects-and-json-resources"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"unless","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"when","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Collection","member":"where","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Enumerable","member":"contains","citation":"DIV-12.20"}
+{"component":"collections","fqcn":"Illuminate\\Support\\Enumerable","member":"dd","citation":"deferred:20-2-global-helpers-and-env"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Enumerable","member":"doesntContain","citation":"DIV-12.20"}
+{"component":"collections","fqcn":"Illuminate\\Support\\Enumerable","member":"dump","citation":"deferred:20-2-global-helpers-and-env"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Enumerable","member":"every","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Enumerable","member":"first","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Enumerable","member":"firstOrFail","citation":"DIV-12.20"}
@@ -29,8 +34,10 @@
 {"component":"collections","fqcn":"Illuminate\\Support\\Enumerable","member":"when","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Enumerable","member":"where","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"contains","citation":"DIV-12.20"}
+{"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"dd","citation":"deferred:20-2-global-helpers-and-env"}
 {"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"doesntContain","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"doesntContainStrict","citation":"DIV-12.20"}
+{"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"dump","citation":"deferred:20-2-global-helpers-and-env"}
 {"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"every","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"first","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"firstOrFail","citation":"DIV-12.20"}
@@ -41,9 +48,14 @@
 {"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"partition","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"sole","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"some","citation":"DIV-12.20"}
+{"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"takeUntilTimeout","citation":"deferred:19-4-test-clock"}
+{"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"throttle","citation":"deferred:19-4-test-clock"}
 {"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"unless","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"when","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"where","citation":"DIV-12.20"}
+{"component":"collections","fqcn":"Illuminate\\Support\\LazyCollection","member":"withHeartbeat","citation":"deferred:19-4-test-clock"}
+{"component":"collections","fqcn":"Illuminate\\Support\\Traits\\EnumeratesValues","member":"dd","citation":"deferred:20-2-global-helpers-and-env"}
+{"component":"collections","fqcn":"Illuminate\\Support\\Traits\\EnumeratesValues","member":"dump","citation":"deferred:20-2-global-helpers-and-env"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Traits\\EnumeratesValues","member":"every","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Traits\\EnumeratesValues","member":"firstWhere","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Traits\\EnumeratesValues","member":"hasMany","citation":"DIV-12.20"}
@@ -52,6 +64,7 @@
 {"component":"collections","fqcn":"Illuminate\\Support\\Traits\\EnumeratesValues","member":"unless","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Traits\\EnumeratesValues","member":"when","citation":"DIV-12.20"}
 {"component":"collections","fqcn":"Illuminate\\Support\\Traits\\EnumeratesValues","member":"where","citation":"DIV-12.20"}
+{"component":"collections","fqcn":"Illuminate\\Support\\Traits\\TransformsToResourceCollection","member":null,"citation":"deferred:46-2-responses-redirects-and-json-resources"}
 {"component":"conditionable","fqcn":"Illuminate\\Support\\Traits\\Conditionable","member":"unless","citation":"DIV-12.13"}
 {"component":"conditionable","fqcn":"Illuminate\\Support\\Traits\\Conditionable","member":"when","citation":"DIV-12.13"}
 {"component":"reflection","fqcn":"lazy","member":null,"citation":"DIV-12.14"}

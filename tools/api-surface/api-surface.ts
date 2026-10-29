@@ -1884,7 +1884,9 @@ export function diffComponent(input: DiffInput): ComponentDiff {
     }
   }
   for (const up of functions) {
-    const name = camel(up.fqcn.slice(up.fqcn.lastIndexOf("\\") + 1));
+    // PORTING.md keeps a bare function name verbatim (`data_get`); a camelCase export of it still matches.
+    const short = up.fqcn.slice(up.fqcn.lastIndexOf("\\") + 1);
+    const name = pkg.functions.has(short) ? short : camel(short);
     const fn = pkg.functions.get(name);
     if (fn === undefined) {
       add("missing", "function", up.fqcn, null);
