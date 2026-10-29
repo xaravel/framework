@@ -434,7 +434,9 @@ export function buildPrompt(input: PromptInput): Prompt {
     : [`# Story ${input.storyId}: tree ${input.tree} against base ${input.base}`, "", "## Manifest", "", fence(input.manifestText, "markdown")];
   sections.push("", "## Inventory rows and Upstream source");
   if (input.inventory.length === 0) {
-    sections.push("", item ? "The action item assigns no Ported Test IDs." : "The manifest assigns no Ported Test IDs (`test_ids` is empty).");
+    sections.push("", item ? "The action item's change adds or changes no Expectations line, so it is reviewed as assigning no Ported Test IDs." : "The manifest assigns no Ported Test IDs (`test_ids` is empty).");
+  } else if (item) {
+    sections.push("", "An action item has no manifest: it is reviewed as assigning the Test IDs whose Expectations lines its own change adds or changes (`itemTestIds`).");
   }
   for (const entry of input.inventory) {
     sections.push("", `### ${entry.id}`, "");
@@ -1695,6 +1697,32 @@ function fitWholeFiles(input: PromptInput, entries: readonly WholeFileEntry[]): 
 function parseSource(source: string): { name: string; rel: string; from: number; to: number } | null {
   const match = /^([^/]+)\/(.+):(\d+)-(\d+)$/.exec(source);
   return match === null ? null : { name: match[1]!, rel: match[2]!, from: Number(match[3]), to: Number(match[4]) };
+}
+
+/**
+ * The Ported Test IDs an action item is reviewed as assigning: the ids of the Expectations lines its own change adds or
+ * changes, in order, without repeats. An item has no manifest, so without them the review shows no Inventory row or
+ * Upstream source for a Ported Test the item enables or changes, and F-1..F-3 cannot be checked (amendment 2026-10-22,
+ * "Missing evidence"; epic-14-item-18).
+ */
+export function itemTestIds(files: readonly ChangedFile[]): string[] {
+  const ids: string[] = [];
+  for (const file of files) {
+    if (!file.filename.startsWith(`${EXPECTATIONS_DIR}/`) || !file.filename.endsWith(".jsonl")) {
+      continue;
+    }
+    for (const line of addedLines([file])) {
+      try {
+        const value = JSON.parse(line) as unknown;
+        if (isRecord(value) && typeof value["id"] === "string" && value["id"] !== "") {
+          ids.push(value["id"]);
+        }
+      } catch {
+        // A malformed line is the Expectations checks' to report.
+      }
+    }
+  }
+  return [...new Set(ids)].sort(compareUnits);
 }
 
 /** The Inventory rows of the manifest's `test_ids` (a listed `X` also takes its rows `X#<key>`), with their Upstream lines. */
@@ -4480,6 +4508,8 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
   const precedence = readme === null ? null : precedenceSection(readme);
   const skipReasons = readme === null ? null : skipReasonsSection(readme);
   // (e) shows the Story's own touched tests; another PR's in the base range is named, not shown (ESC-9.10-3).
+  // An action item has no manifest: its Ported Test IDs are those of the Expectations lines its own change adds or changes.
+  const testIds = args.subject === "item" ? itemTestIds(storyFiles) : [...subject.testIds];
   const touchedTests = xaravelTestEvidence(root, storyFiles);
   const xaravelTests = touchedTests.filter((entry) => subject.inScope(entry.path, entry.ids));
   const outOfScopeTests = [...new Set(touchedTests.filter((entry) => !xaravelTests.includes(entry)).map((entry) => entry.path))].sort(compareUnits);
@@ -4493,13 +4523,13 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
     tree: diff.tree,
     base: diff.base,
     manifestText: subject.text,
-    inventory: inventoryContext(root, subject.testIds),
+    inventory: inventoryContext(root, testIds),
     oracleRequests,
     files: storyFiles,
     outOfScopeFiles,
     evidence: {
       // An action item's assigned ids are those its touched tests declare, so (c) shows their Oracle fixtures.
-      ...gatherEvidence(root, storyFiles, { testIds: [...subject.testIds], xaravelTestIds: args.subject === "item" ? itemXaravelTestIds(xaravelTests) : [...subject.xaravelTestIds] }),
+      ...gatherEvidence(root, storyFiles, { testIds, xaravelTestIds: args.subject === "item" ? itemXaravelTestIds(xaravelTests) : [...subject.xaravelTestIds] }),
       headErrorFixtures: headErrorFixtures(fixtures, requestIds),
       testFixtures: touchedTestFixtures(root, xaravelTests),
       xaravelTests,
