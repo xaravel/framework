@@ -4,7 +4,7 @@
 
 `ksort`, `krsort` and `uksort` sort keys through a `Ref`; `sort` and `rsort` sort values and reindex. All PHP sort flags and stable ties use the runtime's Zend comparators. The held array is replaced so existing aliases keep their values.
 
-`plus` and `divide` implement PHP numeric operators, including leading numeric strings, exact integer results, overflow to float, array union and PHP errors. Array union separates nested arrays, preserves object handles, the left array’s selected key and its next integer index. `intdiv`, `floor` and `ceil` are their PHP builtins. `PHP_INT_MIN` and `PHP_INT_MAX` are exact int64 bigint constants. Integral float results retain the float marker.
+`plus` and `divide` implement PHP numeric operators, including leading numeric strings, exact integer results, overflow to float, array union and PHP errors. Array union separates nested arrays, preserves object handles, the left array’s selected key and its next integer index. `intdiv`, `floor` and `ceil` are their PHP builtins. `PHP_INT_MIN` and `PHP_INT_MAX` are exact int64 bigint constants. Integral float results retain the float marker. `array_sum(array)` is PHP 8.5.11's: int 0 plus each value in order through `plus`, skipping each operand PHP's addition rejects (an array, an object, a non-numeric string); PHP's warning for a skipped operand is not raised under DIV-9.17, and a non-array argument throws PHP's `TypeError`.
 
 `strtolower` folds ASCII only. `strrev` reverses UTF-8 bytes; a reversed sequence that JS cannot represent raises the existing unsupported byte-string TypeError. `is_subclass_of` uses Registry identity, contract inheritance and enum interfaces, excluding the identical class.
 
