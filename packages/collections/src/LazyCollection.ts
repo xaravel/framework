@@ -227,6 +227,44 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     return iterator_to_array(this.getIterator());
   }
 
+  /** Eager load all items into a new lazy collection backed by an array. */
+  eager(): this {
+    return this.newInstance(this.all());
+  }
+
+  /** Cache values as they are enumerated, sharing one source cursor across independent runners. */
+  remember(): this {
+    const iterator = this.getIterator() as Iterator;
+    let iteratorIndex = 0;
+    const cache: [unknown, unknown][] = [];
+
+    // The captured source belongs to the returned collection, not to an individual runner. Closing a runner
+    // must not traverse or close that source: another runner can still extend this positional cache.
+    return this.lazyInstance(function* () {
+      for (let index = 0; true; index++) {
+        if (array_key_exists(index, cache)) {
+          yield keyed(cache[index]![0], valueCopy(cache[index]![1]));
+          continue;
+        }
+
+        if (iteratorIndex < index) {
+          iterator.next();
+          iteratorIndex++;
+        }
+
+        if (!iterator.valid()) break;
+
+        cache[index] = [iterator.key(), valueCopy(iterator.current())];
+        yield keyed(cache[index]![0], valueCopy(cache[index]![1]));
+      }
+    });
+  }
+
+  /** Shuffle the items in the collection, lazily through the eager collection. */
+  shuffle(): this {
+    return this.passthru("shuffle", []);
+  }
+
   /** Count the number of items in the collection by a field or using a callback (by value when none). */
   countBy(countBy: unknown = null): this {
     const callback = countBy === null ? this.identity() : this.valueRetriever(countBy);
