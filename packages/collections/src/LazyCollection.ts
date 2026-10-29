@@ -121,7 +121,7 @@ function entriesOf(values: unknown): Iterable<readonly [unknown, unknown]> {
 type SourceFunction = () => unknown;
 
 /** A lazily enumerated collection: Laravel's `Illuminate\Support\LazyCollection`. */
-export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
+export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) implements Enumerable, CanBeEscapedWhenCastToString {
   /** The source from which to generate items: a generator function, another lazy collection, or a PHP array. */
   source: unknown;
 
@@ -352,7 +352,9 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   /** Group callback pairs into a dictionary when enumerated. */
   mapToDictionary<R>(callback: SyncCallable<[value: any, key: any], R>): this { return this.passthru("mapToDictionary", [callback]); }
 
-  /** Return complete sliding windows while preserving their keys. */
+  /** Return complete sliding windows while preserving their keys; also takes AD-26's options object `{ size, step }`. */
+  sliding(size?: number, step?: number): this;
+  sliding(options?: { size?: number; step?: number }): this;
   sliding(size: number | { size?: number; step?: number } = 2, step: number = 1): this {
     if (isOptionsObject(size)) { step = size.step ?? 1; size = size.size ?? 2; }
     if (size < 1) throw new InvalidArgumentException("Size value must be at least 1.");
@@ -433,8 +435,13 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     });
   }
 
-  /** Sort keys lazily through Collection. */
-  sortKeys(options: number | { options?: number; descending?: boolean | SortDirection } = SORT_REGULAR, descending: boolean | SortDirection = false): this { return this.passthru("sortKeys", [options, descending]); }
+  /** Sort keys lazily through Collection; also takes AD-26's options object `{ options, descending }`. */
+  sortKeys(options?: number, descending?: boolean | SortDirection): this;
+  sortKeys(options?: { options?: number; descending?: boolean | SortDirection }): this;
+  sortKeys(options: number | { options?: number; descending?: boolean | SortDirection } = SORT_REGULAR, descending: boolean | SortDirection = false): this {
+    if (isOptionsObject(options)) { descending = options.descending ?? false; options = options.options ?? SORT_REGULAR; }
+    return this.passthru("sortKeys", [options, descending]);
+  }
 
   /** Sort keys in descending order when consumed. */
   sortKeysDesc(options: number = SORT_REGULAR): this { return this.passthru("sortKeysDesc", [options]); }
@@ -467,10 +474,18 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
     return this.collect().mode(key);
   }
 
-  /** Return only unique items from the collection, by `==` or, when `strict`, by `===`; the first of each is kept. */
+  /**
+   * Return only unique items from the collection, by `==` or, when `strict`, by `===`; the first of each is kept. Also
+   * takes AD-26's options object `{ key, strict }`: PHP's `$key` is a callable, a key string or null, so a plain object
+   * there is the options object, unless its `__invoke` is a function (`isOptionsObject`).
+   */
+  unique<T, R>(this: T, options?: { key?: SyncCallback<[value: any, key: any], R> | string | null; strict?: boolean }): T;
   unique<T, R>(this: T, key: SyncCallback<[value: any, key: any], R>, strict?: boolean): T;
   unique<T, K>(this: T, key?: ValueOrSyncCallback<K>, strict?: boolean): T;
   unique(key: unknown = null, strict: boolean = false): this {
+    if (isOptionsObject(key)) {
+      ({ key = null, strict = false } = key as { key?: unknown; strict?: boolean });
+    }
     const callback = this.valueRetriever(key);
     return this.lazyInstance(function* (this: LazyCollection): globalThis.Generator<KeyedYield, void, unknown> {
       const exists: unknown[] = [];
@@ -544,9 +559,9 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Determine if an item exists, using strict comparison (PHP's `===`); with a value, by an item's `key`. */
-  containsStrict(key: unknown, value_: unknown = null): boolean {
+  containsStrict(key: unknown, value: unknown = null): boolean {
     if (arguments.length === 2) {
-      return this.contains((item: unknown) => identical(data_get(item, key), value_));
+      return this.contains((item: unknown) => identical(data_get(item, key), value));
     }
 
     if (this.useAsCallable(key)) {
@@ -716,10 +731,10 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Get the values of a given key ("dot" notation, segments or a Closure), keyed by `key` when given. */
-  pluck(value_: unknown, key: unknown = null): this {
+  pluck(value: unknown, key: unknown = null): this {
     return this.lazyInstance(function* (this: LazyCollection) {
       // PHP's `use ($value, $key)` copies them into each call, which reassigns its own copies.
-      const [itemValuePath, itemKeyPath] = this.explodePluckParameters(value_, key);
+      const [itemValuePath, itemKeyPath] = this.explodePluckParameters(value, key);
 
       for (const item of this) {
         const itemValue = itemValuePath instanceof Closure ? callCallable(itemValuePath, valueCopy(item)) : data_get(item, itemValuePath);
@@ -990,7 +1005,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
    * Pad collection to the specified length with a value: for a positive `size`, lazily, the items and then `value`
    * until `size` items are yielded; for a negative one, through `Collection.pad`, on the left.
    */
-  pad(size: number, value_: unknown): this {
+  pad(size: number, value: unknown): this {
     if (size < 0) {
       return this.passthru("pad", [...arguments]);
     }
@@ -1005,7 +1020,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
       }
 
       while (yielded++ < size) {
-        yield value_;
+        yield value;
       }
     });
   }
@@ -1150,11 +1165,11 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Search the collection for a value (`==`, or `===` when `strict`) or a callback's match: its key, or `false`. */
-  search(value_: unknown, strict: boolean = false): PhpArrayKey | false {
-    const predicate: unknown = this.useAsCallable(value_)
-      ? value_
+  search(value: unknown, strict: boolean = false): PhpArrayKey | false {
+    const predicate: unknown = this.useAsCallable(value)
+      ? value
       : (item: unknown) => {
-          return strict ? identical(item, value_) : looseEquals(item, value_);
+          return strict ? identical(item, value) : looseEquals(item, value);
         };
 
     for (const [key, item] of this.entries()) {
@@ -1167,13 +1182,13 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Get the item before the given item (by `==`, `===` when `strict`, or a callback), or `null`. */
-  before(value_: unknown, strict: boolean = false): any {
+  before(value: unknown, strict: boolean = false): any {
     let previous: unknown = null;
 
-    const predicate: unknown = this.useAsCallable(value_)
-      ? value_
+    const predicate: unknown = this.useAsCallable(value)
+      ? value
       : (item: unknown) => {
-          return strict ? identical(item, value_) : looseEquals(item, value_);
+          return strict ? identical(item, value) : looseEquals(item, value);
         };
 
     for (const [key, item] of this.entries()) {
@@ -1188,13 +1203,13 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Get the item after the given item (by `==`, `===` when `strict`, or a callback), or `null`. */
-  after(value_: unknown, strict: boolean = false): any {
+  after(value: unknown, strict: boolean = false): any {
     let found = false;
 
-    const predicate: unknown = this.useAsCallable(value_)
-      ? value_
+    const predicate: unknown = this.useAsCallable(value)
+      ? value
       : (item: unknown) => {
-          return strict ? identical(item, value_) : looseEquals(item, value_);
+          return strict ? identical(item, value) : looseEquals(item, value);
         };
 
     for (const [key, item] of this.entries()) {

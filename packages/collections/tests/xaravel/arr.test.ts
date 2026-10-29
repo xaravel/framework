@@ -136,9 +136,9 @@ fails(() => Arr.string({ key: null }, "key"), InvalidArgumentException,
   Assert.assertNull(invalidRef.value);
   class ForwardPushArr extends Arr {
     static calls: unknown[] = [];
-    static override array(array: unknown, key: unknown, defaultValue: unknown = null): unknown {
+    static override array(array: unknown, key: unknown, defaultValue: unknown = null): object {
       this.calls.push(["array", key, defaultValue]);
-      return super.array(array, key, defaultValue);
+      return super.array(array as never, key, defaultValue);
     }
     static override set(array: Ref<unknown>, key: unknown, value: unknown): unknown {
       this.calls.push(["set", key, value]);
@@ -150,9 +150,9 @@ fails(() => Arr.string({ key: null }, "key"), InvalidArgumentException,
   Assert.assertSame([["array", "parent.child", []], ["set", "parent.child", [1]]], ForwardPushArr.calls);
   const variadicSource = { child: [1] };
   class CopyBeforeDispatchArr extends Arr {
-    static override array(array: unknown, key: unknown, defaultValue: unknown = null): unknown {
+    static override array(array: unknown, key: unknown, defaultValue: unknown = null): object {
       variadicSource.child.push(2);
-      return super.array(array, key, defaultValue);
+      return super.array(array as never, key, defaultValue);
     }
   }
   const variadicRef = new Ref<unknown>([]);
@@ -160,7 +160,7 @@ fails(() => Arr.string({ key: null }, "key"), InvalidArgumentException,
   Assert.assertSame([1, 2], variadicSource.child);
   const pushReturned = Arr.push(pushRef, "office.furniture") as { furniture: unknown[] };
   pushReturned.furniture.push("return-only");
-  Assert.assertSame(4, (Arr.array(pushRef.value, "office.furniture") as unknown[]).length);
+  Assert.assertSame(4, (Arr.array(pushRef.value as never, "office.furniture") as unknown[]).length);
   Arr.push(pushRef, "office.furniture", "caller-only");
   Assert.assertSame("return-only", pushReturned.furniture.at(-1));
   for (const args of [[], [new Ref([])]]) {
@@ -376,7 +376,7 @@ fails(() => Arr.string({ key: null }, "key"), InvalidArgumentException,
   const keyPushValue = { child: [1] };
   class PushMutationKey {
     toString(): string {
-      const current = Arr.array(keyPushRef.value, "x") as number[];
+      const current = Arr.array(keyPushRef.value as never, "x") as number[];
       current.push(2);
       Arr.set(keyPushRef, "x", current);
       keyPushValue.child.push(2);
@@ -510,7 +510,7 @@ fails(() => Arr.string({ key: null }, "key"), InvalidArgumentException,
 
   class InvalidArrayReturnArr extends Arr {
     static writes = 0;
-    static override array(): unknown { return 12; }
+    static override array(): object { return 12 as never; }
     static override set(): unknown { this.writes++; return []; }
   }
   const invalidArrayReturnRef = new Ref<unknown>({ x: [] });
@@ -534,7 +534,7 @@ fails(() => Arr.string({ key: null }, "key"), InvalidArgumentException,
   }
   const isolationRoot = new Ref<unknown>({ x: { y: { z: 1 } } });
   Arr.set(isolationRoot, "x.y.z", 2);
-  const selectedCopy = new Ref(Arr.array(isolationRoot.value, "x"));
+  const selectedCopy = new Ref(Arr.array(isolationRoot.value as never, "x"));
   Arr.set(selectedCopy, "y.z", 3);
   Assert.assertSame({ x: { y: { z: 2 } } }, isolationRoot.value);
   Assert.assertSame({ y: { z: 3 } }, selectedCopy.value);
@@ -555,7 +555,7 @@ fails(() => Arr.string({ key: null }, "key"), InvalidArgumentException,
   }
   const repeatedPushRoot = new Ref<unknown>({ x: { values: [] } });
   Arr.push(repeatedPushRoot, "x.values", 1);
-  const repeatedPushCopy = new Ref(Arr.array(repeatedPushRoot.value, null));
+  const repeatedPushCopy = new Ref(Arr.array(repeatedPushRoot.value as never, null));
   Arr.push(repeatedPushCopy, "x.values", 2);
   Assert.assertSame({ x: { values: [1] } }, repeatedPushRoot.value);
   Assert.assertSame({ x: { values: [1, 2] } }, repeatedPushCopy.value);
@@ -714,7 +714,7 @@ fails(() => Arr.string({ key: null }, "key"), InvalidArgumentException,
   class RecordingRecursiveArr extends Arr {
     static override sortRecursive(array: unknown, options: number | { options?: number; descending?: boolean | SortDirection } = 0, descending: boolean | SortDirection = false): unknown {
       recursiveCalls.push([valueCopy(array), options, descending]);
-      return super.sortRecursive(array, options, descending);
+      return super.sortRecursive(array, options as never, descending);
     }
   }
   Assert.assertSame({ nested: ["item10", "item2"] }, RecordingRecursiveArr.sortRecursive({ nested: ["item2", "item10"] }, SORT_NATURAL, true));
@@ -744,10 +744,10 @@ fails(() => Arr.string({ key: null }, "key"), InvalidArgumentException,
   }
   Assert.assertSame({ overridden: [2, 1] }, RecursiveArr.sortRecursiveDesc([2, 1]));
   let arrayTypeError: unknown = null;
-  try { Arr.isAssoc(null); } catch (error) { arrayTypeError = error; }
+  try { Arr.isAssoc(null as never); } catch (error) { arrayTypeError = error; }
   Assert.assertInstanceOf(PhpTypeError, arrayTypeError);
   Assert.assertSame("Illuminate\\Support\\Arr::isAssoc(): Argument #1 ($array) must be of type array, null given", (arrayTypeError as PhpTypeError).getMessage());
-  for (const invoke of [() => (Arr.isAssoc as () => boolean)(), () => Arr.isAssoc(1), () => Arr.isAssoc(new stdClass())]) {
+  for (const invoke of [() => (Arr.isAssoc as () => boolean)(), () => Arr.isAssoc(1 as never), () => Arr.isAssoc(new stdClass())]) {
     let error: unknown = null;
     try { invoke(); } catch (caught) { error = caught; }
     Assert.assertInstanceOf(PhpTypeError, error);

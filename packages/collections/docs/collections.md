@@ -1,8 +1,8 @@
 # Collections
 
-`@xaravel/collections` ports Laravel 13's `illuminate/collections` component: `Collection`, `LazyCollection`, the `Enumerable` interface, the `EnumeratesValues` trait, `HigherOrderCollectionProxy`, `Arr`, `ItemNotFoundException`, `MultipleItemsFoundException` and the `collect()`, `data_get()`, `data_has()` and `value()` helpers. Collections are synchronous, and they keep PHP's array semantics: key order, integer-like key normalisation, and the list-or-object JSON shape.
+`@xaravel/collections` ports Laravel 13's `illuminate/collections` component: `Collection`, `LazyCollection`, the `Enumerable` interface, the `EnumeratesValues` trait, `HigherOrderCollectionProxy`, `Arr`, `ItemNotFoundException`, `MultipleItemsFoundException` and the `collect()`, `data_fill()`, `data_get()`, `data_has()`, `data_set()`, `data_forget()`, `head()`, `last()`, `value()` and `when()` helpers. Collections are synchronous, and they keep PHP's array semantics: key order, integer-like key normalisation, and the list-or-object JSON shape.
 
-This page covers what Stories 14.1-14.4 port: construction, conversion, serialization, array access, iteration, macros and higher-order proxies, the methods that read, find, add and remove items, the methods that filter, slice and branch, with their async companions, and the methods that combine arrays. It also covers `sortBy`, `groupBy`, `keyBy` and `concat`, which those tests reach. The other methods (`sort`, `sortByDesc`, `chunk`, …) arrive with the Collections Stories that port their tests.
+This page covers what Stories 14.1-14.8 port: construction, conversion, serialization, array access, iteration, macros and higher-order proxies, the methods that read, find, add and remove items, the methods that filter, slice and branch, with their async companions, the methods that combine arrays, mapping, sorting, chunking and aggregates, the `Arr` helpers and lazy collections. It also covers what epic-14-item-19 adds for the API surface: the `data_fill`, `data_set`, `data_forget`, `head`, `last` and `when` helpers, `toBase()`, the options forms of `unique`, `sliding`, `sortKeys`, `fromJson`, `Arr.sortRecursive` and `MultipleItemsFoundException`, and the `EnumerableStatic` interface.
 
 ## PHP arrays
 
@@ -41,7 +41,7 @@ The static constructors are Laravel's: `make`, `wrap` (a collection stays as it 
 - `all()` is the items, and `toArray()` the items with each `Arrayable` item replaced by its `toArray()`.
 - `jsonSerialize()` converts each item through `jsonSerialize()`, `toJson()` or `toArray()`. `toJson(flags)` and `toPrettyJson(flags)` encode it with `jsonEncode` from `@xaravel/runtime/php`, never `JSON.stringify`.
 - `toString()` (and `String(collection)`) is `toJson()`, Laravel's `__toString`.
-- `collect()` turns any collection into a `Collection`, and `lazy()` a `Collection` into a `LazyCollection` over a copy of its items.
+- `collect()` turns any collection into a `Collection`, and `lazy()` a `Collection` into a `LazyCollection` over a copy of its items. `toBase()` gives a new base `Collection` of a `Collection`'s items, also from a subclass (Laravel's `new self($this)`).
 - `ensure(type)` checks every item against a type name (`'int'`, `'string'`, …), a class, a contract token, or a list of them, and throws Laravel's `UnexpectedValueException` naming the first item of another type.
 
 ## Array access and iteration
@@ -123,6 +123,24 @@ Each companion calls `callback(value, key)` for one item at a time, in key order
 ### Options objects
 
 `random`, `sortBy` and `duplicates` (both classes), `splice` (`Collection`), `Arr.first`, `Arr.last` and `Arr.random` take two optional parameters, so they also accept an options object (AD-26) as their last argument, in the first optional position: `c.random({ number: 2, preserveKeys: true })`, `c.sortBy(callback, { options: SORT_STRING, descending: true })`, `c.duplicates({ callback, strict })`, `c.splice(1, { length: 1, replacement: ["x"] })`, `Arr.first(array, { callback, default })`, `Arr.last(array, { callback, default })` and `Arr.random(array, { number, preserveKeys })`. PHP never takes an array in those positions, so a plain object there is the options object, unless its `__invoke` is a function.
+
+The same holds for `unique` (`c.unique({ key: "id", strict: true })` is `c.unique("id", true)`), `sliding` (`{ size, step }`), `sortKeys` (`{ options, descending }`), `fromJson` (`Collection.fromJson(json, { depth, flags }, ...args)`), `Arr.sortRecursive` (`{ options, descending }`) and `new MultipleItemsFoundException(count, { code, previous })`.
+
+`Collection` and `LazyCollection` implement the `Enumerable` interface and `CanBeEscapedWhenCastToString`. `EnumerableStatic` is the interface's static side (`make`, `times`, `range`, `wrap`, `unwrap`, `empty`, `proxy`), which a TypeScript interface cannot declare (ESC-10.2-1).
+
+### Data helpers
+
+`data_get(target, key, default)` and `data_has(target, key)` read an array or object by a dot key. `data_set(ref, key, value, overwrite = true)`, `data_fill(ref, key, value)` and `data_forget(ref, key)` take PHP's `&$target` as a `Ref` from `@xaravel/runtime` (DIV-9.2), write the changed target to `ref.value`, and return it. `*` sets or forgets in every item; a missing level is created as `[]`. An `ArrayObject` level writes through its storage; a userland `offsetGet` writes nothing, as PHP's indirect modification does (DIV-9.17, which also omits PHP's notice). `head(array)` and `last(array)` give the first and last value, or `false` for an empty array or any other falsy value (PHP's `empty()`), and throw PHP's `TypeError` for a truthy non-array. `when(condition, value, default)` gives `value(value, condition)` when the condition (a Closure is called first) is truthy, else `value(default, condition)`; like `value`, it is a dual helper (AD-6.5) that returns a callback's result, a Promise included, as it is, and its type keeps that result's type. A Promise (or other thenable) condition, or a Closure condition that returns one, throws a `TypeError` saying to await it before calling `when()`, as Conditionable's `when` does, since it would always test truthy (DIV-1.6).
+
+```ts
+import { data_set, head, when } from "@xaravel/collections";
+import { Ref } from "@xaravel/runtime";
+
+const target = new Ref<unknown>({ users: [{ name: "a" }, { name: "b" }] });
+data_set(target, "users.*.active", true); // target.value is { users: [{ name: "a", active: true }, { name: "b", active: true }] }
+head([1, 2, 3]); // 1
+when(true, () => "yes", "no"); // "yes"
+```
 
 `Arr` gains the members these methods call: `except`, `first`, `forget`, `get`, `last`, `only`, `partition`, `pluck`, `prepend`, `pull`, `random` and `select`. `Arr.forget(ref, keys)` and `Arr.pull(ref, key, default)` take PHP's by-reference array as a `Ref` from `@xaravel/runtime` and write the new array to `ref.value` (DIV-9.2).
 
@@ -285,7 +303,10 @@ retain their full bodies behind the genuine Support clock dependency boundary,
 in addition to the four earlier clock tests described above. The complete
 `testFlatMapIsLazy` remains pending in ESC-14.8-2 until the runtime exports PHP's
 `array_sum`; this is a shared runtime contract gap, not a Collections substitute.
-Epic closure also remains pending: the API surface gate reports 268 unexplained
-findings, including unsupported inherited/mixin analysis and real signature
-findings, and Reflection's Collection dependency still requires a separately
-scoped change. ESC-14.8-1 records those obligations. No Epic-close pass is claimed.
+Epic closure also remains pending. With the API-surface analysis following
+`extends`, mixin traits and aliases, and the genuine Collections findings fixed
+(epic-14-item-19), the gate's remaining findings await their citations or rulings
+(the async companions, `entries`, members needing later Components, the gate's
+camel-cased helper names, the `...moreKeys` / `...moreItems` rest parameters and
+`Enumerable.reduceWithKeys`). ESC-14.8-1 records those obligations. No Epic-close
+pass is claimed.
