@@ -1,5 +1,4 @@
 // Laravel's Illuminate\Support\Arr (v13.37.0). Story 14.6 completes the independent array helpers.
-// Push and the ArrayAccess set repair remain held by ESC-14.6-8; typed accessors are complete.
 // CSS styles reach Support through a throwing Str.finish dependency seam.
 // PHP array arguments accept lists, plain maps and PhpArrays, with value-copy isolation (AD-9).
 // By-reference parameters use Ref (DIV-9.2), while ArrayAccess objects retain PHP's handle semantics.
@@ -25,6 +24,10 @@ import {
   array_all,
   array_any,
   arrayAppend,
+  array_push,
+  offsetAssign,
+  offsetReference,
+  referenceAt,
   callUnpacked,
   array_pop,
   array_slice,
@@ -865,55 +868,78 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /**
-   * Set an array item to a given value using "dot" notation, creating the arrays on the way down; a `null` key replaces
-   * the entire array. `array` is PHP's `&$array` (DIV-9.2): the new array is written to `array.value`. Returns the
-   * innermost array the value was set in.
+   * Set a dot-keyed item through a Ref (DIV-9.2), or replace the root for a null key.
+   * Returns the innermost modified value; a root-leaf ArrayAccess assignment returns its object handle.
    */
   static set(array: Ref<unknown>, key: unknown, value_: unknown): unknown {
+    const supplied = valueCopy(value_);
     if (is_null(key)) {
-      array.value = valueCopy(value_);
-
-      return valueCopy(array.value);
+      array.value = supplied;
+      return valueCopy(supplied);
     }
-
-    const keys = new Ref<unknown>(explode(".", key));
-
-    // PHP's `$array = &$array[$key]`: each array passed on the way down, with the key it is left by. PHP writes into a
-    // `null` as into an empty array.
-    const path: [unknown, unknown][] = [];
-    let current: unknown = valueCopy(array.value ?? []);
-
-    for (const [i, segment] of arrayEntries(keys.value as object)) {
-      if (Number(count(keys.value)) === 1) {
-        break;
+    const keys = explode(".", key);
+    // Temporary traversal references are ported by value (PORTING.md, ESC-14.6-10).
+    // Existing caller-held cells remain shared; this walk creates no native array cells.
+    array.value = valueCopy(array.value);
+    let reference = array;
+    const path: { parent: Ref<unknown>; key: string; child: Ref<unknown> }[] = [];
+    const reconnect = (): void => {
+      for (let index = path.length - 1; index >= 0; index--) {
+        const { parent, key: part, child } = path[index]!;
+        // Shallow assembly of already owned children avoids recursively copying a newly built deep chain.
+        // PhpArray.set also writes through any genuine, surviving caller-held reference cell.
+        parent.value = asCallerForm(parent.value, setKey(parent.value, part, child.value));
       }
-
-      keys.value = unsetKey(keys.value, i);
-
-      // If the key doesn't exist at this depth, we will just create an empty array
-      // to hold the next value, allowing us to create the arrays to hold final
-      // values at the correct depth. Then we'll keep digging into the array.
-      let child = arrayRead(current as object, segment);
-      if (child === null || !is_array(child)) {
-        child = [];
+      path.length = 0;
+    };
+    try {
+      for (let depth = 0; depth < keys.length - 1; depth++) {
+        const segment = keys[depth]!;
+        const current = reference.value;
+        // Publish preceding native writes before a userland offset callback can observe them.
+        if (current instanceof ArrayAccess) reconnect();
+        const present = is_array(current) || current instanceof ArrayAccess;
+        if (!present || !offsetIsSet(current as object, segment) || !is_array(offsetRead(reference.value as object, segment))) {
+          const original = reference.value;
+          offsetAssign(reference, segment, []);
+          if (original instanceof PhpArray) reference.value = ownPhpArray(reference.value);
+        }
+        if (is_array(reference.value)) {
+          const child = new Ref(arrayRead(reference.value as object, segment));
+          path.push({ parent: reference, key: segment, child });
+          reference = child;
+        } else if (reference.value instanceof ArrayAccess) {
+          reference = offsetReference(reference.value, segment);
+        } else {
+          // Only impossible scalar/string acquisitions reach the runtime error seam.
+          reference = referenceAt(reference, segment);
+        }
       }
-
-      path.push([current, segment]);
-      current = child;
+      // A leaf object can likewise call user code, so retain all preceding initialization first.
+      if (reference.value instanceof ArrayAccess) reconnect();
+      const original = reference.value;
+      offsetAssign(reference, keys[keys.length - 1]!, supplied);
+      if (original instanceof PhpArray) reference.value = ownPhpArray(reference.value);
+      return valueCopy(reference.value);
+    } finally {
+      // PHP retains initialization and partial string writes even when a later operation throws.
+      reconnect();
     }
+  }
 
-    let updated = asCallerForm(current, ownPhpArray(current).set(array_shift(keys) as never, valueCopy(value_)));
-    const innermost = updated;
-
-    // Each rebuilt level keeps the form its keys give, and a `PhpArray` stays one.
-    for (let index = path.length - 1; index >= 0; index--) {
-      const [parent, part] = path[index]!;
-      updated = asCallerForm(parent, setKey(parent, part, updated));
-    }
-
-    array.value = updated;
-
-    return valueCopy(innermost);
+  /** Append values through the caller's Ref; declared array return validation follows mutation. */
+  static push(array: Ref<unknown>, _key: unknown, ...values: unknown[]): unknown {
+    const fn = "Illuminate\\Support\\Arr::push";
+    const args = Array.from(arguments);
+    if (args.length > 0) args[0] = array.value;
+    const boundValues = valueCopy(values);
+    const [, key] = bindPhpArguments(fn, [
+      { name: "array", type: "ArrayAccess|array" },
+      { name: "key", type: "string|int|null" },
+    ], args);
+    const target = new Ref(this.array(array.value, key, []));
+    array_push(target, ...boundValues);
+    return phpReturn(fn, "array", this.set(array, key, target.value));
   }
 
   /** Shuffle an array into a reindexed list, copying nested array values. */

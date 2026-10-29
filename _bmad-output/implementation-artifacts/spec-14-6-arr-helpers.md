@@ -2,8 +2,8 @@
 title: 'Story 14.6: Arr helpers'
 type: feature
 created: '2026-10-27'
-status: blocked
-baseline_revision: 45371e1e22ecc728ede1cb30e33de80f8a38ff28
+status: done
+baseline_revision: 3e4123222622555cd429e25bef7ccf4094f45bd8
 review_loop_iteration: 6
 followup_review_recommended: false
 context:
@@ -20,6 +20,8 @@ context:
   - '{project-root}/decisions/ESC-14.6-8.md'
   - '{project-root}/decisions/ESC-14.6-9.md'
   - '{project-root}/decisions/MAINT-2026-10-28-story-14-6-fifth.md'
+  - '{project-root}/decisions/MAINT-2026-10-28-story-14-6-sixth.md'
+  - '{project-root}/decisions/ESC-14.6-10.md'
 warnings: [oversized]
 deferred:
   - summary: >-
@@ -52,6 +54,14 @@ deferred:
       packages/runtime/src/php/valueCopy.ts
     severity: medium
 
+  - summary: >-
+      Native Arr path reconstruction does not transfer PHP array pointer state.
+    evidence: |-
+      Pre-existing setKey/asCallerForm reconstruction rebuilds native parent arrays without copying their current/key pointer; the baseline Arr.set used the same reconstruction. This change preserves PHP values and existing aliases but does not claim to repair the pre-existing pointer issue. Investigate public key/current behavior after nested set and forget in a scoped follow-up.
+    location: >-
+      packages/collections/src/Arr.ts:setKey/asCallerForm
+    severity: medium
+
 ---
 
 <intent-contract>
@@ -70,29 +80,25 @@ deferred:
 
 </intent-contract>
 
-## Current resume scope (2026-10-28, reference-lifetime contract hold)
+## Current resume scope (2026-10-28, Maintainer traversal-by-value ruling)
 
-PR #517 resolved the arbitrary receiver/reference errors from ESC-14.6-9, and the complete referenceAt-based attempt passed the full harness. Additional public copy-isolation probes then exposed permanent sharing of temporary traversal cells: later Arr.set/Arr.push on a copy mutates the original, unlike PHP 8.5.11. ESC-14.6-10 holds push and its whole set repair until a shared runtime lifetime contract lands. No public reference release seam exists. The complete attempt, positive tests and new failing probe matrix are preserved in that Escalation. Executable package files exactly match starting main: five completed typed accessors and baseline set retained, testPush remains held, four Support holds unchanged. Story completion is not claimed. The execution tasks below describe preserved work for resumption only; the new contract hold takes precedence.
+MAINT-2026-10-28-story-14-6-sixth and ESC-14.6-10 reject a runtime lifetime protocol and release this Story under PORTING.md's temporary traversal rule. Implement the whole set repair and push using by-value native-array traversal, initialization through offsetAssign before descent, and offsetReference only at ArrayAccess levels. Preserve every positive receiver/error/call-order regression and add the pinned copy-isolation matrix, including surviving caller aliases. Earlier active referenceAt requirements and lifetime hold are superseded by this ruling; historical records below remain immutable.
 
 ## Code Map
 
-- `conformance/escalations/ESC-14.6-10.md` preserves the full attempt and pinned PHP/Bun lifetime probes. `packages/runtime/src/php/arrayReferenceCells.ts`, `arrayReference.ts`, `referenceAt.ts`, `offsetReference.ts`, `Ref.ts` and `valueCopy.ts` have no public transient-reference cleanup contract. Read-only: do not strip cells or duplicate runtime lifetime machinery in collections.
-
-- `stories/14.6.md`, `PORTING.md:65-66`, `_bmad-output/implementation-artifacts/epic-14-context.md`, architecture AD-6/9/22/26, `decisions/DIV-9.md` and `decisions/ESC-14.6-2.md` bind scope, Ref adaptation, runtime constructs, and four genuine Support holds. Read-only except authorized manifest/status bookkeeping.
-- `conformance/upstream/framework/src/Illuminate/Collections/Arr.php:1030-1085` is canonical: set snapshots its value argument before explode/key conversion, performs isset then conditional is_array read, explicit initialization, reference acquisition, final offset assignment and innermost return. Null key replaces the root. Push binds ArrayAccess|array and string|int|null before body, snapshots variadics by value, calls static::array/current caller state, array_push, static::set, and validates its declared array return after mutation. Read-only.
-- `conformance/escalations/ESC-14.6-9.md:51` preserves the complete positive attempted diff: canonical testPush, docs and extensive XT12 cases. Reuse complete bodies and all positive regressions; do not blindly apply its incorrect local child Ref/parent reconstruction implementation. Its pinned probe gives x.0.z/x.1.z reference Error, x.y.z offset TypeError and x.0 result '1bc'. ESC-6/7/8 retain older canonical/argument/copy evidence; all are immutable historical evidence.
-- `packages/runtime/src/php/referenceAt.ts:16`, public `packages/runtime/src/php/index.ts:214`, and `packages/runtime/tests/xaravel/php-reference-at.test.ts` (XT-runtime-114 onward) provide arbitrary receiver reference acquisition, alias cells and PHP errors; arrays share captured slots through supported operations, null/false promote, true/int/float reject, strings reject references after preceding writes, ArrayAccess delegates to offsetReference. Read-only; do not reproduce this machinery in collections.
-- `packages/runtime/src/php/offsetAssign.ts:65` performs arbitrary receiver writes, copies values, preserves next-free state and dispatches ArrayAccess offsetSet. `offsetReference.ts` distinguishes builtin/inherited ArrayObject write-through from overriding/userland detached returns. Use referenceAt for every traversal acquisition; do not manufacture a Ref from an offset value or implement PHP scalar/string rules locally. Read-only.
-- `packages/runtime/src/php/userlandArguments.ts` supplies public bindPhpArguments/phpReturn; `valueCopy.ts`, `arrayFunctions.ts` and php public exports supply copies, array_push, array checks and slot reads. Binding's array snapshot validates input but cannot replace push's current caller Ref after key-coercion callbacks. Read-only.
-- `packages/collections/src/Arr.ts:868` baseline set rebuilds paths and loses ArrayAccess semantics. Replace this method as one complete repair using runtime references, retaining array form/copy/next-free behavior. Existing array/boolean/float/integer/string are complete preservation targets. Existing arrayRead, ownPhpArray/asCallerForm and runtime php helpers are reuse points, not authority to duplicate reference semantics.
-- `packages/collections/tests/ported/framework/tests/Support/SupportArrTest.test.ts`, `packages/collections/tests/xaravel/arr.test.ts` (XT-collections-12), own `conformance/expectations/collections/framework/tests/Support/SupportArrTest.jsonl:58` and `packages/collections/docs/collections.md` are the remaining implementation targets. Only testPush's expectation changes; retain all prior assertions, typed regressions, compiler/lint probes and four Support holds.
+- `stories/14.6.md`, `PORTING.md` § By-reference parameters, architecture AD-6/9/22/26, `decisions/DIV-1.md`, `DIV-9.md`, `DIV-12.md`, `ESC-14.6-2.md` and `MAINT-2026-10-28-story-14-6-sixth.md` bind the scope. Latest ruling supersedes historical referenceAt traversal requirements; no runtime edits.
+- `conformance/escalations/ESC-14.6-10.md` preserves complete canonical push/test/docs attempt, all positive receiver/order/error regressions, and pinned copy-isolation PHP matrix. Reuse bodies/assertions, replace its native referenceAt algorithm. `ESC-14.6-9.md` has pinned numeric-string error cases. Read-only historical evidence.
+- `packages/collections/src/Arr.ts:872` baseline set and helpers `ownPhpArray`, `setKey`, `asCallerForm` are local by-value path assembly reuse points. `PhpArray.copy/set` preserve existing cells and next-free state without creating temporary native cells. Shallow assembly of owned children avoids recursive copying a new 50,000-level chain. No runtime cell registry/cleanup or private runtime imports.
+- `packages/runtime/src/php/offsetAssign.ts`, `offsetReference.ts`, `referenceAt.ts`, `valueCopy.ts`, `userlandArguments.ts` and public exports are read-only helpers. Actual PHP initialization and leaf writes use offsetAssign; ArrayAccess descent uses offsetReference. Scalar/string reference errors must still come from runtime referenceAt where acquisition cannot succeed, never a Collections copy of PHP receiver semantics. Native array traversal must not call referenceAt.
+- `conformance/upstream/framework/src/Illuminate/Collections/Arr.php:1030-1085`: set snapshots entry value before key callbacks, initializes before descent, preserves earlier writes on error, returns innermost array/handle. Push validates all arguments, snapshots variadics before key coercion, selects current caller state, static-dispatches array/set and validates array return after mutation.
+- `packages/collections/tests/ported/framework/tests/Support/SupportArrTest.test.ts`, `tests/xaravel/arr.test.ts` (XT-collections-12), own `conformance/expectations/collections/framework/tests/Support/SupportArrTest.jsonl` and `packages/collections/docs/collections.md` are remaining implementation targets. Only testPush Expectation changes; preserve prior assertions and four Support holds.
 
 ## Tasks & Acceptance
 
 **Execution:**
 - `packages/collections/tests/ported/framework/tests/Support/SupportArrTest.test.ts` -- add the complete canonical testPush from pinned Upstream/preserved ESC-9, with only DIV-9.2 Ref adaptations; preserve every previous body/assertion. Run the fast Story baseline before implementing.
 - `packages/collections/src/Arr.ts` -- implement whole push using public argument binding, entry variadic snapshots before key coercion, this.array on the current caller Ref after binding, runtime array_push, this.set and post-mutation phpReturn array validation. Preserve omitted/invalid argument diagnostics and static dispatch; never use binder's copied first argument as the live selection state.
-- `packages/collections/src/Arr.ts` -- replace whole set in Upstream order: entry value snapshot before callbacks; null-key replacement; iterative dot traversal with observable isset/is_array reads, conditional offsetAssign initialization, referenceAt acquisition at every intermediate segment, final offsetAssign and innermost value/handle return. Preserve explicit writes on exceptions, object identity, detached versus builtin references, array separation, caller form and next-free state. Do not delay all writeback until success or locally reconstruct references. Keep direct root-leaf object return and document it. No recursion/depth cap for 50,000-segment initially empty creation; no claim that pre-existing deep valueCopy limitations are solved.
+- `packages/collections/src/Arr.ts` -- replace whole set in Upstream order: entry value snapshot before callbacks; null-key replacement; iterative dot traversal with observable isset/is_array reads, conditional offsetAssign initialization, by-value acquisition at native-array segments and offsetReference at ArrayAccess segments, final offsetAssign and innermost value/handle return. Preserve explicit writes on exceptions, object identity, detached versus builtin references, array separation, caller form and next-free state. Retain initialization writes on exceptions; never create persistent native reference cells for temporary traversal. Keep direct root-leaf object return and document it. No recursion/depth cap for 50,000-segment initially empty creation; no claim that pre-existing deep valueCopy limitations are solved.
 - `packages/collections/tests/xaravel/arr.test.ts` -- restore every positive XT12 regression in ESC-9's documentary diff: nested/null/no-values/multiple-values push, argument errors before lookup, sparse next-free state, returned/caller copies and shared object handles; builtin/inherited versus overriding/independent userland ArrayAccess; root-leaf mutation then return TypeError, null-key replacement/rejection, static dispatch and invalid overridden array/set returns. Preserve all earlier typed/token/default/async callback cases.
 - `packages/collections/tests/xaravel/arr.test.ts` -- retain ESC-9's argument evaluation/call-order/deep cases: set snapshots before Stringable key/offset callbacks; push key conversion mutates caller Ref and variadic source, selecting updated caller state but old variadic value; existence false despite stored values, changing successive reads, missing/non-array initialization, ignored/throwing offsetSet/offsetGet, builtin offset overrides and retained writes. Exercise all runtime receiver kinds through public Arr.set (array forms, null, false, true, integer, float, strings, builtin/userland objects), at intermediate and leaf positions, with exact errors/state/trace. Add the pinned x.0.z/x.1.z/x.y.z/x.0 cases, comparing PHP 8.5.11 evidence where new outcomes need confirmation. Observe the 50,000-level root iteratively without invoking recursively copying getters.
 - `conformance/expectations/collections/framework/tests/Support/SupportArrTest.jsonl` -- change only testPush to its observed pass with DIV-9.2 metadata and no obsolete ESC-9 hold; preserve all other lines and four Support holds.
@@ -106,6 +112,12 @@ PR #517 resolved the arbitrary receiver/reference errors from ESC-14.6-9, and th
 - Given public Arr.set on an empty root and a 50,000-segment path, when writing a leaf, then it succeeds without recursive stack exhaustion and iterative observation finds the expected root/innermost values.
 - Given all prior helpers, typed accessors and Support holds, when full Collections/Xaravel/harness checks and fresh reviews run, then previous behavior remains verified with no weakened assertion, current Fidelity and passing story:check before completion.
 
+- Given native lists, maps and PhpArrays, selected/returned roots and parents, repeated push and builtin/inherited ArrayObject copies, when a later copy is changed, then the original remains unchanged as the pinned PHP matrix; genuine caller-held aliases stay shared and userland offsetGet remains detached.
+
+## Design Notes
+
+Temporary native traversal keeps owned values and frames, never native captured reference cells. Use shallow existing assembly helpers to reconnect owned children without recursively copying the new deep chain. Reconnect on error too, preserving prior PHP initialization; ArrayAccess boundary uses its captured offsetReference rather than invoking offsetSet for a reference write. Avoid flushing the full chain on every descent (quadratic). Runtime helpers continue owning receiver classification, errors and genuine reference semantics. The 50,000-depth AC applies to initially empty native root; existing valueCopy depth limitation is unchanged.
+
 ## Verification
 
 - `bun run harness --fast --story 14.6` -- baseline after translation; record seed, not completion evidence.
@@ -117,6 +129,8 @@ PR #517 resolved the arbitrary receiver/reference errors from ESC-14.6-9, and th
 - `bun run story:check 14.6` -- pass including required authenticated remote full-run evidence; record any environmental refusal precisely and do not claim done from local/fast checks.
 
 ## Spec Change Log
+
+- 2026-10-28 resume: blocked → draft after Maintainer ruling #519; no runtime lifetime protocol. Re-plan whole set/push with traversal by value under the updated PORTING rule. KEEP complete canonical tests, every positive error/order/50,000-depth regression, typed accessors, Support holds and immutable history; add the entire ESC-14.6-10 copy-isolation matrix, preserving genuine caller aliases.
 
 - 2026-10-28 contract stop: referenceAt traversal leaves shared cells after local references should expire. Public copying via Arr.array, returned arrays, Collection.all and ArrayObject copies then aliases the original; PHP 8.5.11 isolates it. Raised ESC-14.6-10 with the whole container/copy matrix and explicit surviving-alias contrast, saved the complete implementation/tests/docs as documentary evidence and reversed its hunks in place. KEEP all five completed accessors, prior assertions, four Support holds, every positive pending regression, exact errors/call order and immutable history. Hold push/set whole pending public runtime lifetime semantics; no Collections-owned cleanup workaround.
 
@@ -153,6 +167,28 @@ PR #517 resolved the arbitrary receiver/reference errors from ESC-14.6-9, and th
 - 2026-10-28 referenceAt planning: approved #517 resolves ESC-14.6-9. Replaced stale six-method/six-Expectation active tasks with the single held push translation and whole set repair; referenceAt replaces the demonstrated incorrect local-child-Ref reconstruction. Require full receiver integration/error/retained-write matrix and preserve every ESC-9 positive regression, all five typed accessors, four Support holds and immutable history. Current plan supersedes historical holds; fresh implementation and reviews remain required.
 
 ## Review Triage Log
+
+### 2026-10-28 — Traversal-by-value resume review
+
+- verdicts: 14 findings — high 0, medium 2, low 2, false 10, maybe-false 0.
+- findings:
+  - `[low]` `[patch]` Blind 1: direct PhpArray assignment loses caller form — reproduced with a PhpArray holding x=1, set y=2 yielded a native map; preserve PhpArray form around initialization and leaf offsetAssign, with explicit representation tests. Shared root cause with edge 2.
+  - `[medium]` `[defer]` Blind 2: native reconstruction loses array pointer state — baseline set used the same setKey/asCallerForm reconstruction and did not transfer pointers; pre-existing public key/current issue recorded in deferred, no new runtime or unrelated forget change.
+  - `[false]` `[reject]` Blind 3: scalar/null surviving aliases lacked tests — no failing behavior demonstrated; existing initialization uses offsetAssign/assignedArray and PhpArray.set writes through cells. Added explicit scalar/null alias regressions for confirmation without introducing new semantics.
+  - `[false]` `[reject]` Blind 4: multiple ancestor aliases lacked tests — code reconstructs bottom-up through each existing cell; no demonstrated defect. Added multi-level alias regression to confirm this path.
+  - `[false]` `[reject]` Blind 5: native parent/object callback publication lacked tests — this proposed path is unreachable: a native parent holding an ArrayAccess child sees !is_array and replaces the child with [] before descent, as PHP does. Added replacement/no-callback confirmation; reachable root/custom-offset initialization and throwing callbacks already have exact tests.
+  - `[false]` `[reject]` Blind 6: reentrant callbacks might lose ancestor/sibling mutation — pending frames are published and cleared before entering user code; subsequent object handles stay live and no cleared frame overwrites the caller. The distinct proven stale conditional receiver is addressed under edge 1.
+  - `[false]` `[reject]` Blind 7: untouched sparse ancestors/siblings lacked next-free tests — PhpArray.copy preserves next-free state, ownPhpArray retains it for PhpArray ancestors, and sibling values retain runtime copies; no loss shown. Existing sparse target regressions pass.
+  - `[false]` `[reject]` Blind 8: empty-root deep path should hit invalid receiver after creating ancestors — ordinary segments of an initially empty native root only create arrays; no invalid receiver is reachable in that scenario. Existing custom offset/scalar/string exception tests exercise reachable retained-write failures.
+  - `[medium]` `[patch]` Edge 1: offsetExists replaces the caller before conditional read — reproduced Bun Error/root x=12 versus PHP 8.5.11 result y=1/root x.y=1 when offsetExists replaces root and stale offsetGet returns []; use reference.value for the subsequent offsetRead and add the exact regression.
+  - `[low]` `[patch]` Edge 2: PhpArray form lost at direct leaf — duplicate of blind 1; same minimal caller-form repair and representation tests, including intermediate initialization.
+  - `[false]` `[reject]` Intent 1: no runtime lifetime contract added — approved Maintainer ruling #519 explicitly rejects that mechanism and authorizes the by-value port; no missing contract remains for this increment.
+  - `[false]` `[reject]` Intent 2: whole Story versus one canonical test increment — previous commits already implemented the independent helpers; full Story checks cover all 87 IDs, with 83 passing and four legitimate Support holds preserved.
+  - `[false]` `[reject]` Intent 3: internal temporary references differ from PHP — PORTING.md explicitly requires by-value traversal for this case; acceptance is public values, aliases, errors and ordering, which these public integration tests exercise.
+  - `[false]` `[reject]` Intent 4: status resumes rather than stays blocked — main's approved ruling explicitly sets Story 14.6 in-progress and releases the prior hold; spec follows that resume state.
+
+Verification-gap reviewer reported no gaps. Both Fidelity reviewers passed the reviewed tree; reviewer 1's unavailable-Claude fallback was recorded. Review patch groups: one medium callback-order correction and one low caller-form correction. No high patches; followup_review_recommended remains false unless a new specific unverified risk emerges.
+
 
 ### 2026-10-28 — Resume review pass 2 (contract HALT)
 - verdicts: 16 findings — high 0, medium 4, low 7, false 5, maybe-false 0
@@ -1054,6 +1090,106 @@ None.
 {"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"bebc18bd27f56a867dcbd5446e5c9c85dd1e1a98","base":"4809ad1a1f623da9ec4063053ff417d39358e698","cli":"codex","model":"gpt-6.1-sol","loop_cli":"codex","fallback":null,"date":"2026-10-28T19:15:29.316Z","items":[{"id":"F-1","result":"pass","note":"Compared the five added typed-accessor Ported Tests with their Upstream excerpts. Assertion subjects, expected values, exception expectations and order match.","findings":[]},{"id":"F-2","result":"pass","note":"The five tests preserve comparison strictness, exception classes and message patterns. XT-collections-12 adds checks without weakening existing expectations.","findings":[]},{"id":"F-3","result":"pass","note":"Each added Ported Test retains both value assertions and both exception expectations. No executable assertion is removed; the pending push translation is documentary.","findings":[]},{"id":"F-4","result":"pass","note":"testPush remains wholly unported with a documented runtime contract gap. not-ported-yet counts against conformance; blocked-by:runtime is invalid under the supplied phase and Epic rule, and no higher-precedence reason applies.","findings":[]},{"id":"F-5","result":"pass","note":"The added DIV-10.1 markers and Expectations fields cover equivalent conversions of the Upstream PCRE patterns to JavaScript RegExp without changing their constraints.","findings":[]},{"id":"F-6","result":"n/a","note":"The fixture evidence identifies no relied-upon Oracle error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"Compared XT-collections-12's full body and helpers with its consequence. Assertions cover upfront argument validation, scalar and class-string representations, dot operations, key order, nulls, copies, synchronous callbacks and lazy traversal.","findings":[]},{"id":"F-8","result":"pass","note":"Executable implementation changes stay in collections and delegate PHP binding, classification and return normalization to approved runtime seams. The incomplete offset-write attempt remains documentary and push remains absent.","findings":[]},{"id":"F-9","result":"pass","note":"Compared the complete Arr.ts and declaration inventory with AD-6 and DIV-1. No asyncRoot tags are present; its synchronous methods perform no IO and accept no permitted async callbacks requiring tags.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no Oracle request file.","findings":[]}],"prior":[]}
 ```
 
+### Reviewer 1: pass at tree 61949ced8d54e3e380d51107bb00f04535c1a46d
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `codex` loop, against base `3e4123222622555cd429e25bef7ccf4094f45bd8`, on 2026-10-28T23:45:23.607Z. Fallback: claude unavailable: not installed: /nonexistent/claude-disabled-until-reset: not found.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | pass | Compared added testPush with Upstream lines 86–108: all four array assertions and the expected exception object retain their subjects, values and order. |
+| F-2: No expected value is weakened | pass | testPush keeps assertEquals and the exact exception class and message. Added Xaravel assertions do not weaken existing expectations. |
+| F-3: No assertion is removed without a DIV clause | pass | testPush preserves all four explicit assertions and expectExceptionObject; no Upstream assertion is dropped. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The only changed Expectations line changes testPush from skip to pass; no new skip reason is introduced. |
+| F-5: Every `adapted` marker matches its clause | pass | The added DIV-9.2 markers and Expectations adaptation cover Ref boxing and reading the resulting array; expected values remain unchanged. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied fixture inventory identifies no Oracle error fixture relied on by this change. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | Compared XT-collections-12's complete body with its consequence: it checks argument binding, representations, dot operations, keys, nulls, copy isolation, synchronous callbacks and lazy traversal. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The implementation remains in collections and uses shared runtime offset helpers. Its temporary traversal reconstruction follows ESC-14.6-10 without adding another Component's implementation. |
+| F-9: Every `@asyncRoot` tag is true | pass | Compared Arr.ts's complete source and declaration inventory with AD-6 and DIV-1: it contains no async roots or tags, and its callbacks remain synchronous. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No conformance/oracle-requests file changes, so there are no changed request inputs to compare. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"61949ced8d54e3e380d51107bb00f04535c1a46d","base":"3e4123222622555cd429e25bef7ccf4094f45bd8","cli":"codex","model":"gpt-6.1-sol","loop_cli":"codex","fallback":"claude unavailable: not installed: /nonexistent/claude-disabled-until-reset: not found","date":"2026-10-28T23:45:23.607Z","items":[{"id":"F-1","result":"pass","note":"Compared added testPush with Upstream lines 86–108: all four array assertions and the expected exception object retain their subjects, values and order.","findings":[]},{"id":"F-2","result":"pass","note":"testPush keeps assertEquals and the exact exception class and message. Added Xaravel assertions do not weaken existing expectations.","findings":[]},{"id":"F-3","result":"pass","note":"testPush preserves all four explicit assertions and expectExceptionObject; no Upstream assertion is dropped.","findings":[]},{"id":"F-4","result":"n/a","note":"The only changed Expectations line changes testPush from skip to pass; no new skip reason is introduced.","findings":[]},{"id":"F-5","result":"pass","note":"The added DIV-9.2 markers and Expectations adaptation cover Ref boxing and reading the resulting array; expected values remain unchanged.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied fixture inventory identifies no Oracle error fixture relied on by this change.","findings":[]},{"id":"F-7","result":"pass","note":"Compared XT-collections-12's complete body with its consequence: it checks argument binding, representations, dot operations, keys, nulls, copy isolation, synchronous callbacks and lazy traversal.","findings":[]},{"id":"F-8","result":"pass","note":"The implementation remains in collections and uses shared runtime offset helpers. Its temporary traversal reconstruction follows ESC-14.6-10 without adding another Component's implementation.","findings":[]},{"id":"F-9","result":"pass","note":"Compared Arr.ts's complete source and declaration inventory with AD-6 and DIV-1: it contains no async roots or tags, and its callbacks remain synchronous.","findings":[]},{"id":"F-10","result":"n/a","note":"No conformance/oracle-requests file changes, so there are no changed request inputs to compare.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: pass at tree 61949ced8d54e3e380d51107bb00f04535c1a46d
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `codex` loop, against base `3e4123222622555cd429e25bef7ccf4094f45bd8`, on 2026-10-28T23:45:23.607Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | pass | Compared the added testPush with Upstream: all four array assertions and the expected exception retain the same subjects, values and order. |
+| F-2: No expected value is weakened | pass | testPush preserves assertEquals and the exact exception class and message. Ref adaptations do not weaken expected values; the Xaravel Test adds checks without weakening existing ones. |
+| F-3: No assertion is removed without a DIV clause | pass | Every Upstream testPush assertion and exception expectation has a counterpart; no assertion is dropped. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The only changed Expectations line changes testPush from skip to pass; no new skip reason requires review. |
+| F-5: Every `adapted` marker matches its clause | pass | The added DIV-9.2 markers and Expectations adaptation cover array representations and by-reference Ref arguments read through value, with unchanged expected values. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied fixture inventory identifies no relied-on or changed Oracle error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | Compared XT-collections-12's consequence with its complete body: it checks argument binding, representations, dot operations, key normalization and order, nulls, copy isolation, synchronous callbacks and lazy traversal. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The change stays within Collections and uses shared runtime offset helpers. Its temporary traversal reconstruction follows ESC-14.6-10; it adds no implementation of another Component. |
+| F-9: Every `@asyncRoot` tag is true | pass | Compared Arr.ts's complete declarations and bodies with AD-6 and DIV-1: its methods remain synchronous, require no async-root tags, and retain none. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file changes, so there are no changed setup or expression inputs to compare. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"61949ced8d54e3e380d51107bb00f04535c1a46d","base":"3e4123222622555cd429e25bef7ccf4094f45bd8","cli":"codex","model":"gpt-6.1-sol","loop_cli":"codex","fallback":null,"date":"2026-10-28T23:45:23.607Z","items":[{"id":"F-1","result":"pass","note":"Compared the added testPush with Upstream: all four array assertions and the expected exception retain the same subjects, values and order.","findings":[]},{"id":"F-2","result":"pass","note":"testPush preserves assertEquals and the exact exception class and message. Ref adaptations do not weaken expected values; the Xaravel Test adds checks without weakening existing ones.","findings":[]},{"id":"F-3","result":"pass","note":"Every Upstream testPush assertion and exception expectation has a counterpart; no assertion is dropped.","findings":[]},{"id":"F-4","result":"n/a","note":"The only changed Expectations line changes testPush from skip to pass; no new skip reason requires review.","findings":[]},{"id":"F-5","result":"pass","note":"The added DIV-9.2 markers and Expectations adaptation cover array representations and by-reference Ref arguments read through value, with unchanged expected values.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied fixture inventory identifies no relied-on or changed Oracle error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"Compared XT-collections-12's consequence with its complete body: it checks argument binding, representations, dot operations, key normalization and order, nulls, copy isolation, synchronous callbacks and lazy traversal.","findings":[]},{"id":"F-8","result":"pass","note":"The change stays within Collections and uses shared runtime offset helpers. Its temporary traversal reconstruction follows ESC-14.6-10; it adds no implementation of another Component.","findings":[]},{"id":"F-9","result":"pass","note":"Compared Arr.ts's complete declarations and bodies with AD-6 and DIV-1: its methods remain synchronous, require no async-root tags, and retain none.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file changes, so there are no changed setup or expression inputs to compare.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 1: pass at tree d1eb0d8fe73edba667ad841269668c32e80f1030
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `codex` loop, against base `3e4123222622555cd429e25bef7ccf4094f45bd8`, on 2026-10-28T23:53:32.152Z. Fallback: claude unavailable: not installed: /nonexistent/claude-disabled-until-reset: not found.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | pass | Compared the added testPush with Upstream: all four array assertions and the expected exception object retain their subjects, values and order. |
+| F-2: No expected value is weakened | pass | The added Ported Test preserves assertEquals and the exact exception class and message. Added Xaravel assertions do not weaken existing expectations. |
+| F-3: No assertion is removed without a DIV clause | pass | testPush retains all four explicit assertions and Upstream's exception-object expectation; no assertion is dropped. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The diff removes a skip for testPush and adds no skip reason. |
+| F-5: Every `adapted` marker matches its clause | pass | The added DIV-9.2 markers and Expectations adaptation cover Ref arguments and array readback, with expected values unchanged. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied fixture inventory identifies no Oracle error fixture relied on by this change. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | Compared XT-collections-12's full body and helpers with its consequence: assertions cover argument binding, representations, dot operations, key order, nulls, copy isolation, synchronous callbacks and lazy traversal. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The implementation changes remain in collections and consume shared runtime offset seams. By-value path reconstruction follows ESC-14.6-10; no new implementation of another Component is added. |
+| F-9: Every `@asyncRoot` tag is true | pass | Arr.ts retains no asyncRoot tags and its methods remain synchronous, consistent with AD-6 and DIV-1's Arr and synchronous-callback rules. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no Oracle request file. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"d1eb0d8fe73edba667ad841269668c32e80f1030","base":"3e4123222622555cd429e25bef7ccf4094f45bd8","cli":"codex","model":"gpt-6.1-sol","loop_cli":"codex","fallback":"claude unavailable: not installed: /nonexistent/claude-disabled-until-reset: not found","date":"2026-10-28T23:53:32.152Z","items":[{"id":"F-1","result":"pass","note":"Compared the added testPush with Upstream: all four array assertions and the expected exception object retain their subjects, values and order.","findings":[]},{"id":"F-2","result":"pass","note":"The added Ported Test preserves assertEquals and the exact exception class and message. Added Xaravel assertions do not weaken existing expectations.","findings":[]},{"id":"F-3","result":"pass","note":"testPush retains all four explicit assertions and Upstream's exception-object expectation; no assertion is dropped.","findings":[]},{"id":"F-4","result":"n/a","note":"The diff removes a skip for testPush and adds no skip reason.","findings":[]},{"id":"F-5","result":"pass","note":"The added DIV-9.2 markers and Expectations adaptation cover Ref arguments and array readback, with expected values unchanged.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied fixture inventory identifies no Oracle error fixture relied on by this change.","findings":[]},{"id":"F-7","result":"pass","note":"Compared XT-collections-12's full body and helpers with its consequence: assertions cover argument binding, representations, dot operations, key order, nulls, copy isolation, synchronous callbacks and lazy traversal.","findings":[]},{"id":"F-8","result":"pass","note":"The implementation changes remain in collections and consume shared runtime offset seams. By-value path reconstruction follows ESC-14.6-10; no new implementation of another Component is added.","findings":[]},{"id":"F-9","result":"pass","note":"Arr.ts retains no asyncRoot tags and its methods remain synchronous, consistent with AD-6 and DIV-1's Arr and synchronous-callback rules.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no Oracle request file.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: pass at tree d1eb0d8fe73edba667ad841269668c32e80f1030
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `codex` loop, against base `3e4123222622555cd429e25bef7ccf4094f45bd8`, on 2026-10-28T23:53:32.152Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | pass | Compared the added testPush with Upstream: all four array assertions and the expected exception retain their subjects, values and order. |
+| F-2: No expected value is weakened | pass | The added Ported Test preserves assertEquals and the exact exception class and message. The Xaravel Test additions do not weaken existing expectations. |
+| F-3: No assertion is removed without a DIV clause | pass | Upstream testPush's four assertions and exception-object expectation all have counterparts; none is dropped. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The diff adds no skip reason; it changes testPush from skip to pass. |
+| F-5: Every `adapted` marker matches its clause | pass | Compared the added DIV-9.2 markers and Expectations adaptation with its clause: Ref boxing and value reads preserve the expected arrays. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied fixture inventory identifies no relied-on Oracle error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | Compared XT-collections-12's full body with its consequence: it checks argument binding, representations, dot operations, key normalization and order, copy isolation, synchronous callbacks and lazy traversal. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The implementation changes Collections behavior using the shared runtime seams authorized by ESC-14.6-7 through ESC-14.6-10. It adds no implementation of another Component. |
+| F-9: Every `@asyncRoot` tag is true | pass | Compared Arr.ts's full source and declaration inventory with AD-6 and DIV-1: its methods remain synchronous, perform no IO and require no async-root tags. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no Oracle request file. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"d1eb0d8fe73edba667ad841269668c32e80f1030","base":"3e4123222622555cd429e25bef7ccf4094f45bd8","cli":"codex","model":"gpt-6.1-sol","loop_cli":"codex","fallback":null,"date":"2026-10-28T23:53:32.152Z","items":[{"id":"F-1","result":"pass","note":"Compared the added testPush with Upstream: all four array assertions and the expected exception retain their subjects, values and order.","findings":[]},{"id":"F-2","result":"pass","note":"The added Ported Test preserves assertEquals and the exact exception class and message. The Xaravel Test additions do not weaken existing expectations.","findings":[]},{"id":"F-3","result":"pass","note":"Upstream testPush's four assertions and exception-object expectation all have counterparts; none is dropped.","findings":[]},{"id":"F-4","result":"n/a","note":"The diff adds no skip reason; it changes testPush from skip to pass.","findings":[]},{"id":"F-5","result":"pass","note":"Compared the added DIV-9.2 markers and Expectations adaptation with its clause: Ref boxing and value reads preserve the expected arrays.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied fixture inventory identifies no relied-on Oracle error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"Compared XT-collections-12's full body with its consequence: it checks argument binding, representations, dot operations, key normalization and order, copy isolation, synchronous callbacks and lazy traversal.","findings":[]},{"id":"F-8","result":"pass","note":"The implementation changes Collections behavior using the shared runtime seams authorized by ESC-14.6-7 through ESC-14.6-10. It adds no implementation of another Component.","findings":[]},{"id":"F-9","result":"pass","note":"Compared Arr.ts's full source and declaration inventory with AD-6 and DIV-1: its methods remain synchronous, perform no IO and require no async-root tags.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no Oracle request file.","findings":[]}],"prior":[]}
+```
+
 ## Historical review repair requirements (prior run; released runtime holds superseded above)
 
 - `packages/collections/src/Arr.ts` -- use this for every newly added upstream static:: delegation, preserving hardcoded Arr only where Upstream spells Arr. Extend sort/desc public types to PHP callable tuples/objects while rejecting async function/invokable callbacks. Fix every/some bare-generator traversal through public runtime primitives, without materializing input or importing runtime internals; prove short-circuiting with throw-on-overread sources.
@@ -1152,3 +1288,32 @@ No review layers ran: the parent verification found this contract stop before st
 
 
 Final held-tree verification: typecheck and lint/disables (939 files), Expectations, Divergence, Escalations (139 records / 138 decisions) and staged whitespace checks pass. Full sandbox run encountered four timeouts (XT-conformance-161/37 and XT-runtime-35/43); the identical `bun run harness` was approved outside the sandbox and passed: XARAVEL tests=484 passed=479 failed=0 skipped=5; SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0. Seven backend Variants are unavailable locally, as AD-17 permits. Final Story harness checked 87 with zero differences. `story:check 14.6` correctly fails completion for held testPush, open ESC-14.6-10 and no current-tree approvals; remote full-run evidence cannot be checked without GH_TOKEN. Manifest, assigned Xaravel test, fixtures and API-surface clauses pass. The workflow HALTs blocked before review; the branch records the contract stop rather than claiming done.
+
+
+## Implementation verification — 2026-10-28 traversal-by-value resume
+
+Implemented the whole `push` and `set` repair under MAINT-2026-10-28-story-14-6-sixth / ESC-14.6-10. Native array descent uses owned by-value frames, with public `offsetAssign` for initialization and leaf assignment and shallow `PhpArray` assembly on normal and exceptional completion. Pending frames are published before ArrayAccess callbacks; ArrayAccess descent alone uses `offsetReference`. Scalar/string failed acquisition stays in runtime `referenceAt`. No runtime implementation changed and no temporary native reference cells are created. Genuine surviving caller cells keep write-through behavior.
+
+Restored the complete canonical testPush and every positive regression from ESC-14.6-10's preserved attempt, including the complete receiver/error/order matrix and 50,000-segment initially empty creation with iterative observation. Added its full pinned copy-isolation matrix for native lists/maps/PhpArrays, selected arrays, returned roots and parents, repeated nested push, builtin/inherited ArrayObject copies, Collection.all, userland detached offsets, and explicit surviving aliases. Extra held-alias writes through public Arr.set in both directions and ordinary stdClass receiver errors were checked directly against PHP 8.5.11. All prior executable assertions, typed accessor behavior and four Support holds remain. Only testPush's Expectations line changes to pass with DIV-9.2. Docs describe Ref push, the innermost/root-handle return, mutation-before-return-error and temporary traversal isolation.
+
+Fast baseline after canonical translation: seed `3300a0c4`, 87 sampled, missing push reproduced as expected. Focused repaired-tree checks: `bun run typecheck` passes; `bun run lint` passes (939 files); Story harness `checked=87 differ=0`; Collections harness `checked=1029 differ=0`; Collections Xaravel `tests=12 passed=12 failed=0 skipped=0`; `git diff --check` passes. PHP 8.5.11 confirms held aliases reach y=3 then y=4 in the original and its copy when Arr.set edits either, and root/intermediate stdClass attempts throw `Error: Cannot use object of type stdClass as array`.
+
+This is implementation evidence, not completion or review approval. Fresh general/Fidelity reviews, global rule checks, foreground full harness and authenticated remote full-run evidence / story:check remain with the parent workflow. Historical verdicts and contract-stop records remain unchanged. The pre-existing deep valueCopy and ordinary-object general foreach limitations recorded in frontmatter are not claimed fixed.
+
+
+## Review patch verification — 2026-10-28
+
+Patched two grouped review findings: one medium live-receiver read after offsetExists and one low PhpArray-form preservation at both initialization and final offsetAssign. Added exact PHP 8.5.11 regressions for caller replacement, direct/nested PhpArray representation, scalar/null and multilevel surviving aliases, plus the native-parent object replacement/no-callback case. No public API or runtime contract was added. No high patch and only one medium patch group: followup_review_recommended is false.
+
+After repairs, typecheck, lint/disables (939 files), full Story (87 comparisons), Collections (1,029 comparisons), all 12 Collections Xaravel tests, Expectations, Escalations (139/139), Divergence and whitespace checks pass. Both fresh Fidelity reviewers pass tree d1eb0d8fe73edba667ad841269668c32e80f1030; Finalize status prints current. Reviewer 1 used the recorded unavailable-Claude fallback to Codex. All four general layers ran in two batches; verification-gap found no gaps. One pre-existing native array-pointer issue is deferred alongside the existing runtime deep-copy/general-object limitations.
+
+
+## Auto Run Result — 2026-10-28 completed traversal-by-value implementation
+
+Status: done. Arr.push and the complete Arr.set repair are implemented under the approved temporary traversal rule. Native arrays retain copy isolation, genuine caller aliases remain shared, ArrayAccess preserves builtin versus detached userland behavior, and receiver errors/partial writes follow PHP 8.5.11. The canonical testPush is ported whole; only its Expectations line changes, and all four complete Support-dependent tests remain blocked-by:support for their later Component.
+
+Changed files: Arr.ts implements the whole methods and two review repairs; canonical SupportArrTest restores testPush; XT-collections-12 adds receiver/order/copy/alias/depth regressions; the owned Expectations line records pass; collections.md documents the completed behavior; this spec records planning, reviews and evidence; manifest and sprint status record completion.
+
+All four general review layers ran. Fourteen findings were individually triaged: ten false findings rejected with evidence, two duplicate low representation findings repaired as one group, one medium live-receiver finding repaired, one pre-existing medium pointer issue deferred. Zero high patches; one medium and one low patch group; follow-up review recommended false. Fresh final Fidelity passes and current status are recorded above; no historical record was edited.
+
+Final foreground full harness after review repairs: XARAVEL tests=484 passed=479 failed=0 skipped=5; SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0. Seven unavailable local backend Variants are NOT-RUN under AD-17. Typecheck, lint, Story and Collections harnesses, 12 Collections Xaravel tests, Expectations/Divergence/Escalations and whitespace checks pass. Remote ratchet evidence and authenticated story:check are checked after opening the PR, before merge; they cannot exist before the first push. Residual pre-existing runtime deep-copy, native array-pointer and general-object foreach limits are documented in deferred. No waiver, divergence, grader weakening, runtime change or new skip is introduced.
