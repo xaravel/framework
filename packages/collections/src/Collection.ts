@@ -896,6 +896,11 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
     return this.newInstance(Arr.random(this.items, number, preserveKeys));
   }
 
+  /** Shuffle the items in the collection, reindexing the copied values. */
+  shuffle(): this {
+    return this.newInstance(Arr.shuffle(this.items));
+  }
+
   /** Search the collection for a value (`==`, or `===` when `strict`) or a callback's match: its key, or `false`. */
   search(value_: unknown, strict: boolean = false): PhpArrayKey | false {
     if (!this.useAsCallable(value_)) {

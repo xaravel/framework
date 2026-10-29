@@ -142,6 +142,16 @@ const lines = LazyCollection.make(function* () {
 
 A generator yields only values, so a key is written `yield keyed(k, v)`, and PHP's `yield from` is `yield* yieldFrom(iterable)` (DIV-12.18). Each enumeration calls the function again. A function that is not a generator has its result wrapped as an array. A generator object, the result of calling a generator function, is rejected with Laravel's `InvalidArgumentException`, because it can be enumerated only once: pass the function itself.
 
+`eager()` immediately materializes the current source into a new `LazyCollection` backed by a copied array. Array structure and nested array values are copied, so later array changes to the source or to an `all()` result do not change the snapshot. Object values keep their shared PHP handles, so mutations to those objects remain visible.
+
+`remember()` captures one source iterator and caches each entry as it is requested. Each runner starts at position zero, sharing the same cache and source cursor. Entries are cached by position, so repeated keys remain separate during traversal; `all()` keeps the last value at each key, as PHP materialization does. Stopping one runner does not close the shared source, so another runner can continue it. Cache values are copied at array boundaries, while objects keep their PHP handle semantics.
+
+`shuffle()` delegates through `Collection.shuffle()` to `Arr.shuffle()`, returning copied values reindexed from zero. On a `LazyCollection`, it waits until enumeration to materialize and shuffle the source, and shuffles again for each enumeration.
+
+`takeUntilTimeout`, `throttle` and `withHeartbeat` remain unavailable until Support supplies Carbon, Duration, Sleep and the frame-scoped clock in Epic 19. Their four complete Upstream tests report `blocked-by:support`. XT-collections-14 passes by verifying only that their shared test-only gate throws the exact Support dependency error; it verifies no production clock behavior. All real clock behavior remains unverified in the four complete blocked Ported Tests. No wall-clock substitute is provided.
+
+To activate clock acceptance in Epic 19, implement the production clock methods against Support, remove the unconditional `SupportLazyCollectionBlockedBySupportTest.setUp` gate in `tests/support/SupportClockBoundary.ts`, replace the throwing Support seams and clock surface casts in the retained Ported Tests with the real Support imports and contracts, and update their Expectations from dependency blocks to observed outcomes. Replace XT-collections-14’s dependency-classification test with executable timeout, throttle and heartbeat acceptance scenarios against the real frame-scoped test clock, and remove the test-only boundaries.
+
 ## Macros and higher-order proxies
 
 `Collection` and `LazyCollection` are `Macroable`: `Collection.macro('name', function () { … })` adds a method, with the collection as `this`. Type it with a `declare` member on a subclass, or call it through a typed view.

@@ -44,7 +44,8 @@ import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Arr, Collection, collect, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
 import { TestBackedEnum, TestStringBackedEnum, FIXTURES as ENUM_FIXTURES } from "../ported/framework/tests/Support/Fixtures/Enums";
-import { ArgumentCountError, ArrayIterator, Generator } from "@xaravel/runtime";
+import { ArgumentCountError, ArrayIterator, BlockedByComponentError, Generator } from "@xaravel/runtime";
+import { SupportLazyCollectionBlockedBySupportTest } from "../support/SupportClockBoundary";
 import { Arrayable } from "@xaravel/contracts/support";
 import { array_values, arrayEntries, Error as PhpError, fqcn, InvalidArgumentException, jsonEncode, keyed, looseEquals, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_NUMERIC, SORT_NATURAL, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError, ValueError } from "@xaravel/runtime";
 
@@ -1955,4 +1956,88 @@ xaravelTest(
     }
   },
   120_000,
+);
+
+xaravelTest(
+  "XT-collections-13",
+  "remember() shares one synchronous source across interleaved runners, caching by position so duplicate keys survive traversal (FR-23, AD-6, AD-9); stopping one runner leaves the source available to another, all() materializes last-key values, and cached array values are copied",
+  () => {
+    let starts = 0;
+    const advances: number[] = [];
+    const events: string[] = [];
+    const source = LazyCollection.make(function* () {
+      starts++;
+      try {
+        for (const value of [1, 2, 3, 4]) {
+          advances.push(value);
+          yield keyed(value < 3 ? "duplicate" : value, { value });
+        }
+      } finally { events.push("finished"); }
+    });
+    const remembered = source.remember();
+    Assert.assertSame(0, starts);
+    const a = remembered.entries();
+    const b = remembered.entries();
+    Assert.assertSame(["duplicate", { value: 1 }], a.next().value);
+    Assert.assertSame(["duplicate", { value: 1 }], b.next().value);
+    Assert.assertSame([1], advances);
+    Assert.assertSame(["duplicate", { value: 2 }], b.next().value);
+    Assert.assertSame([1, 2], advances);
+    Assert.assertSame(["duplicate", { value: 2 }], a.next().value);
+    Assert.assertSame([1, 2], advances);
+    a.return();
+    Assert.assertSame([], events);
+    Assert.assertSame([3, { value: 3 }], b.next().value);
+    Assert.assertSame([4, { value: 4 }], b.next().value);
+    Assert.assertTrue(b.next().done);
+    Assert.assertSame(["finished"], events);
+    Assert.assertSame(1, starts);
+    Assert.assertSame([1, 2, 3, 4], advances);
+    const pairs = [...remembered.entries()];
+    Assert.assertSame([
+      ["duplicate", { value: 1 }], ["duplicate", { value: 2 }], [3, { value: 3 }], [4, { value: 4 }],
+    ], pairs);
+    (pairs[0]![1] as { value: number }).value = 99;
+    Assert.assertSame(["duplicate", { value: 1 }], remembered.entries().next().value);
+    const materialized = remembered.all() as PhpArray;
+    Assert.assertSame(new PhpArray<string | number, unknown>([
+      ["duplicate", { value: 2 }], [3, { value: 3 }], [4, { value: 4 }],
+    ]), materialized);
+    (materialized.get("duplicate") as { value: number }).value = 99;
+    Assert.assertSame({ value: 2 }, (remembered.all() as PhpArray).get("duplicate"));
+    Assert.assertSame(1, starts);
+    Assert.assertSame([1, 2, 3, 4], advances);
+
+    const original = [{ value: 1 }];
+    const eager = LazyCollection.make(function* () { yield* original; }).eager();
+    original[0]!.value = 99;
+    original.push({ value: 2 });
+    Assert.assertSame([{ value: 1 }], eager.all());
+    const returned = eager.all() as { value: number }[];
+    returned[0]!.value = 100;
+    Assert.assertSame([{ value: 1 }], eager.all());
+
+    let shuffledStarts = 0;
+    const input = { first: { value: 1 }, second: { value: 2 } };
+    const shuffled = LazyCollection.make(() => { shuffledStarts++; return input; }).shuffle();
+    Assert.assertSame(0, shuffledStarts);
+    Assert.assertSame([1, 2], shuffled.pluck("value").sort().values().all());
+    Assert.assertSame(1, shuffledStarts);
+    Assert.assertSame([0, 1], [...shuffled.keys()]);
+    Assert.assertSame(2, shuffledStarts);
+    Assert.assertSame({ first: { value: 1 }, second: { value: 2 } }, input);
+  },
+);
+
+xaravelTest(
+  "XT-collections-14",
+  "the shared test-only Support clock gate used by the four retained LazyCollection Ported Tests throws exactly BlockedByComponentError('support'); this verifies only the dependency classification, with no clock behavior verified",
+  () => {
+    let failure: unknown = null;
+    try { new SupportLazyCollectionBlockedBySupportTest().setUp(); }
+    catch (error) { failure = error; }
+    Assert.assertInstanceOf(BlockedByComponentError, failure);
+    Assert.assertSame(BlockedByComponentError, (failure as BlockedByComponentError).constructor);
+    Assert.assertSame("BlockedByComponentError(support)", (failure as BlockedByComponentError).message);
+  },
 );
