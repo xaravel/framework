@@ -22,6 +22,7 @@
 {"fqcn":"Mix\\Widget","kind":"method","member":"describe","static":false,"parameters":[],"returns":null,"nullable":true}
 {"fqcn":"Mix\\Widget","kind":"method","member":"rename","static":false,"parameters":[{"name":"from","type":"string","nullable":false,"default":null,"optional":false,"variadic":false,"byRef":false},{"name":"into","type":"string","nullable":false,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Mix\\Widget","kind":"method","member":"vanish","static":false,"parameters":[],"returns":null,"nullable":true}
+{"fqcn":"Mix\\data_tap","kind":"function","member":null,"static":false,"parameters":[{"name":"text","type":"string","nullable":false,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Mix\\hum","kind":"function","member":null,"static":false,"parameters":[{"name":"text","type":"string","nullable":false,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Mix\\loud","kind":"function","member":null,"static":false,"parameters":[{"name":"text","type":"string","nullable":false,"default":null,"optional":false,"variadic":false,"byRef":false}],"returns":null,"nullable":true}
 {"fqcn":"Mix\\whisper","kind":"function","member":null,"static":false,"parameters":[],"returns":null,"nullable":true}

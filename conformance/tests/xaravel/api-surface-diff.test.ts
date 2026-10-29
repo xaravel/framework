@@ -1125,7 +1125,7 @@ function mixinsRoot(): string {
 
 xaravelTest(
   "XT-conformance-268",
-  "a registration's members include those its heritage supplies, read from the emitted .d.ts in PHP's order (its own, then each mixin() trait's, then its parent's, transitively and across packages) and never extra, and a function exported through an export { f as g } specifier counts under its exported name; a member nothing supplies is still missing, and a supplied member's parameter names and defaults are still checked (ESC-14.8-1, AD-15)",
+  "a registration's members include those its heritage supplies, read from the emitted .d.ts in PHP's order (its own, then each mixin() trait's, then its parent's, transitively and across packages) and never extra, and a function exported through an export { f as g } specifier counts under its exported name, and one exported under its verbatim PHP name (data_tap) counts too; a member nothing supplies is still missing, and a supplied member's parameter names and defaults are still checked (ESC-14.8-1, AD-15)",
   () => {
     // The CLI over the fixture, with the repository's tsc: Widget extends mixin(Base, Greets, Counts), Counts extends
     // mixin(null, Resets), Gadget extends Widget. Every supplied member counts (a trait's, a nested trait's, a trait's
@@ -1145,7 +1145,7 @@ xaravelTest(
       String.raw`mixins: mismatch function Mix\hum: parameter 1 is words, Upstream text`,
       String.raw`mixins: missing function Mix\whisper`,
     ];
-    expect(run.stdout).toBe([...findings, "api-surface mixins: 27 Upstream, 20 matched, 3 missing, 0 renamed, 0 extra, 4 mismatched, 0 div12; 7 unexplained (AD-15)", ""].join("\n"));
+    expect(run.stdout).toBe([...findings, "api-surface mixins: 28 Upstream, 21 matched, 3 missing, 0 renamed, 0 extra, 4 mismatched, 0 div12; 7 unexplained (AD-15)", ""].join("\n"));
     // tsc emitted `extends mixin(…)` as a `Mixed` const: the form the walk reads.
     expect(readFileSync(join(dir, ".cache", "tsc", "mixins", "src", "Widget.d.ts"), "utf8")).toContain("declare const Widget_base: import(\"./support/mixin\").Mixed<typeof Base, readonly [typeof Greets, typeof Counts]>;");
     const gate = cli(dir, ["--gate", "mixins"]);
