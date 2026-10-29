@@ -178,13 +178,14 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Add a dot-keyed value when the current value is null or missing. */
-  static add(array: unknown, key: unknown, value_: unknown): unknown {
+  static add(array: unknown, key: unknown, value: unknown): unknown {
     const result = new Ref(valueCopy(array));
-    if (is_null(this.get(array, key))) this.set(result, key, value_);
+    if (is_null(this.get(array, key))) this.set(result, key, value);
     return result.value;
   }
 
   /** Get an array item using dot notation, binding PHP parameters before lookup. */
+  static array(array: object, key: unknown, defaultValue?: unknown): object;
   static array(_array: unknown, _key: unknown, _defaultValue: unknown = null): unknown {
     const fn = "Illuminate\\Support\\Arr::array";
     const [array, key, defaultValue] = bindPhpArguments(fn, [
@@ -200,6 +201,7 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Get a boolean item using dot notation, binding PHP parameters before lookup. */
+  static boolean(array: object, key: unknown, defaultValue?: unknown): boolean;
   static boolean(_array: unknown, _key: unknown, _defaultValue: unknown = null): boolean {
     const fn = "Illuminate\\Support\\Arr::boolean";
     const [array, key, defaultValue] = bindPhpArguments(fn, [
@@ -436,6 +438,7 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Get a float item using dot notation, binding PHP parameters before lookup. */
+  static float(array: object, key: unknown, defaultValue?: unknown): number | PhpFloat;
   static float(_array: unknown, _key: unknown, _defaultValue: unknown = null): number | PhpFloat {
     const fn = "Illuminate\\Support\\Arr::float";
     const [array, key, defaultValue] = bindPhpArguments(fn, [
@@ -620,6 +623,7 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Get an integer item using dot notation, binding PHP parameters before lookup. */
+  static integer(array: object, key: unknown, defaultValue?: unknown): number | bigint;
   static integer(_array: unknown, _key: unknown, _defaultValue: unknown = null): number | bigint {
     const fn = "Illuminate\\Support\\Arr::integer";
     const [array, key, defaultValue] = bindPhpArguments(fn, [
@@ -635,6 +639,7 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Determine whether an array has keys other than sequential integers starting at zero. */
+  static isAssoc(array: object): boolean;
   static isAssoc(array: unknown): boolean {
     [array] = bindPhpArguments("Illuminate\\Support\\Arr::isAssoc", [{ name: "array", type: "array" }], [...arguments]);
     return !array_is_list(array);
@@ -665,7 +670,7 @@ export class Arr extends mixin(null, Macroable) {
 
   /** Prepend a string to each key. */
   static prependKeysWith(array: unknown, prependWith: string): unknown {
-    return this.mapWithKeys(array, (item: unknown, key: unknown) => new PhpArray([[prependWith + toPhpString(key), item]]));
+    return this.mapWithKeys(array as object, (item: unknown, key: unknown) => new PhpArray([[prependWith + toPhpString(key), item]]));
   }
 
   /** Get a subset of the items from the given array: the entries whose key is one of `keys`. */
@@ -686,7 +691,7 @@ export class Arr extends mixin(null, Macroable) {
   static select(array: unknown, keys: unknown): unknown {
     keys = this.wrap(keys);
 
-    return this.map(array, (item: unknown) => {
+    return this.map(array as object, (item: unknown) => {
       const result = new PhpArray();
 
       for (const key of iterateValues(keys)) {
@@ -705,13 +710,13 @@ export class Arr extends mixin(null, Macroable) {
    * Pluck an array of values from an array: each item's `value` (a "dot" key, a list of segments, or a Closure of the
    * item), keyed by its `key` when one is given (a `__toString` object key is its string).
    */
-  static pluck(array: unknown, value_: unknown, key: unknown = null): unknown {
+  static pluck(array: unknown, value: unknown, key: unknown = null): unknown {
     const results = new PhpArray();
 
-    [value_, key] = this.explodePluckParameters(value_, key);
+    [value, key] = this.explodePluckParameters(value, key);
 
     for (const item of iterateValues(array)) {
-      const itemValue = value_ instanceof Closure ? callCallable(value_, valueCopy(item)) : data_get(item, value_);
+      const itemValue = value instanceof Closure ? callCallable(value, valueCopy(item)) : data_get(item, value);
 
       // If the key is "null", we will just append the value to the array and keep
       // looping. Otherwise we will key the array using the value of the key we
@@ -733,16 +738,16 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Explode the "value" and "key" arguments passed to "pluck": a string is its "dot" segments. */
-  protected static explodePluckParameters(value_: unknown, key: unknown): [unknown, unknown] {
-    value_ = is_string(value_) ? explode(".", value_) : value_;
+  protected static explodePluckParameters(value: unknown, key: unknown): [unknown, unknown] {
+    value = is_string(value) ? explode(".", value) : value;
 
     key = key === null || is_array(key) || key instanceof Closure ? key : explode(".", key);
 
-    return [value_, key];
+    return [value, key];
   }
 
   /** Run a map over each of the items in the array; the callback gets each value and its key. */
-  static map<R>(array: unknown, callback: SyncCallable<[value: any, key: any], R>): unknown {
+  static map<R>(array: object, callback: SyncCallable<[value: any, key: any], R>): unknown {
     const keys = array_keys(array);
 
     let items: unknown;
@@ -759,7 +764,7 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Run an associative map over an array; later occurrences replace earlier values of the same key. */
-  static mapWithKeys<R>(array: unknown, callback: SyncCallable<[value: any, key: any], R>): unknown {
+  static mapWithKeys<R>(array: object, callback: SyncCallable<[value: any, key: any], R>): unknown {
     const result = new PhpArray();
     for (const [key, value_] of arrayEntries(array as object)) {
       const assoc = callCallable(callback, valueCopy(value_), key);
@@ -774,7 +779,7 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Map array chunks after appending each chunk's key to its arguments. */
-  static mapSpread<R>(array: unknown, callback: SyncCallable<any[], R>): unknown {
+  static mapSpread<R>(array: object, callback: SyncCallable<any[], R>): unknown {
     return this.map(array, (chunk: unknown, key: unknown) => {
       const ref = new Ref(chunk);
       arrayAppend(ref, key);
@@ -786,14 +791,14 @@ export class Arr extends mixin(null, Macroable) {
    * Push an item onto the beginning of an array: with two arguments it is prepended at key 0 (int keys renumbered),
    * with a `key` it is set first under that key (`[$key => $value] + $array`).
    */
-  static prepend(array: unknown, value_: unknown, key: unknown = null): unknown {
+  static prepend(array: unknown, value: unknown, key: unknown = null): unknown {
     if (arguments.length === 2) {
       const ref = new Ref(valueCopy(array));
-      array_unshift(ref, valueCopy(value_));
+      array_unshift(ref, valueCopy(value));
       array = ref.value;
     } else {
       // PHP's `[$key => $value] + $array`: the left-hand keys win.
-      const union = new PhpArray([[key as never, valueCopy(value_)]]);
+      const union = new PhpArray([[key as never, valueCopy(value)]]);
       for (const [itemKey, item] of arrayEntries(valueCopy(array) as object)) {
         if (!union.has(itemKey)) {
           union.set(itemKey, item);
@@ -871,8 +876,8 @@ export class Arr extends mixin(null, Macroable) {
    * Set a dot-keyed item through a Ref (DIV-9.2), or replace the root for a null key.
    * Returns the innermost modified value; a root-leaf ArrayAccess assignment returns its object handle.
    */
-  static set(array: Ref<unknown>, key: unknown, value_: unknown): unknown {
-    const supplied = valueCopy(value_);
+  static set(array: Ref<unknown>, key: unknown, value: unknown): unknown {
+    const supplied = valueCopy(value);
     if (is_null(key)) {
       array.value = supplied;
       return valueCopy(supplied);
@@ -928,6 +933,7 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Append values through the caller's Ref; declared array return validation follows mutation. */
+  static push(array: Ref<unknown>, key: unknown, ...values: unknown[]): object;
   static push(array: Ref<unknown>, _key: unknown, ...values: unknown[]): unknown {
     const fn = "Illuminate\\Support\\Arr::push";
     const args = Array.from(arguments);
@@ -937,7 +943,7 @@ export class Arr extends mixin(null, Macroable) {
       { name: "array", type: "ArrayAccess|array" },
       { name: "key", type: "string|int|null" },
     ], args);
-    const target = new Ref(this.array(array.value, key, []));
+    const target = new Ref(this.array(array.value as object, key, []));
     array_push(target, ...boundValues);
     return phpReturn(fn, "array", this.set(array, key, target.value));
   }
@@ -968,6 +974,8 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Recursively sort array keys or list values, with sort flags and an optional direction (AD-26). */
+  static sortRecursive(array: unknown, options?: number, descending?: boolean | SortDirection): unknown;
+  static sortRecursive(array: unknown, options?: { options?: number; descending?: boolean | SortDirection }): unknown;
   static sortRecursive(array: unknown, options: number | { options?: number; descending?: boolean | SortDirection } = SORT_REGULAR, descending: boolean | SortDirection = false): unknown {
     if (arguments.length === 0) throw new ArgumentCountError("Too few arguments to function Illuminate\\Support\\Arr::sortRecursive(), 0 passed and at least 1 expected");
     if (isOptionsObject(options)) { descending = options.descending ?? false; options = options.options ?? SORT_REGULAR; }
@@ -996,6 +1004,7 @@ export class Arr extends mixin(null, Macroable) {
   }
 
   /** Get a string item using dot notation, binding PHP parameters before lookup. */
+  static string(array: object, key: unknown, defaultValue?: unknown): string;
   static string(_array: unknown, _key: unknown, _defaultValue: unknown = null): string {
     const fn = "Illuminate\\Support\\Arr::string";
     const [array, key, defaultValue] = bindPhpArguments(fn, [

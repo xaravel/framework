@@ -88,7 +88,7 @@ import { Enumerable } from "../Enumerable";
 import { enum_value } from "../functions";
 import { data_get, data_has } from "../helpers";
 import { HigherOrderCollectionProxy } from "../HigherOrderCollectionProxy";
-import { callCallable, type NonFunctionCallable, type SyncCallback, type SyncCallable, type ValueOrSyncCallback } from "../support/callables";
+import { callCallable, isOptionsObject, type NonFunctionCallable, type SyncCallback, type SyncCallable, type ValueOrSyncCallback } from "../support/callables";
 
 /** Support's class_basename arrives in Epic 19; preserve the real dependency at its call site. */
 function class_basename(_class: string): never { throw new BlockedByComponentError("support"); }
@@ -254,9 +254,18 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
     return range.unless(looseEquals(callback, null)).map(callback) as R;
   }
 
-  /** Create a new collection by decoding a JSON string. */
-  static fromJson<R>(this: CollectionClass<R>, json: string, depth: number = 512, flags: number = 0, ...args: unknown[]): R {
-    return new this(jsonDecode(json, true, depth, flags), ...args);
+  /**
+   * Create a new collection by decoding a JSON string. Also takes AD-26's options object `{ depth, flags }` after the
+   * JSON: PHP's `$depth` is an int, so a plain object there is never the depth; the arguments after it are `args`.
+   */
+  static fromJson<R>(this: CollectionClass<R>, json: string, depth?: number, flags?: number, ...args: unknown[]): R;
+  static fromJson<R>(this: CollectionClass<R>, json: string, options?: { depth?: number; flags?: number }, ...args: unknown[]): R;
+  static fromJson<R>(this: CollectionClass<R>, json: string, depth: unknown = 512, flags: unknown = 0, ...args: unknown[]): R {
+    if (isOptionsObject(depth)) {
+      args = arguments.length > 2 ? [flags, ...args] : [];
+      ({ depth = 512, flags = 0 } = depth as { depth?: number; flags?: number });
+    }
+    return new this(jsonDecode(json, true, depth as number, flags as number), ...args);
   }
 
   /** Get the average non-null resolved value. */
@@ -307,12 +316,12 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
   }
 
   /** Map each value into a constructor or backed enum case. */
-  mapInto<T extends EnumeratesValuesHost>(this: T, class_: (new (...args: any[]) => unknown) | string): T {
-    if (is_subclass_of(class_, fqcn(BackedEnum))) {
-      return this.map((value: unknown) => callCallable([class_, "from"], value)) as T;
+  mapInto<T extends EnumeratesValuesHost>(this: T, className: (new (...args: any[]) => unknown) | string): T {
+    if (is_subclass_of(className, fqcn(BackedEnum))) {
+      return this.map((value: unknown) => callCallable([className, "from"], value)) as T;
     }
     return this.map((value: unknown, key: unknown) => {
-      const klass = typeof class_ === "string" ? resolveClass(class_) : class_;
+      const klass = typeof className === "string" ? resolveClass(className) : className;
       return new (klass as new (...args: unknown[]) => unknown)(value, key);
     }) as T;
   }
@@ -380,8 +389,8 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
   }
 
   /** Pass this collection to a class constructor. */
-  pipeInto<R>(class_: new (collection: this) => R): R {
-    return new class_(this);
+  pipeInto<R>(className: new (collection: this) => R): R {
+    return new className(this);
   }
 
   /** Pass this collection through each callback in order. */
@@ -649,6 +658,35 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
     }) as T;
   }
 
+  /**
+   * Return only unique items from the collection array, by `==` or, when `strict`, by `===`: the items whose
+   * `valueRetriever(key)` value was not seen before. Also takes AD-26's options object `{ key, strict }`: PHP's `$key`
+   * is a callable, a key string or null, so a plain object there is the options object, unless its `__invoke` is a
+   * function (`isOptionsObject`).
+   */
+  unique<T, R>(this: T, options?: { key?: SyncCallback<[value: any, key: any], R> | string | null; strict?: boolean }): T;
+  unique<T, R>(this: T, key: SyncCallback<[value: any, key: any], R>, strict?: boolean): T;
+  unique<T, K>(this: T, key?: ValueOrSyncCallback<K>, strict?: boolean): T;
+  unique(key: unknown = null, strict: boolean = false): unknown {
+    if (isOptionsObject(key)) {
+      ({ key = null, strict = false } = key as { key?: unknown; strict?: boolean });
+    }
+
+    const callback = this.valueRetriever(key);
+
+    const exists: unknown[] = [];
+
+    return (this as unknown as { reject(callback: ItemCallback): unknown }).reject((item: unknown, itemKey: unknown) => {
+      const id = callback(item, itemKey);
+      if (in_array(id, exists, strict)) {
+        return true;
+      }
+
+      exists.push(id);
+      return null;
+    });
+  }
+
   /** Return only unique items from the collection array using strict comparison (PHP's `===`). */
   uniqueStrict<T extends EnumeratesValuesHost, R>(this: T & EnumeratesValues, key: SyncCallback<[value: any, key: any], R>): T;
   uniqueStrict<T extends EnumeratesValuesHost, K>(this: T & EnumeratesValues, key?: ValueOrSyncCallback<K>): T;
@@ -667,7 +705,7 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
   }
 
   /** Convert the object into something JSON serializable: each item's `jsonSerialize()`, decoded `toJson()` or `toArray()`. */
-  jsonSerialize(this: EnumeratesValuesHost): any {
+  jsonSerialize(this: EnumeratesValuesHost): object {
     return array_map((value: unknown) => {
       if (value instanceof JsonSerializable) {
         return value.jsonSerialize();
@@ -679,7 +717,7 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
         return value.toArray();
       }
       return value;
-    }, this.all());
+    }, this.all()) as object;
   }
 
   /** Get the collection of items as JSON. */

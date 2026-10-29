@@ -135,7 +135,7 @@ import { EnumeratesValues } from "./Traits/EnumeratesValues";
 import { Arr } from "./Arr";
 import { Enumerable, type SortByDescCallback } from "./Enumerable";
 import { enum_value } from "./functions";
-import { data_get, value } from "./helpers";
+import { data_get, value, value as resolveValue } from "./helpers";
 import type { HigherOrderCollectionProxy } from "./HigherOrderCollectionProxy";
 import { ItemNotFoundException } from "./ItemNotFoundException";
 import { LazyCollection } from "./LazyCollection";
@@ -189,7 +189,7 @@ function withCopies(callback: unknown): ItemCallback {
 }
 
 /** A collection of items: Laravel's `Illuminate\Support\Collection`. */
-export class Collection extends mixin(null, EnumeratesValues, Macroable) {
+export class Collection extends mixin(null, EnumeratesValues, Macroable) implements Enumerable, CanBeEscapedWhenCastToString {
   /** The items contained in the collection. */
   protected items: PhpArray;
 
@@ -304,8 +304,8 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Get the median of the non-null values of a key. */
-  median(key_: unknown = null): unknown {
-    const values = (key_ !== null ? this.pluck(key_) : this).reject((item: unknown) => item === null).sort().values();
+  median(key: unknown = null): unknown {
+    const values = (key !== null ? this.pluck(key) : this).reject((item: unknown) => item === null).sort().values();
     const count = values.count();
     if (count === 0) return null;
     const middle = Number(intdiv(count, 2));
@@ -326,7 +326,9 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
     return this.newInstance(dictionary);
   }
 
-  /** Return complete sliding windows while preserving inner keys. */
+  /** Return complete sliding windows while preserving inner keys; also takes AD-26's options object `{ size, step }`. */
+  sliding(size?: number, step?: number): this;
+  sliding(options?: { size?: number; step?: number }): this;
   sliding(size: number | { size?: number; step?: number } = 2, step: number = 1): this {
     if (isOptionsObject(size)) { step = size.step ?? 1; size = size.size ?? 2; }
     if (size < 1) throw new InvalidArgumentException("Size value must be at least 1.");
@@ -368,7 +370,9 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
     return this.newInstance(this.lazy().chunkWhile(callback).mapInto(this.constructor as new (...args: any[]) => this));
   }
 
-  /** Sort keys with PHP sort flags, preserving values. */
+  /** Sort keys with PHP sort flags, preserving values; also takes AD-26's options object `{ options, descending }`. */
+  sortKeys(options?: number, descending?: boolean | SortDirection): this;
+  sortKeys(options?: { options?: number; descending?: boolean | SortDirection }): this;
   sortKeys(options: number | { options?: number; descending?: boolean | SortDirection } = SORT_REGULAR, descending: boolean | SortDirection = false): this {
     if (isOptionsObject(options)) { descending = options.descending ?? false; options = options.options ?? SORT_REGULAR; }
     const items = new Ref<unknown>(valueCopy(this.items));
@@ -437,10 +441,19 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
     return sorted.filter((value_: unknown) => looseEquals(value_, highestValue)).sort().keys().all();
   }
 
-  /** Return only unique items from the collection array, by `==` or, when `strict`, by `===`. */
+  /**
+   * Return only unique items from the collection array, by `==` or, when `strict`, by `===`. Also takes AD-26's options
+   * object `{ key, strict }`: PHP's `$key` is a callable, a key string or null, so a plain object there is the options
+   * object, unless its `__invoke` is a function, which makes it a callable (`isOptionsObject`).
+   */
+  unique<T, R>(this: T, options?: { key?: SyncCallback<[value: any, key: any], R> | string | null; strict?: boolean }): T;
   unique<T, R>(this: T, key: SyncCallback<[value: any, key: any], R>, strict?: boolean): T;
   unique<T, K>(this: T, key?: ValueOrSyncCallback<K>, strict?: boolean): T;
   unique(key: unknown = null, strict: boolean = false): this {
+    if (isOptionsObject(key)) {
+      ({ key = null, strict = false } = key as { key?: unknown; strict?: boolean });
+    }
+
     if (key === null && strict === false) {
       return this.newInstance(array_unique(this.items, SORT_REGULAR));
     }
@@ -532,9 +545,9 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Determine if an item exists, using strict comparison (PHP's `===`); with a value, by an item's `key`. */
-  containsStrict(key: unknown, value_: unknown = null): boolean {
+  containsStrict(key: unknown, value: unknown = null): boolean {
     if (arguments.length === 2) {
-      return this.contains((item: unknown) => identical(data_get(item, key), value_));
+      return this.contains((item: unknown) => identical(data_get(item, key), value));
     }
 
     if (this.useAsCallable(key)) {
@@ -591,14 +604,14 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Get an item from the collection by key or add it to the collection (`value(value)`) if it does not exist. */
-  getOrPut(key: unknown, value_: unknown): unknown {
+  getOrPut(key: unknown, value: unknown): unknown {
     if (array_key_exists(key ?? "", this.items)) {
       return valueCopy(this.items.get((key ?? "") as PhpKeyInput));
     }
 
-    this.offsetSet(key, (value_ = value(value_)));
+    this.offsetSet(key, (value = resolveValue(value)));
 
-    return value_;
+    return value;
   }
 
   /** Determine if all of the keys exist in the collection (a list, or the keys as arguments). */
@@ -742,8 +755,8 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Get the values of a given key ("dot" notation, segments or a Closure), keyed by `key` when given. */
-  pluck(value_: unknown, key: unknown = null): this {
-    return this.newInstance(Arr.pluck(this.items, value_, key));
+  pluck(value: unknown, key: unknown = null): this {
+    return this.newInstance(Arr.pluck(this.items, value, key));
   }
 
   /** Create a new collection consisting of every n-th element, from `offset`. Throws for a step below 1. */
@@ -832,9 +845,9 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Push an item onto the beginning of the collection, under `key` when one is given. */
-  prepend(value_: unknown, key: unknown = null): this {
+  prepend(value: unknown, key: unknown = null): this {
     void key;
-    this.items = asItems(Arr.prepend(this.items, ...((arguments.length > 1 ? [...arguments] : [value_]) as [unknown, unknown?])));
+    this.items = asItems(Arr.prepend(this.items, ...((arguments.length > 1 ? [...arguments] : [value]) as [unknown, unknown?])));
 
     return this;
   }
@@ -867,8 +880,8 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Put an item in the collection by key. */
-  put(key: unknown, value_: unknown): this {
-    this.offsetSet(key, value_);
+  put(key: unknown, value: unknown): this {
+    this.offsetSet(key, value);
 
     return this;
   }
@@ -902,17 +915,17 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Search the collection for a value (`==`, or `===` when `strict`) or a callback's match: its key, or `false`. */
-  search(value_: unknown, strict: boolean = false): PhpArrayKey | false {
-    if (!this.useAsCallable(value_)) {
-      return array_search(value_, this.items, strict);
+  search(value: unknown, strict: boolean = false): PhpArrayKey | false {
+    if (!this.useAsCallable(value)) {
+      return array_search(value, this.items, strict);
     }
 
-    return array_find_key(this.items, withCopies(value_)) ?? false;
+    return array_find_key(this.items, withCopies(value)) ?? false;
   }
 
   /** Get the item before the given item (by `search`), or `null`. */
-  before(value_: unknown, strict: boolean = false): any {
-    const key = this.search(value_, strict);
+  before(value: unknown, strict: boolean = false): any {
+    const key = this.search(value, strict);
 
     if (key === false) {
       return null;
@@ -929,8 +942,8 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Get the item after the given item (by `search`), or `null`. */
-  after(value_: unknown, strict: boolean = false): any {
-    const key = this.search(value_, strict);
+  after(value: unknown, strict: boolean = false): any {
+    const key = this.search(value, strict);
 
     if (key === false) {
       return null;
@@ -1089,8 +1102,8 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
    * Pad collection to the specified length with a value (`array_pad`): on the right for a positive `size`, on the left
    * for a negative one; integer keys are renumbered. Throws PHP's `ValueError` beyond PHP's array size limit.
    */
-  pad(size: number, value_: unknown): this {
-    return this.newInstance(array_pad(this.items, size, value_));
+  pad(size: number, value: unknown): this {
+    return this.newInstance(array_pad(this.items, size, value));
   }
 
   /**
@@ -1664,6 +1677,11 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
     return this;
   }
 
+  /** Get a base Support collection instance from this collection: a new `Collection` of its items (`new self($this)`). */
+  toBase(): Collection {
+    return new Collection(this);
+  }
+
   /** Determine if an item exists at an offset: PHP's `isset`, so a `null` item is absent. */
   offsetExists(offset: unknown): boolean {
     return this.items.has(offset as PhpKeyInput) && this.items.get(offset as PhpKeyInput) !== null;
@@ -1675,11 +1693,11 @@ export class Collection extends mixin(null, EnumeratesValues, Macroable) {
   }
 
   /** Set the item at a given offset; a `null` offset appends, as `$c[] = $value` does. */
-  offsetSet(offset: unknown, value_: unknown): void {
+  offsetSet(offset: unknown, value: unknown): void {
     if (offset === null || offset === undefined) {
-      this.items.push(valueCopy(value_));
+      this.items.push(valueCopy(value));
     } else {
-      this.items.set(offset as PhpKeyInput, valueCopy(value_));
+      this.items.set(offset as PhpKeyInput, valueCopy(value));
     }
   }
 
