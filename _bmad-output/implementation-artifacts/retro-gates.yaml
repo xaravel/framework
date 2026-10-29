@@ -104,5 +104,11 @@ epic-14:
   # epic-14-item-18: built and reviewed in #529 (Fidelity current), but it changes the Expectations line the ruling
   # names on a planning/* branch, and amendment 2026-10-22 keeps that `planning scope:` violation blocking: the
   # Maintainer merges #529 (or routes the line otherwise).
+  # epic-14-item-19: every genuine Collections gate finding is fixed in #531 (gate 144 -> 64, Fidelity current). Left:
+  # U1, the 17 `...moreKeys` / `...moreItems` rest parameters (Upstream reads func_get_args(); Ported Tests pass the
+  # extra arguments; no DIV covers it), and U2, Enumerable::reduceWithKeys (Upstream lacks it; XT-collections-11's
+  # fixture uses it). Both need a Maintainer ruling (a DIV clause, a tool rule, or a change); #531's body lists them
+  # with the E/O/T lines the monitor cites or routes.
   waiting_on_maintainer:
     - epic-14-item-18-reflection-class-attributes
+    - epic-14-item-19-collections-api-surface-findings
