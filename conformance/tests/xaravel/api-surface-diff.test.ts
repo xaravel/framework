@@ -1109,3 +1109,94 @@ xaravelTest(
   },
   TIMEOUT,
 );
+
+// ---------------------------------------------------------------------------
+// XT-conformance-268 (ESC-14.8-1: members supplied through extends, mixin traits and export aliases)
+
+/** A temp root holding the `mixins` fixture: `packages/mixins`, `conformance/api-surface/mixins.jsonl`, no citations and no DIV-12 pairs. */
+function mixinsRoot(): string {
+  const dir = tempDir("xaravel-api-surface-mixins-");
+  cpSync(join(FIXTURES, "mixins"), join(dir, "packages", "mixins"), { recursive: true });
+  write(dir, { "conformance/api-surface/additions.jsonl": "", "conformance/api-surface/exceptions.jsonl": "", "conformance/scans/div12-pairs.jsonl": "" });
+  cpSync(join(FIXTURES, "mixins.jsonl"), join(dir, "conformance", "api-surface", "mixins.jsonl"));
+  cpSync(join(root, "conformance", "api-surface", "schema.json"), join(dir, "conformance", "api-surface", "schema.json"));
+  return dir;
+}
+
+xaravelTest(
+  "XT-conformance-268",
+  "a registration's members include those its heritage supplies, read from the emitted .d.ts in PHP's order (its own, then each mixin() trait's, then its parent's, transitively and across packages) and never extra, and a function exported through an export { f as g } specifier counts under its exported name; a member nothing supplies is still missing, and a supplied member's parameter names and defaults are still checked (ESC-14.8-1, AD-15)",
+  () => {
+    // The CLI over the fixture, with the repository's tsc: Widget extends mixin(Base, Greets, Counts), Counts extends
+    // mixin(null, Resets), Gadget extends Widget. Every supplied member counts (a trait's, a nested trait's, a trait's
+    // static, the unregistered base's, a registered parent's, transitively); the class's own member wins over a
+    // trait's, and a trait's over the base's; no supplied member is extra. What nothing declares stays missing, and a
+    // supplied member's parameter names are checked, on the trait and on the class using it.
+    const dir = mixinsRoot();
+    const run = cli(dir, ["--details", "mixins"]);
+    expect(run.stderr).toBe("");
+    expect(run.exitCode).toBe(0);
+    const findings = [
+      String.raw`mixins: missing method Mix\Gadget::explode`,
+      String.raw`mixins: mismatch method Mix\Traits\Counts::tally: parameter 2 is step, Upstream by`,
+      String.raw`mixins: mismatch method Mix\Widget::tally: parameter 2 is step, Upstream by`,
+      String.raw`mixins: mismatch method Mix\Widget::rename: parameter 2 is to, Upstream into`,
+      String.raw`mixins: missing method Mix\Widget::vanish`,
+      String.raw`mixins: mismatch function Mix\hum: parameter 1 is words, Upstream text`,
+      String.raw`mixins: missing function Mix\whisper`,
+    ];
+    expect(run.stdout).toBe([...findings, "api-surface mixins: 27 Upstream, 20 matched, 3 missing, 0 renamed, 0 extra, 4 mismatched, 0 div12; 7 unexplained (AD-15)", ""].join("\n"));
+    // tsc emitted `extends mixin(…)` as a `Mixed` const: the form the walk reads.
+    expect(readFileSync(join(dir, ".cache", "tsc", "mixins", "src", "Widget.d.ts"), "utf8")).toContain("declare const Widget_base: import(\"./support/mixin\").Mixed<typeof Base, readonly [typeof Greets, typeof Counts]>;");
+    const gate = cli(dir, ["--gate", "mixins"]);
+    expect([gate.exitCode, gate.stdout]).toEqual([1, [...findings, "api-surface:gate mixins: 7 unexplained (AD-15)", ""].join("\n")]);
+    const schema = readSurfaceSchema(root);
+    for (const surface of readFileSync(join(FIXTURES, "mixins.jsonl"), "utf8").trimEnd().split("\n")) {
+      expect([surface, defErrors(JSON.parse(surface), "surface", schema)]).toEqual([surface, []]);
+    }
+
+    // The pure diff: a trait from another package (`@xaravel/other`), read from its declarations (`packageDeclarations`)
+    // with its defaults from its sources (`packageSources`). The registration's own unmatched member is still extra.
+    const A = "X\\A";
+    const hello = (defaultValue: string): UpstreamRecord => method(A, "hello", [p("name"), p("loud", { optional: true, default: defaultValue })]);
+    const dts = 'import { T } from "@xaravel/other";\ndeclare const A_base: import("@xaravel/runtime").Mixed<null, readonly [typeof T]>;\nexport declare class A extends A_base {\n  own(): void;\n}\n';
+    const otherDts = [
+      { file: "src/index.ts", text: 'export { T } from "./T";\n' },
+      { file: "src/T.ts", text: "export declare class T {\n  hello(name: unknown, loud?: boolean): unknown;\n  helper(): void;\n}\n" },
+    ];
+    const otherSources = [{ file: "src/T.ts", text: "export class T {\n  hello(name: unknown, loud = false): unknown {\n    return loud ? name : null;\n  }\n  helper(): void {}\n}\n" }];
+    const cross = (upstream: UpstreamRecord[], extra: Partial<DiffInput>): string[] =>
+      diffComponent({
+        component: "x",
+        upstream: [decl(A), ...upstream],
+        additions: [],
+        exceptions: [],
+        div12: [],
+        declarations: [{ file: "src/A.ts", text: dts }],
+        sources: [{ file: "src/A.ts", text: 'export class A {}\nregisterClass("X\\\\A", A);\n' }],
+        ...extra,
+      }).items.map((item) => renderItem("x", item));
+    const other: Partial<DiffInput> = { packageDeclarations: (pkg) => (pkg === "other" ? otherDts : []), packageSources: (pkg) => (pkg === "other" ? otherSources : []) };
+    expect(cross([hello("false")], other)).toEqual(["x: extra method X\\A::own"]);
+    expect(cross([hello("true")], other)).toEqual(["x: mismatch method X\\A::hello: parameter 2 default false, Upstream true", "x: extra method X\\A::own"]);
+    // Without that package's declarations nothing is supplied: missing.
+    expect(cross([hello("false")], {})).toEqual(["x: missing method X\\A::hello", "x: extra method X\\A::own"]);
+
+    // An interface's `extends` supplies members too: a contract token whose interface extends another.
+    const C = "X\\Child";
+    const iface = diffComponent({
+      component: "x",
+      upstream: [{ fqcn: C, kind: "interface", member: null }, method(C, "get", [p("key")]), method(C, "put", [p("key")])],
+      additions: [],
+      exceptions: [],
+      div12: [],
+      declarations: [
+        { file: "src/Base.ts", text: "export interface Base {\n  get(key: string): unknown;\n}\n" },
+        { file: "src/Child.ts", text: 'import { Base } from "./Base";\nexport interface Child extends Base {\n}\nexport declare const Child: symbol;\n' },
+      ],
+      sources: [{ file: "src/Child.ts", text: 'export const Child = contract("X\\\\Child");\n' }],
+    }).items.map((item) => renderItem("x", item));
+    expect(iface).toEqual(["x: missing method X\\Child::put"]);
+  },
+  TIMEOUT,
+);
