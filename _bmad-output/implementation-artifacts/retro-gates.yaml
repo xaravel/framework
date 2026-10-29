@@ -100,5 +100,9 @@ epic-13:
   checkpoint_approved: false
   waiting_on_maintainer: []
 epic-14:
-  # No retrospective yet: this entry routes the Maintainer-ruled action item that waits on a ruling (step D).
-  waiting_on_maintainer: []
+  # No retrospective yet: this entry routes the Maintainer-ruled action items that wait on the Maintainer (step D).
+  # epic-14-item-18: built and reviewed in #529 (Fidelity current), but it changes the Expectations line the ruling
+  # names on a planning/* branch, and amendment 2026-10-22 keeps that `planning scope:` violation blocking: the
+  # Maintainer merges #529 (or routes the line otherwise).
+  waiting_on_maintainer:
+    - epic-14-item-18-reflection-class-attributes
