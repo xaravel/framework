@@ -13,11 +13,11 @@ import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
+import { Collection } from "@xaravel/collections";
 import { contract } from "@xaravel/contracts";
 import { Reflector, ReflectsClosures } from "@xaravel/reflection";
 import {
   allOf,
-  BlockedByComponentError,
   fqcn,
   inject,
   mixin,
@@ -279,7 +279,7 @@ function parameterOf(klass: object, method: string): ReflectionParameter {
 
 xaravelTest(
   "XT-reflection-1",
-  "FR-26 (Reflection): for a method declared `@inject({ event: OrderShipped })` and a closure declared `inject({ event: OrderShipped }, fn)`, getParameterClassName / firstClosureParameterType give fqcn(OrderShipped) from the metadata; builtins (String, Number, Boolean, primitive) and unions give null, getParameterClassNames lists a union's classes without builtins, `self` / `parent` resolve against the declaring class (`parent` without a registered parent stays 'parent'), a variadic parameter gives null in closureParameterTypes and makes firstClosureParameterType / firstClosureParameterTypes throw the missing-type-hint RuntimeException, while getParameterClassName gives its element class's fqcn as PHP does, closureReturnTypes keeps only class return types; isParameterSubclassOf resolves a contract-token hint as PHP's interface_exists does, true against the token's parent and false against itself or an unrelated token, and a class hint is a subclass of a token the class implements through its brand getter, given as the token or its FQCN (ESC-13.1-7); isParameterBackedEnumWithStringBackingType is true for a string-backed AD-26 enum and false for an int-backed, a pure enum, a non-enum class, a union, an untyped or a builtin parameter (ESC-13.1-8); isCallable follows DIV-9.14's edges (under syntaxOnly, an array whose first element is a string, an object or a constructor, registered or not, is callable without a method lookup) and never throws; getClassAttribute builds every match first and gives the first or null, and getClassAttributes throws BlockedByComponentError(collections)",
+  "FR-26 (Reflection): for a method declared `@inject({ event: OrderShipped })` and a closure declared `inject({ event: OrderShipped }, fn)`, getParameterClassName / firstClosureParameterType give fqcn(OrderShipped) from the metadata; builtins (String, Number, Boolean, primitive) and unions give null, getParameterClassNames lists a union's classes without builtins, `self` / `parent` resolve against the declaring class (`parent` without a registered parent stays 'parent'), a variadic parameter gives null in closureParameterTypes and makes firstClosureParameterType / firstClosureParameterTypes throw the missing-type-hint RuntimeException, while getParameterClassName gives its element class's fqcn as PHP does, closureReturnTypes keeps only class return types; isParameterSubclassOf resolves a contract-token hint as PHP's interface_exists does, true against the token's parent and false against itself or an unrelated token, and a class hint is a subclass of a token the class implements through its brand getter, given as the token or its FQCN (ESC-13.1-7); isParameterBackedEnumWithStringBackingType is true for a string-backed AD-26 enum and false for an int-backed, a pure enum, a non-enum class, a union, an untyped or a builtin parameter (ESC-13.1-8); isCallable follows DIV-9.14's edges (under syntaxOnly, an array whose first element is a string, an object or a constructor, registered or not, is callable without a method lookup) and never throws; getClassAttribute builds every match first and gives the first or null, and getClassAttributes returns a Collection of the class's instances, or, with includeParents, a Collection keyed by each walked class's FQCN whose values are Collections, building every walked class's matches in walk order, for a class or an instance, and throws ReflectionException for an unknown FQCN",
   () => {
     // The declared class, from a method's and a closure's inject metadata.
     Assert.assertSame(fqcn(OrderShipped), Reflector.getParameterClassName(parameterOf(Listener, "handle")));
@@ -398,10 +398,24 @@ xaravelTest(
     Assert.assertNull(Reflector.getClassAttribute(TaggedChild, Unused, true));
     Assert.assertTrue(thrownBy(() => Reflector.getClassAttribute("Missing\\Name", Tag)) instanceof ReflectionException);
 
-    // getClassAttributes returns a Collection, which Epic 14 builds.
-    const blocked = thrownBy(() => Reflector.getClassAttributes(TaggedChild, Tag));
-    Assert.assertTrue(blocked instanceof BlockedByComponentError);
-    Assert.assertSame("collections", (blocked as BlockedByComponentError).component);
+    // getClassAttributes: a Collection of the class's instances, or keyed by FQCN in walk order with its parents.
+    built.length = 0;
+    const own = Reflector.getClassAttributes(TaggedChild, Tag);
+    Assert.assertInstanceOf(Collection, own);
+    Assert.assertSame(["child-1", "child-2"], own.all().map((instance: Tag) => instance.value));
+    Assert.assertSame(["child-1", "child-2"], built);
+    built.length = 0;
+    const withParents = Reflector.getClassAttributes(TaggedChild, Tag, true);
+    Assert.assertInstanceOf(Collection, withParents);
+    Assert.assertSame([fqcn(TaggedChild), fqcn(TaggedParent)], withParents.keys().all());
+    Assert.assertTrue(withParents.every((list: unknown) => list instanceof Collection));
+    Assert.assertSame(["child-1", "child-2", "parent-1"], built);
+    built.length = 0;
+    Assert.assertSame(["child-1", "child-2"], Reflector.getClassAttributes(new TaggedChild(), Tag).all().map((instance: Tag) => instance.value));
+    Assert.assertSame(["child-1", "child-2"], built);
+    Assert.assertSame([], Reflector.getClassAttributes(TaggedChild, Unused).toArray());
+    Assert.assertSame({ [fqcn(TaggedChild)]: [], [fqcn(TaggedParent)]: [] }, Reflector.getClassAttributes(TaggedChild, Unused, true).toArray());
+    Assert.assertTrue(thrownBy(() => Reflector.getClassAttributes("Missing\\Name", Tag)) instanceof ReflectionException);
   },
 );
 

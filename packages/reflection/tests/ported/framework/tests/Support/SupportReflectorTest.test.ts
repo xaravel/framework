@@ -14,13 +14,12 @@
 //
 // The PHP interfaces `IA` and `IB` are `contract(...)` tokens, which `contract` records so that `isParameterSubclassOf`
 // resolves an interface name (ESC-13.1-7's ruling). testGetClassAttributes reads the `Collection`
-// `getClassAttributes` returns, so its case's `setUp` throws `BlockedByComponentError("collections")` (Collections is
-// built in Epic 14, after reflection's Epic, ESC-13.1-10's ruling). Its body is Upstream's under the mechanical rule
-// (`->map->string` is `.map.string`), read through `CollectionReflector`, a view of `Reflector` typed with the
-// `Collection` members the body calls; Epic 14 removes the view when it unblocks the test.
+// `getClassAttributes` returns; its higher-order reads `->map->string` and `->sum->number` are the `__get` calls PHP
+// makes, `.__get("map").__get("string")` and `.__get("sum").__get("number")` (DIV-12.16).
 import { portedTest, TestCase } from "@xaravel/assert";
 import { contract } from "@xaravel/contracts";
 import { Mailable } from "@xaravel/contracts/mail";
+import type { Collection } from "@xaravel/collections";
 import { Reflector } from "@xaravel/reflection";
 import { BlockedByComponentError, fqcn, inject, parent, registerTestClass, resolveClass } from "@xaravel/runtime";
 import { ReflectionClass } from "@xaravel/runtime/php";
@@ -94,34 +93,12 @@ class SupportReflectorTestBus extends TestCase {
   }
 }
 
-/** The test that reads the `Collection` `getClassAttributes` returns (the Collections Component). */
-class SupportReflectorTestCollections extends TestCase {
-  setUp(): void {
-    throw new BlockedByComponentError("collections");
-  }
-}
-
 /** The tests that reflect `Model` (the Database Component). */
 class SupportReflectorTestDatabase extends TestCase {
   setUp(): void {
     throw new BlockedByComponentError("database");
   }
 }
-
-/** The `Illuminate\\Support\\Collection` members testGetClassAttributes calls (Collections, Epic 14), as types only. */
-interface AttributeCollection {
-  all(): unknown;
-  toArray(): unknown;
-  flatten(): AttributeCollection;
-  keys(): AttributeCollection;
-  readonly map: { readonly string: AttributeCollection };
-  readonly sum: { readonly number: unknown };
-}
-
-/** `Reflector`, with `getClassAttributes` typed as returning that `Collection`; it throws until Epic 14. */
-const CollectionReflector = Reflector as unknown as {
-  getClassAttributes(objectOrClass: object | string, attribute: abstract new (...args: never[]) => unknown, includeParents?: boolean): AttributeCollection;
-};
 
 portedTest(`${ID}::testGetClassName`, { case: SupportReflectorTestMail }, async function () {
   const method = new ReflectionClass(resolveClass("Illuminate\\Support\\Testing\\Fakes\\PendingMailFake")).getMethod("send");
@@ -177,9 +154,7 @@ portedTest(`${ID}::testIsCallable`, { case: SupportReflectorTest }, async functi
   this.assertTrue(Reflector.isCallable(["TotallyMissingClass", "foo"], true));
 });
 
-portedTest(`${ID}::testGetClassAttributes`, { case: SupportReflectorTestCollections }, async function () {
-  const Reflector = CollectionReflector;
-
+portedTest(`${ID}::testGetClassAttributes`, { case: SupportReflectorTest }, async function () {
   // Upstream's `require_once __DIR__.'/Fixtures/ClassesWithAttributes.php'` is this file's import of the fixtures.
   this.assertSame([], Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.UnusedAttr).toArray()); // adapted:DIV-12.15
 
@@ -190,18 +165,18 @@ portedTest(`${ID}::testGetClassAttributes`, { case: SupportReflectorTestCollecti
 
   this.assertSame(
     ["quick", "brown", "fox"],
-    Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.StrAttr).map.string.all(), // adapted:DIV-12.15
+    (Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.StrAttr).__get("map").__get("string") as Collection).all(), // adapted:DIV-12.15 adapted:DIV-12.16
   );
 
   this.assertSame(
     ["quick", "brown", "fox", "lazy", "dog"],
-    Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.StrAttr, true).flatten().map.string.all(), // adapted:DIV-12.15
+    (Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.StrAttr, true).flatten().__get("map").__get("string") as Collection).all(), // adapted:DIV-12.15 adapted:DIV-12.16
   );
 
-  this.assertSame(7, Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.NumAttr).sum.number); // adapted:DIV-12.15
-  this.assertSame(12, Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.NumAttr, true).flatten().sum.number); // adapted:DIV-12.15
-  this.assertSame(5, Reflector.getClassAttributes(Fixtures.ParentClass, Fixtures.NumAttr).sum.number); // adapted:DIV-12.15
-  this.assertSame(5, Reflector.getClassAttributes(Fixtures.ParentClass, Fixtures.NumAttr, true).flatten().sum.number); // adapted:DIV-12.15
+  this.assertSame(7, Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.NumAttr).__get("sum").__get("number")); // adapted:DIV-12.15 adapted:DIV-12.16
+  this.assertSame(12, Reflector.getClassAttributes(Fixtures.ChildClass, Fixtures.NumAttr, true).flatten().__get("sum").__get("number")); // adapted:DIV-12.15 adapted:DIV-12.16
+  this.assertSame(5, Reflector.getClassAttributes(Fixtures.ParentClass, Fixtures.NumAttr).__get("sum").__get("number")); // adapted:DIV-12.15 adapted:DIV-12.16
+  this.assertSame(5, Reflector.getClassAttributes(Fixtures.ParentClass, Fixtures.NumAttr, true).flatten().__get("sum").__get("number")); // adapted:DIV-12.15 adapted:DIV-12.16
 
   this.assertSame(
     [fqcn(Fixtures.ChildClass), fqcn(Fixtures.ParentClass)],

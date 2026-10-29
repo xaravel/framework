@@ -51,7 +51,7 @@ All methods are static.
   - Under `syntaxOnly`, `[stringOrObjectOrClass, 'method']` (a string, an object, or a class, registered or not) is callable without looking the method up.
   - It never throws.
 - `Reflector.getClassAttribute(objectOrClass, attribute, ascend = false)` gives the first `attribute` instance on the class's own `@attribute(...)` list, or `null`. With `ascend`, it then checks each parent class. Every matching attribute on the classes it checks is built (`newInstance()`) before the first is returned, as Laravel builds the whole collection first. It throws `ReflectionException` for an FQCN the Class Registry does not hold.
-- `Reflector.getClassAttributes(objectOrClass, attribute, includeParents = false)` returns a `Collection` in Laravel. Collections is not ported yet, so it throws `BlockedByComponentError("collections")`.
+- `Reflector.getClassAttributes(objectOrClass, attribute, includeParents = false)` returns a `Collection` (`@xaravel/collections`) of the class's own `attribute` instances. With `includeParents`, it returns a `Collection` keyed by each walked class's FQCN (the class, then each parent), whose values are those `Collection`s. Every walked class's attributes are built in walk order, and an FQCN the Class Registry does not hold throws `ReflectionException`.
 
 ```ts
 const method = new ReflectionClass(SendShipmentNotification).getMethod("handle");
@@ -105,5 +105,4 @@ The Maintainer's rulings on Story 13.1's Escalations (`decisions/MAINT-2026-10-2
 - Interface names resolve through the contract tokens `contract(...)` records, so `isParameterSubclassOf` works for an interface hint (ESC-13.1-7).
 - A backed enum declares `static backingType`, which `isParameterBackedEnumWithStringBackingType` reads through `ReflectionEnum` (ESC-13.1-8).
 - `assertInstanceOf` accepts the class-string `firstClosureParameterType` returns, as PHPUnit's does, so Laravel's test of it is ported unchanged (ESC-13.1-9).
-- `Reflector.getClassAttributes` throws `BlockedByComponentError("collections")` until Collections (Epic 14) is ported, and its Laravel test is `blocked-by:collections` until then (ESC-13.1-10).
 - Laravel's tests that reflect the Mail and Bus fakes and `Model` wait on those Components (`blocked-by:mail`, `blocked-by:bus`, `blocked-by:database`).
