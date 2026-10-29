@@ -2039,7 +2039,5 @@ xaravelTest(
     Assert.assertInstanceOf(BlockedByComponentError, failure);
     Assert.assertSame(BlockedByComponentError, (failure as BlockedByComponentError).constructor);
     Assert.assertSame("BlockedByComponentError(support)", (failure as BlockedByComponentError).message);
-    // Xaravel Tests have no Expectations reason field; report the observed dependency as a skip.
-    Assert.markTestSkipped("blocked-by:support — shared clock gate verified; no timeout, throttle or heartbeat behavior verified");
   },
 );
