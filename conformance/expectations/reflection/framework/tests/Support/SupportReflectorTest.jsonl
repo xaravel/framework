@@ -1,6 +1,6 @@
 {"id":"Illuminate\\Tests\\Support\\SupportReflectorTest::testEmptyClassName","variant":"none","status":"skip","reason":"blocked-by:mail","adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportReflectorTest::testGetClassAttribute","variant":"none","status":"pass","reason":null,"adapted":"DIV-12.15","escalation":null}
-{"id":"Illuminate\\Tests\\Support\\SupportReflectorTest::testGetClassAttributes","variant":"none","status":"skip","reason":"blocked-by:collections","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\Support\\SupportReflectorTest::testGetClassAttributes","variant":"none","status":"pass","reason":null,"adapted":"DIV-12.15","escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportReflectorTest::testGetClassName","variant":"none","status":"skip","reason":"blocked-by:mail","adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportReflectorTest::testIsCallable","variant":"none","status":"pass","reason":null,"adapted":"DIV-9.14","escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportReflectorTest::testParameterSubclassOfInterface","variant":"none","status":"pass","reason":null,"adapted":"DIV-3.2","escalation":null}

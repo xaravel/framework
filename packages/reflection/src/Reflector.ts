@@ -9,16 +9,17 @@
 // - `isCallable` follows DIV-9.14: a class is a registered constructor or an FQCN string, visibility is erased, and a
 //   non-array string is callable only as a `'Class::method'` string naming a static method or reaching `__callStatic`
 //   (or under `syntaxOnly`), as PHP 8's `is_callable` gives.
-// - `getClassAttributes` returns a `Collection`, which does not exist before Epic 14, so it throws
-//   `BlockedByComponentError("collections")`. `getClassAttribute` builds the same per-class instance lists as plain
-//   arrays and takes the first instance (ESC-13.1-4's ruling, DIV-12.15).
+// - `getClassAttributes` returns `@xaravel/collections`' `Collection`, as Upstream: a `Collection` of the walked class's
+//   attribute instances, or, with `includeParents`, a `Collection` of those keyed by each walked class's FQCN.
+//   `getClassAttribute` builds the same per-class instance lists as plain arrays and takes the first instance
+//   (ESC-13.1-4's ruling, DIV-12.15).
 // - `enum_exists` and `ReflectionEnum` are the runtime's `enumExists` and `ReflectionEnum`, over AD-26's enum model,
 //   where a backed enum declares `static backingType` (ESC-13.1-8's ruling).
 //
 // Everything is sync, and `null` is the only absent value.
-import type { Collection } from "@xaravel/contracts/bus";
-import { BlockedByComponentError, fqcn, registerClass, resolveClass, toBool } from "@xaravel/runtime";
-import { enumExists, interfaceExists, ReflectionClass, ReflectionEnum, ReflectionException, ReflectionMethod, ReflectionNamedType, type ReflectionParameter, ReflectionUnionType } from "@xaravel/runtime/php";
+import { Collection } from "@xaravel/collections";
+import { fqcn, registerClass, resolveClass, toBool } from "@xaravel/runtime";
+import { array_first, enumExists, interfaceExists, ReflectionClass, ReflectionEnum, ReflectionException, ReflectionMethod, ReflectionNamedType, type ReflectionParameter, ReflectionUnionType } from "@xaravel/runtime/php";
 
 /** A class, as `getAttributes` filters by it. */
 type AttributeClass = abstract new (...args: never[]) => unknown;
@@ -154,16 +155,22 @@ export class Reflector {
   }
 
   /**
-   * Get the specified class attribute(s), optionally following an inheritance chain. Upstream returns a `Collection`
-   * (of instances, or keyed by class name when `includeParents` is true), and Collections (Epic 14) is not ported yet,
-   * so this throws `BlockedByComponentError("collections")`.
+   * Get the specified class attribute(s), optionally following an inheritance chain: a `Collection` of the `attribute`
+   * instances on `objectOrClass`'s own `@attribute(...)` list, or, when `includeParents` is true, a `Collection` keyed
+   * by each walked class's FQCN (the class, then each parent) whose values are those `Collection`s. Every walked class's
+   * attributes are built (`newInstance()`) in walk order (DIV-12.15). Throws `ReflectionException` for an FQCN the
+   * Class Registry does not hold.
    */
   static getClassAttributes(objectOrClass: object | string, attribute: AttributeClass, includeParents: boolean = false): Collection {
-    void objectOrClass;
-    void attribute;
-    void includeParents;
+    let reflectionClass: ReflectionClass | false = new ReflectionClass(objectOrClass);
 
-    throw new BlockedByComponentError("collections", "Reflector::getClassAttributes() returns an Illuminate\\Support\\Collection");
+    const attributes: Record<string, Collection> = {};
+
+    do {
+      attributes[reflectionClass.name] = new Collection(reflectionClass.getAttributes(attribute).map((reflectionAttribute) => reflectionAttribute.newInstance()));
+    } while (includeParents && false !== (reflectionClass = reflectionClass.getParentClass()));
+
+    return includeParents ? new Collection(attributes) : (array_first(attributes) as Collection);
   }
 
   /**

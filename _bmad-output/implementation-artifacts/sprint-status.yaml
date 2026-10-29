@@ -2227,7 +2227,7 @@ action_items:
       (ESC-14.8-1 part 3). The Upstream assertions stay unchanged; no other Reflection
       behaviour changes; lands before Story 14.8 resumes"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/MAINT-2026-10-29-story-14-8.md"
   - id: "epic-14-item-19-collections-api-surface-findings"
     epic: 14
