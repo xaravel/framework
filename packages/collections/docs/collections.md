@@ -305,8 +305,11 @@ in addition to the four earlier clock tests described above. The complete
 `array_sum`; this is a shared runtime contract gap, not a Collections substitute.
 Epic closure also remains pending. With the API-surface analysis following
 `extends`, mixin traits and aliases, and the genuine Collections findings fixed
-(epic-14-item-19), the gate's remaining findings await their citations or rulings
-(the async companions, `entries`, members needing later Components, the gate's
-camel-cased helper names, the `...moreKeys` / `...moreItems` rest parameters and
-`Enumerable.reduceWithKeys`). ESC-14.8-1 records those obligations. No Epic-close
-pass is claimed.
+(epic-14-item-19), every remaining line is explained: the deferred members and
+verbatim helper names (#533), and the Maintainer's gate ruling
+(`decisions/MAINT-2026-10-29-collections-gate.md`): DIV-1.2 for the async
+companions, DIV-12.18 for `entries`, DIV-12.21 for the `func_get_args()` rest
+parameters, and `reduceWithKeys` removed from `Enumerable` to match Upstream,
+while `Collection` and `LazyCollection` keep it. `api-surface:gate collections`
+reports zero unexplained lines. Activating XT-collections-16 stays with Story 14.8
+(ESC-14.8-1). No Epic-close pass is claimed.
