@@ -9,7 +9,7 @@
 // (epic-10-item-1, ESC-10.1-4) run through the same stand-in, and
 // the real PHP runs their interfaces mode against php-fixtures/api-surface-psr/.
 import { expect } from "bun:test";
-import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, writeFileSync } from "node:fs";
+import { copyFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { basename, dirname, join, resolve } from "node:path";
 import type { ImageRunner } from "../../../tools/inventory/inventory";
@@ -603,7 +603,7 @@ phpTest("XT-conformance-200", "the real api-surface.php run twice on the fixture
 // ---------------------------------------------------------------------------
 // XT-conformance-82
 
-xaravelTest("XT-conformance-82", "additions.jsonl and exceptions.jsonl exist and are Protected (additions empty, exceptions only from Maintainer rulings citing a declared DIV clause), and their schema requires a citation on every line: FR or DIV for additions, DIV or deferred: for exceptions (AD-15.5, AD-16.1)", () => {
+xaravelTest("XT-conformance-82", "additions.jsonl and exceptions.jsonl exist and are Protected (their lines only from Maintainer rulings, each DIV-<n>.<k> citation naming a declared clause), and their schema requires a citation on every line: FR or DIV for additions, DIV or deferred: for exceptions (AD-15.5, AD-16.1)", () => {
   const entries = parseList(readFileSync(join(root, LIST_PATH), "utf8"));
   const phases = activePhases(root);
   for (const name of ["additions.jsonl", "exceptions.jsonl", "schema.json", "support.jsonl"]) {
@@ -611,10 +611,10 @@ xaravelTest("XT-conformance-82", "additions.jsonl and exceptions.jsonl exist and
     expect([path, existsSync(join(root, path))]).toEqual([path, true]);
     expect([path, isProtected(entries, phases, path)]).toEqual([path, true]);
   }
-  expect(statSync(join(root, API_SURFACE_DIR, "additions.jsonl")).size).toBe(0);
-  // exceptions.jsonl started empty; its lines come only from Maintainer rulings (first: ESC-12.1-3), and each
+  // Both files started empty; their lines come only from Maintainer rulings (exceptions first: ESC-12.1-3; additions
+  // first: MAINT-2026-10-29-collections-gate, as spine AD-15 allows an extra member citing an FR or a DIV), and each
   // DIV-<n>.<k> citation must name a clause its record declares.
-  for (const text of readFileSync(join(root, API_SURFACE_DIR, "exceptions.jsonl"), "utf8").split("\n").filter((l) => l !== "")) {
+  for (const text of ["additions.jsonl", "exceptions.jsonl"].flatMap((name) => readFileSync(join(root, API_SURFACE_DIR, name), "utf8").split("\n").filter((l) => l !== ""))) {
     const citation = (JSON.parse(text) as JsonObject)["citation"];
     const clause = typeof citation === "string" ? /^DIV-(\d+)\.(\d+)$/.exec(citation) : null;
     if (clause !== null) {
