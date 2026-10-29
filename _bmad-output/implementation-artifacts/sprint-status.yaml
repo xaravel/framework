@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-29-2026 11:29
+last_updated: 10-29-2026 12:01
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -2227,7 +2227,7 @@ action_items:
       (ESC-14.8-1 part 3). The Upstream assertions stay unchanged; no other Reflection
       behaviour changes; lands before Story 14.8 resumes"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/MAINT-2026-10-29-story-14-8.md"
   - id: "epic-14-item-19-collections-api-surface-findings"
     epic: 14

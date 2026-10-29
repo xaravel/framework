@@ -105,4 +105,5 @@ The Maintainer's rulings on Story 13.1's Escalations (`decisions/MAINT-2026-10-2
 - Interface names resolve through the contract tokens `contract(...)` records, so `isParameterSubclassOf` works for an interface hint (ESC-13.1-7).
 - A backed enum declares `static backingType`, which `isParameterBackedEnumWithStringBackingType` reads through `ReflectionEnum` (ESC-13.1-8).
 - `assertInstanceOf` accepts the class-string `firstClosureParameterType` returns, as PHPUnit's does, so Laravel's test of it is ported unchanged (ESC-13.1-9).
+- `Reflector.getClassAttributes` returns `@xaravel/collections`' `Collection` now that Collections exists, and its Laravel test runs (ESC-14.8-1; `decisions/MAINT-2026-10-29-story-14-8.md`).
 - Laravel's tests that reflect the Mail and Bus fakes and `Model` wait on those Components (`blocked-by:mail`, `blocked-by:bus`, `blocked-by:database`).

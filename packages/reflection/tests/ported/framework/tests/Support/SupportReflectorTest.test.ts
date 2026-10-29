@@ -17,9 +17,9 @@
 // `getClassAttributes` returns; its higher-order reads `->map->string` and `->sum->number` are the `__get` calls PHP
 // makes, `.__get("map").__get("string")` and `.__get("sum").__get("number")` (DIV-12.16).
 import { portedTest, TestCase } from "@xaravel/assert";
+import type { Collection } from "@xaravel/collections";
 import { contract } from "@xaravel/contracts";
 import { Mailable } from "@xaravel/contracts/mail";
-import type { Collection } from "@xaravel/collections";
 import { Reflector } from "@xaravel/reflection";
 import { BlockedByComponentError, fqcn, inject, parent, registerTestClass, resolveClass } from "@xaravel/runtime";
 import { ReflectionClass } from "@xaravel/runtime/php";

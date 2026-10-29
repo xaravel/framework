@@ -410,6 +410,12 @@ xaravelTest(
     Assert.assertSame([fqcn(TaggedChild), fqcn(TaggedParent)], withParents.keys().all());
     Assert.assertTrue(withParents.every((list: unknown) => list instanceof Collection));
     Assert.assertSame(["child-1", "child-2", "parent-1"], built);
+    Assert.assertSame(["child-1", "child-2"], (withParents.get(fqcn(TaggedChild)) as Collection).all().map((instance: Tag) => instance.value));
+    Assert.assertSame(["parent-1"], (withParents.get(fqcn(TaggedParent)) as Collection).all().map((instance: Tag) => instance.value));
+    const parentOnly = Reflector.getClassAttributes(TaggedParent, Tag, true);
+    Assert.assertSame([fqcn(TaggedParent)], parentOnly.keys().all());
+    Assert.assertInstanceOf(Collection, parentOnly.get(fqcn(TaggedParent)));
+    Assert.assertSame([fqcn(TaggedChild), fqcn(TaggedParent)], Reflector.getClassAttributes(new TaggedChild(), Tag, true).keys().all());
     built.length = 0;
     Assert.assertSame(["child-1", "child-2"], Reflector.getClassAttributes(new TaggedChild(), Tag).all().map((instance: Tag) => instance.value));
     Assert.assertSame(["child-1", "child-2"], built);
