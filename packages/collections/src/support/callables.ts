@@ -1,7 +1,7 @@
 // Calling a PHP callable and reading a PHP array or object by key, as the Collections core does, and the type of a
 // sync member's callback. Internal: not exported from the package.
 import type { NotPromise } from "@xaravel/contracts/async";
-import { Error as PhpError, getDebugType, is_array, normalizeKey, type PhpArray, toBool, resolveCallable } from "@xaravel/runtime";
+import { Error as PhpError, getDebugType, is_array, normalizeKey, type PhpArray, toBool, resolveCallable, valueCopy } from "@xaravel/runtime";
 
 const PHP_ARRAY = Symbol.for("xaravel.php.array");
 
@@ -93,6 +93,38 @@ export function propertyIsSet(object: object, key: unknown): boolean {
     return toBool(Reflect.apply(magic, object, [name]));
   }
   return false;
+}
+
+/**
+ * PHP's `$object->{$key} = $value`: the property, a copy of `value` (AD-9), when the object has it or has no `__set`
+ * port; else the object's `__set($key, $value)`.
+ */
+export function propertyWrite(object: object, key: unknown, value: unknown): void {
+  const name = String(key);
+  const magic: unknown = (object as { __set?: unknown }).__set;
+  if (hasProperty(object, name) || typeof magic !== "function") {
+    (object as Record<string, unknown>)[name] = valueCopy(value);
+    return;
+  }
+  Reflect.apply(magic, object, [name, valueCopy(value)]);
+}
+
+/** PHP's `unset($object->{$key})`: the property when the object has it, else the object's `__unset($key)` port. */
+export function propertyUnset(object: object, key: unknown): void {
+  const name = String(key);
+  if (Object.hasOwn(object, name)) {
+    delete (object as Record<string, unknown>)[name];
+    return;
+  }
+  const magic: unknown = (object as { __unset?: unknown }).__unset;
+  if (!hasProperty(object, name) && typeof magic === "function") {
+    Reflect.apply(magic, object, [name]);
+  }
+}
+
+/** Whether `$object->{$key}` names a property of the object itself (not one only its `__get` port answers). */
+export function propertyIsDeclared(object: object, key: unknown): boolean {
+  return hasProperty(object, String(key));
 }
 
 /**

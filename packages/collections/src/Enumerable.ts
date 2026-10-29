@@ -15,6 +15,7 @@
 // and `duplicates` also take AD-26's options object (`{ options, descending }`, `{ callback, strict }`).
 import { Arrayable, Jsonable } from "@xaravel/contracts/support";
 import { type ContractToken, contract } from "@xaravel/contracts";
+import type { NotPromise } from "@xaravel/contracts/async";
 import type { SyncCallback, SyncCallable, ValueOrSyncCallback } from "./support/callables";
 import { type CachingIterator, IteratorAggregate, JsonSerializable, type PhpArray, type PhpArrayKey, type SortDirection, type Traversable } from "@xaravel/runtime";
 
@@ -23,6 +24,16 @@ export type SortByDescComparison<R> = string | number | bigint | SyncCallback<[a
 
 /** Descending sort accepts a key, a synchronous retriever, or PHP comparison-array forms. */
 export type SortByDescCallback<R> = string | number | bigint | boolean | null | SyncCallback<[value: any, key: any], R> | SortByDescComparison<R>[] | PhpArray<PhpArrayKey, SortByDescComparison<R>> | Record<string, SortByDescComparison<R>>;
+
+/**
+ * The callback of `whenEmpty`, `unless` and their kin: called with the collection and the condition's value. A
+ * closure, or an invokable object whose `__invoke` is called. A dual helper's callback (AD-6, DIV-1.6): it may be
+ * async, and its own result type `R` is returned.
+ */
+export type EnumerableCallback<S, V, R> = ((self: S, value: V) => R) | { __invoke(self: S, value: V): R };
+
+/** What such a callback's result `r` makes the member return: `r ?? this`, as `when` does. */
+export type EnumerableResult<R, S> = Exclude<R, null | undefined | void> | S;
 
 declare const EnumerableBrand: unique symbol;
 
@@ -157,21 +168,23 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   /** Group callback pairs into collections. */
   mapToGroups<R>(callback: SyncCallable<[value: any, key: any], R>): Enumerable;
   /** Map values into a constructor or backed enum. */
-  mapInto(class_: (new (...args: any[]) => unknown) | string): Enumerable;
-  /** Return complete sliding windows. */
-  sliding(size?: number | { size?: number; step?: number }, step?: number): Enumerable;
+  mapInto(className: (new (...args: any[]) => unknown) | string): Enumerable;
+  /** Return complete sliding windows; also takes AD-26's options object `{ size, step }`. */
+  sliding(size?: number, step?: number): Enumerable;
+  sliding(options?: { size?: number; step?: number }): Enumerable;
   /** Split into balanced groups. */
   split(numberOfGroups: number): Enumerable;
   /** Split into groups filling the first completely. */
   splitIn(numberOfGroups: number): Enumerable;
-  /** Chunk items preserving inner keys by default. */
-  chunk(size: number, preserveKeys?: boolean | { preserveKeys?: boolean }): Enumerable;
+  /** Chunk the collection into chunks of the given size. */
+  chunk(size: number): Enumerable;
   /** Chunk consecutive items while the callback returns true. */
   chunkWhile<R>(callback: SyncCallable<[value: any, key: any, chunk: import("./Collection").Collection], R>): Enumerable;
   /** Chunk consecutive items with equal resolved keys. */
   chunkBy<R>(key: SyncCallable<[value: any, key: any], R> | string): Enumerable;
-  /** Sort keys with PHP flags. */
-  sortKeys(options?: number | { options?: number; descending?: boolean | SortDirection }, descending?: boolean | SortDirection): Enumerable;
+  /** Sort keys with PHP flags; also takes AD-26's options object `{ options, descending }`. */
+  sortKeys(options?: number, descending?: boolean | SortDirection): Enumerable;
+  sortKeys(options?: { options?: number; descending?: boolean | SortDirection }): Enumerable;
   /** Sort keys in descending order. */
   sortKeysDesc(options?: number): Enumerable;
   /** Sort keys using a synchronous comparator. */
@@ -206,9 +219,9 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   /** Pass the collection to a callback. */
   pipe<R>(callback: SyncCallable<[collection: this], R>): R;
   /** Pass the collection to a constructor. */
-  pipeInto<R>(class_: new (collection: this) => R): R;
+  pipeInto<R>(className: new (collection: this) => R): R;
   /** Pass the collection through callbacks in order. */
-  pipeThrough<R>(callbacks: SyncCallable<[carry: any], R>[]): unknown;
+  pipeThrough<R>(pipes: SyncCallable<[carry: any], R>[]): unknown;
   /** Invoke a callback and return the collection. */
   tap<R>(callback: SyncCallable<[collection: this], R>): this;
   /** Paginate using a slice. */
@@ -226,9 +239,13 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   reject<R>(callback: SyncCallback<[value: any, key: any], R>): Enumerable;
   reject<K>(callback?: ValueOrSyncCallback<K>): Enumerable;
 
-  /** Return only unique items from the collection array. */
+  /** Return only unique items from the collection array; also takes AD-26's options object `{ key, strict }`. */
+  unique<R>(options?: { key?: SyncCallback<[value: any, key: any], R> | string | null; strict?: boolean }): Enumerable;
   unique<R>(key: SyncCallback<[value: any, key: any], R>, strict?: boolean): Enumerable;
   unique<K>(key?: ValueOrSyncCallback<K>, strict?: boolean): Enumerable;
+
+  /** Shuffle the items in the collection. */
+  shuffle(): Enumerable;
 
   /** Reset the keys on the underlying array. */
   values(): Enumerable;
@@ -281,16 +298,22 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   every<K>(key: ValueOrSyncCallback<K>, operator?: unknown, value?: unknown): boolean;
 
   /** Apply the callback if the collection is empty (a dual helper, as `when`). */
-  whenEmpty(callback: unknown, defaultValue?: unknown): unknown;
+  whenEmpty<R = never, D = never>(callback: EnumerableCallback<this, boolean, R>, defaultValue?: EnumerableCallback<this, boolean, D> | null): EnumerableResult<R | D, this>;
 
   /** Apply the callback if the collection is not empty (a dual helper, as `when`). */
-  whenNotEmpty(callback: unknown, defaultValue?: unknown): unknown;
+  whenNotEmpty<R = never, D = never>(callback: EnumerableCallback<this, boolean, R>, defaultValue?: EnumerableCallback<this, boolean, D> | null): EnumerableResult<R | D, this>;
 
   /** Apply the callback unless the collection is empty (a dual helper, as `when`). */
-  unlessEmpty(callback: unknown, defaultValue?: unknown): unknown;
+  unlessEmpty<R = never, D = never>(callback: EnumerableCallback<this, boolean, R>, defaultValue?: EnumerableCallback<this, boolean, D> | null): EnumerableResult<R | D, this>;
 
   /** Apply the callback unless the collection is not empty (a dual helper, as `when`). */
-  unlessNotEmpty(callback: unknown, defaultValue?: unknown): unknown;
+  unlessNotEmpty<R = never, D = never>(callback: EnumerableCallback<this, boolean, R>, defaultValue?: EnumerableCallback<this, boolean, D> | null): EnumerableResult<R | D, this>;
+
+  /**
+   * Apply the callback if the given "value" is (or resolves to) falsy, else the default when one is given (a dual
+   * helper, as Conditionable's `unless`).
+   */
+  unless<V, R = never, D = never>(value: NotPromise<V> | ((self: this) => NotPromise<V>), callback: EnumerableCallback<this, V, R>, defaultValue?: EnumerableCallback<this, V, D> | null): EnumerableResult<R | D, this>;
 
   /** Filter items where the value for the given key is null. */
   whereNull(key?: unknown): Enumerable;
@@ -481,6 +504,33 @@ export interface Enumerable extends Arrayable, Jsonable, JsonSerializable, Itera
   __get(key: string): unknown;
 }
 
+/**
+ * The static side of `Enumerable`, satisfied by an implementing class's constructor: PHP's interface declares these
+ * as static methods, which a TypeScript interface cannot hold (decisions/ESC-10.2-1.md).
+ */
+export interface EnumerableStatic {
+  /** Create a new collection instance if the value isn't one already. */
+  make(items?: unknown): Enumerable;
+
+  /** Create a new instance by invoking the callback a given amount of times. */
+  times(number: number, callback?: ((number: number) => unknown) | null): Enumerable;
+
+  /** Create a collection with the given range. */
+  range(from: number, to: number, step?: number): Enumerable;
+
+  /** Wrap the given value in a collection if applicable. */
+  wrap(value: unknown): Enumerable;
+
+  /** Get the underlying items from the given collection if applicable. */
+  unwrap(value: unknown): unknown;
+
+  /** Create a new instance with no items. */
+  empty(): Enumerable;
+
+  /** Add a method to the list of proxied methods. */
+  proxy(method: string): void;
+}
+
 export const Enumerable = contract<Enumerable, typeof EnumerableBrand>(
   "Illuminate\\Support\\Enumerable",
   {
@@ -496,7 +546,7 @@ export const Enumerable = contract<Enumerable, typeof EnumerableBrand>(
     sliding: ["size", "step"],
     split: ["numberOfGroups"],
     splitIn: ["numberOfGroups"],
-    chunk: ["size", "preserveKeys"],
+    chunk: ["size"],
     chunkWhile: ["callback"],
     chunkBy: ["key"],
     sortKeys: ["options", "descending"],
@@ -541,6 +591,7 @@ export const Enumerable = contract<Enumerable, typeof EnumerableBrand>(
     map: ["callback"],
     reject: ["callback"],
     unique: ["key", "strict"],
+    shuffle: [],
     values: [],
     countBy: ["countBy"],
     collect: [],
@@ -557,6 +608,7 @@ export const Enumerable = contract<Enumerable, typeof EnumerableBrand>(
     whenNotEmpty: ["callback", "default"],
     unlessEmpty: ["callback", "default"],
     unlessNotEmpty: ["callback", "default"],
+    unless: ["value", "callback", "default"],
     whereNull: ["key"],
     whereNotNull: ["key"],
     whereStrict: ["key", "value"],
