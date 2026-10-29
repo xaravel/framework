@@ -14,7 +14,7 @@ import { array_is_list, array_push, http_build_query } from "./arrBuiltins";
 // back: every listed export is a function declaration, initialised before any module body runs, so the cycle is safe.
 import { array_chunk } from "./arrayFunctions";
 import { key, ksort, krsort, uksort, sort, rsort } from "./arrayRefFunctions";
-import { intdiv, floor, ceil } from "./arithmetic";
+import { array_sum, intdiv, floor, ceil } from "./arithmetic";
 import { call_user_func_array } from "./callables";
 import { setlocale } from "./locale";
 import { strtolower, strrev } from "./stringFunctions";
@@ -112,6 +112,7 @@ export const PHP_FUNCTIONS: Readonly<Record<string, PhpFunction>> = Object.freez
       entry("intdiv", intdiv, 2, 2),
       entry("floor", floor, 1, 1),
       entry("ceil", ceil, 1, 1),
+      entry("array_sum", array_sum, 1, 1),
       entry("call_user_func_array", call_user_func_array, 2, 2),
       entry("setlocale", setlocale, 2, 3, true),
       entry("strtolower", strtolower, 1, 1),

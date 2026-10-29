@@ -3,7 +3,7 @@ import { arrayUnion } from "./arrayFunctions";
 import { ArithmeticError } from "./ArithmeticError";
 import { DivisionByZeroError } from "./DivisionByZeroError";
 import { parseNumeric } from "./numericString";
-import { intParameter, numberParameter, type PhpNumber } from "./phpArguments";
+import { arrayParameter, intParameter, numberParameter, type PhpNumber } from "./phpArguments";
 import { float, type PhpFloat } from "./PhpFloat";
 import { INT_MAX, INT_MIN, intKey } from "./phpInt";
 import { phpType, phpTypeName } from "./phpType";
@@ -55,6 +55,19 @@ export function plus(a: unknown, b: unknown): unknown {
     return sum >= INT_MIN && sum <= INT_MAX ? intKey(sum) : float(Number(left.int) + Number(right.int));
   }
   return float(double(left) + double(right));
+}
+
+/**
+ * PHP 8.5.11's `array_sum` (`php_array_binop`): int 0 plus each value in order, through `plus`. An operand
+ * `add_function` rejects (an array, an object, a non-numeric string) is skipped; PHP's warnings for it are not
+ * raised (DIV-9.17).
+ */
+export function array_sum(array: unknown): number | bigint | PhpFloat {
+  let sum: number | bigint | PhpFloat = 0;
+  for (const [, value] of arrayParameter("array_sum", 1, "array", array)) {
+    if (numeric(value) !== null) sum = plus(sum, value) as number | bigint | PhpFloat;
+  }
+  return sum;
 }
 
 /** PHP's `$a / $b`: an exact divisible int pair stays int; every other result is float. */
