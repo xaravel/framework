@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-28-2026 16:04
+last_updated: 10-28-2026 18:04
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -164,7 +164,7 @@ development_status:
   14-5-mapping-grouping-sorting-chunking-and-aggregates: done
   14-6-arr-helpers: done  # Maintainer traversal-by-value ruling implemented; 83 pass, four legitimate Support holds; current Fidelity and full harness verified.
   14-7-lazycollection-behaviour: done
-  14-8-lazycollection-laziness-guarantees: backlog
+  14-8-lazycollection-laziness-guarantees: blocked  # ESC-14.8-1: API/Reflection close gates; ESC-14.8-2: missing runtime array_sum
   epic-14-retrospective: optional
 
   epic-15: backlog

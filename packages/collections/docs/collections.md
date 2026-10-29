@@ -258,3 +258,34 @@ Native array paths use temporary by-value traversal, so copying a selected, retu
 
 
 The complete accessible/arrayable DateTime tests now use `blocked-by:support` under the Maintainer ruling in `decisions/ESC-14.6-2.md`. Carbon-key plucking and `toCssStyles` retain their complete test bodies and throw `BlockedByComponentError("support")` at their Carbon / `Str.finish` dependency seams, for Support (Epic 19) to clear.
+
+### Source consumption guarantees (Story 14.8)
+
+Calling a deferred transformation such as `map`, `filter`, `chunk`, `flatten`,
+`skip`, `take`, `concat` or `zip` does not enumerate its source. Consuming a
+partial result advances only as far as Laravel's corresponding method requires:
+`take(3)` reads exactly three source items, `chunk(5).take(3)` reads fifteen,
+and `filter(v => v % 2 === 0).take(3)` reads six from a source starting at one.
+`chunkWhile` and `chunkBy` read the first item of the next group to discover the
+boundary, so taking the first group of `['A', 'A', 'B']` reads three items.
+Whole-source operations such as sorting defer their materialization until the
+result is consumed; terminals such as `sum` enumerate immediately, once.
+These whole-source operations cannot finish on infinite sources.
+
+Array sources and factories that create fresh iterators replay on every
+enumeration. A factory that returns the same iterator reuses that iterator's
+current state, including exhaustion. `remember()` instead shares its
+one source cursor and cached entries across repeated and interleaved runners;
+requesting an already cached prefix does not read the source again. Keys remain
+attached to each yielded value, including duplicate keys during iteration;
+materializing with `all()` applies PHP's last-value-at-first-key-position rule.
+
+The source-count suite releases 132 independent canonical tests. Three more
+retain their full bodies behind the genuine Support clock dependency boundary,
+in addition to the four earlier clock tests described above. The complete
+`testFlatMapIsLazy` remains pending in ESC-14.8-2 until the runtime exports PHP's
+`array_sum`; this is a shared runtime contract gap, not a Collections substitute.
+Epic closure also remains pending: the API surface gate reports 268 unexplained
+findings, including unsupported inherited/mixin analysis and real signature
+findings, and Reflection's Collection dependency still requires a separately
+scoped change. ESC-14.8-1 records those obligations. No Epic-close pass is claimed.
