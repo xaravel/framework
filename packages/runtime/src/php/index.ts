@@ -221,6 +221,8 @@ export {
   PREG_SPLIT_OFFSET_CAPTURE,
   PREG_UNMATCHED_AS_NULL,
 } from "./pcreFunctions";
+export { getenv, putenv, superglobals } from "./environmentFunctions";
+export { file_get_contents } from "./fileFunctions";
 export { mb_convert_encoding, mb_encoding_aliases, mb_list_encodings, mb_strlen, mb_strpos, mb_substr } from "./mbstringFunctions";
 export { is_a, is_array, is_bool, is_callable, is_int, is_iterable, is_null, is_object, is_string } from "./typeTests";
 export { UnitEnum } from "./UnitEnum";

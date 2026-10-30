@@ -318,3 +318,5 @@ export {
   PREG_SPLIT_OFFSET_CAPTURE,
   PREG_UNMATCHED_AS_NULL,
 } from "./php/index";
+
+export { file_get_contents, getenv, putenv, superglobals } from "./php/index";
