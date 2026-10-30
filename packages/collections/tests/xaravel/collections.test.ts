@@ -47,7 +47,7 @@ import { TestBackedEnum, TestStringBackedEnum, FIXTURES as ENUM_FIXTURES } from 
 import { ArgumentCountError, ArrayIterator, BlockedByComponentError, Generator, Iterator, Traversable } from "@xaravel/runtime";
 import { SupportLazyCollectionBlockedBySupportTest } from "../support/SupportClockBoundary";
 import { Arrayable } from "@xaravel/contracts/support";
-import { array_values, arrayEntries, Error as PhpError, fqcn, InvalidArgumentException, jsonEncode, keyed, looseEquals, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_NUMERIC, SORT_NATURAL, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError, ValueError } from "@xaravel/runtime";
+import { array_values, arrayEntries, Error as PhpError, fqcn, InvalidArgumentException, jsonDecode, jsonEncode, keyed, looseEquals, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_NUMERIC, SORT_NATURAL, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError, ValueError } from "@xaravel/runtime";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 
@@ -2455,5 +2455,46 @@ xaravelTest(
     Assert.assertTrue(g() instanceof Traversable);
     Assert.assertTrue(g() instanceof Iterator);
     Assert.assertTrue(g() instanceof Generator);
+  },
+);
+
+// Action item epic-14-retro-item-6-stdclass-props-hook: `stdClass` exposes its properties through
+// `[Symbol.for('xaravel.php.props')]()`, so `contains`, `unique`, `max`, `min`, `sort` and `sortDesc` compare stdClass
+// items, and `jsonDecode` objects, by their properties as PHP does. The expected values are those of
+// `stdclass-items.probe.txt`, which `stdclass-items.probe.php` writes with PHP 8.5.11 by running Upstream at the Pin;
+// every recorded label is recomputed here and compared through `jsonEncode`.
+const STDCLASS_ITEMS = readFileSync(join(import.meta.dir, "stdclass-items.probe.txt"), "utf8").trim().split("\n").map((line) => {
+  const tab = line.indexOf("\t");
+  return [line.slice(0, tab), line.slice(tab + 1)] as const;
+});
+
+xaravelTest(
+  "XT-collections-21",
+  "Collection's contains, unique, max, min, sort and sortDesc over stdClass items, unique, contains, max, min and sort over jsonDecode objects, and LazyCollection's unique and contains over stdClass items, compare the objects by their properties and give PHP 8.5.11's values",
+  () => {
+    const obj = (props: Record<string, unknown>): stdClass => Object.assign(new stdClass(), props);
+    const items = (): Collection => collect([obj({ a: 1 }), obj({ a: 1 }), obj({ a: 2 })]);
+    const cases: Record<string, () => unknown> = {
+      contains: () => [items().contains(obj({ a: 1 })), items().contains(obj({ a: 3 }))],
+      unique: () => items().unique().all(),
+      max_min: () => [(items().max() as stdClass)["a"], (items().min() as stdClass)["a"]],
+      sort: () => [items().sort().values().all(), items().sortDesc().values().all()],
+      json_decode: () => {
+        const decoded = collect(jsonDecode('[{"a":1},{"a":1},{"a":2}]') as unknown[]);
+        return [decoded.unique().count(), decoded.contains(jsonDecode('{"a":1}'))];
+      },
+      "json_decode.order": () => {
+        const decoded = collect(jsonDecode('[{"a":1},{"a":1},{"a":2}]') as unknown[]);
+        return [(decoded.max() as stdClass)["a"], (decoded.min() as stdClass)["a"], decoded.sort().values().all()];
+      },
+      lazy: () => {
+        const lazy = (): LazyCollection => LazyCollection.make([obj({ a: 1 }), obj({ a: 1 }), obj({ a: 2 })]);
+        return [lazy().unique().count(), lazy().contains(obj({ a: 1 })), lazy().contains(obj({ a: 3 }))];
+      },
+    };
+    for (const [label, json] of STDCLASS_ITEMS) {
+      Assert.assertSame(json, jsonEncode(cases[label]!()), label);
+    }
+    Assert.assertSame(jsonEncode(Object.keys(cases).sort()), jsonEncode(STDCLASS_ITEMS.map(([label]) => label).sort()));
   },
 );

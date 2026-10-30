@@ -1,0 +1,7 @@
+contains	[true,false]
+unique	{"0":{"a":1},"2":{"a":2}}
+max_min	[2,1]
+sort	[[{"a":1},{"a":1},{"a":2}],[{"a":2},{"a":1},{"a":1}]]
+json_decode	[2,true]
+json_decode.order	[2,1,[{"a":1},{"a":1},{"a":2}]]
+lazy	[2,true,false]

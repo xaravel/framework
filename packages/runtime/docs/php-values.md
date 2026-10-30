@@ -52,7 +52,10 @@ synchronous.
   `offsetReference`, including its builtin versus userland semantics and null
   empty-string offset policy. DIV-9.17 omits notices and deprecations only.
 - **Objects.** `stdClass` is PHP's class with no members; a dynamic property is a plain property write. An object PHP
-  compares with `==` exposes its compared properties through `[Symbol.for('xaravel.php.props')]()`.
+  compares with `==` exposes its compared properties through `[Symbol.for('xaravel.php.props')]()`. `stdClass`
+  carries that hook as a non-enumerable prototype method returning its own enumerable string properties, in order, so
+  `==` and `<=>` compare two stdClass objects, `jsonDecode` objects included, by their properties as PHP does. Its order is JS key order, integer-like names first, so a stdClass mixing integer-like and string
+  names compares (`<=>`) in that order, not PHP's insertion order (the limit `jsonDecode.ts`'s header notes).
 
 ## `PhpArray`
 
