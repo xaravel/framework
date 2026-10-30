@@ -514,7 +514,7 @@ export interface EnumerableStatic {
   times(number: number, callback?: ((number: number) => unknown) | null): Enumerable;
 
   /** Create a collection with the given range. */
-  range(from: number, to: number, step?: number): Enumerable;
+  range(from: unknown, to: unknown, step?: unknown): Enumerable;
 
   /** Wrap the given value in a collection if applicable. */
   wrap(value: unknown): Enumerable;

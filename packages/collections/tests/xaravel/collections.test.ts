@@ -47,7 +47,7 @@ import { TestBackedEnum, TestStringBackedEnum, FIXTURES as ENUM_FIXTURES } from 
 import { ArgumentCountError, ArrayIterator, BlockedByComponentError, Generator, Iterator, Traversable } from "@xaravel/runtime";
 import { SupportLazyCollectionBlockedBySupportTest } from "../support/SupportClockBoundary";
 import { Arrayable } from "@xaravel/contracts/support";
-import { array_values, arrayEntries, Error as PhpError, fqcn, InvalidArgumentException, jsonDecode, jsonEncode, keyed, looseEquals, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_NUMERIC, SORT_NATURAL, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError, ValueError } from "@xaravel/runtime";
+import { array_values, arrayEntries, Error as PhpError, fqcn, InvalidArgumentException, JSON_PRESERVE_ZERO_FRACTION, jsonDecode, jsonEncode, keyed, looseEquals, minus, PHP_INT_MAX, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_NUMERIC, SORT_NATURAL, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError, ValueError } from "@xaravel/runtime";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 
@@ -2496,5 +2496,67 @@ xaravelTest(
       Assert.assertSame(json, jsonEncode(cases[label]!()), label);
     }
     Assert.assertSame(jsonEncode(Object.keys(cases).sort()), jsonEncode(STDCLASS_ITEMS.map(([label]) => label).sort()));
+  },
+);
+
+// Action item epic-14-retro-item-7-lazy-range-php-arithmetic: `LazyCollection.range` compares and steps its bounds
+// with the runtime's PHP `<=>`, `+` and `-`, as Upstream's two `for` loops do, so numeric-string bounds count, floats
+// stay floats, and a non-numeric bound throws PHP's `Unsupported operand types` TypeError on its first step. The
+// expected values are those of `lazy-range.probe.txt`, which `lazy-range.probe.php` writes with PHP 8.5.11 by running
+// Upstream at the Pin; every recorded label is recomputed here and compared through `jsonEncode` with
+// `JSON_PRESERVE_ZERO_FRACTION`, as the probe encodes, so a float `1.0` is told from the int `1`.
+const LAZY_RANGE = readFileSync(join(import.meta.dir, "lazy-range.probe.txt"), "utf8").trim().split("\n").map((line) => {
+  const tab = line.indexOf("\t");
+  return [line.slice(0, tab), line.slice(tab + 1)] as const;
+});
+
+xaravelTest(
+  "XT-collections-22",
+  "LazyCollection.range over int, numeric-string, mixed, float, string-step, negative-step and null bounds gives PHP 8.5.11's items, letter bounds throw TypeError 'Unsupported operand types: string + int' (ascending) or 'string - int' (descending) on the advance after yielding the first bound, a non-numeric step builds the collection and throws abs()'s TypeError on the advance after yielding the first bound, and a zero step throws InvalidArgumentException at the call",
+  () => {
+    const attempt = (fn: () => unknown): unknown => {
+      try { return fn(); } catch (error) { return `${fqcn(error as object)}: ${(error as Error).message}`; }
+    };
+    // The range is built, then stepped by hand, as the probe's `steps` does: its class, the first value, then the next
+    // advance's value or exception. A throw while building escapes to the outer `attempt` and fails the comparison.
+    const steps = (make: () => LazyCollection): unknown[] => {
+      const collection = make();
+      const iterator = collection.getIterator() as Iterator;
+      return [fqcn(collection), iterator.current(), attempt(() => {
+        iterator.next();
+        return iterator.valid() ? iterator.current() : null;
+      })];
+    };
+    const cases: Record<string, () => unknown> = {
+      "int.up": () => attempt(() => LazyCollection.range(1, 3).all()),
+      "int.down": () => attempt(() => LazyCollection.range(3, 1).all()),
+      "numeric_string.up": () => attempt(() => LazyCollection.range("1", "3").all()),
+      "numeric_string.down": () => attempt(() => LazyCollection.range("3", "1").all()),
+      mixed_bound: () => attempt(() => LazyCollection.range(1, "3").all()),
+      float_step: () => attempt(() => LazyCollection.range(0, 1, 0.5).all()),
+      string_step: () => attempt(() => LazyCollection.range(1, 5, "2").all()),
+      negative_step: () => attempt(() => LazyCollection.range(5, 1, -2).all()),
+      null_bound: () => attempt(() => LazyCollection.range(null, 2).all()),
+      "letters.up": () => attempt(() => LazyCollection.range("a", "e").take(5).all()),
+      "letters.down": () => attempt(() => LazyCollection.range("e", "a").take(5).all()),
+      "letters.up.steps": () => attempt(() => steps(() => LazyCollection.range("a", "e"))),
+      "letters.down.steps": () => attempt(() => steps(() => LazyCollection.range("e", "a"))),
+      non_numeric_step: () => attempt(() => LazyCollection.range(1, 3, "x").all()),
+      "non_numeric_step.steps": () => attempt(() => steps(() => LazyCollection.range(1, 3, "x"))),
+      "nan.to": () => attempt(() => LazyCollection.range(1, NaN).take(3).all()),
+      "nan.from": () => attempt(() => LazyCollection.range(NaN, 1).take(3).all()),
+      "nan.step": () => attempt(() => LazyCollection.range(5, 1, NaN).take(3).all()),
+      "multi_digit_string.up": () => attempt(() => LazyCollection.range("9", "10").all()),
+      "multi_digit_string.down": () => attempt(() => LazyCollection.range("10", "9").all()),
+      "float_bounds.up": () => attempt(() => LazyCollection.range(0.5, 2).all()),
+      "float_bounds.down": () => attempt(() => LazyCollection.range(2.5, 0).all()),
+      int_max: () => attempt(() => LazyCollection.range(minus(PHP_INT_MAX, 1), PHP_INT_MAX).take(4).all()),
+      float_drift: () => attempt(() => LazyCollection.range(0, 1, 0.1).all()),
+      zero_step: () => attempt(() => LazyCollection.range(1, 3, "0")),
+    };
+    for (const [label, json] of LAZY_RANGE) {
+      Assert.assertSame(json, jsonEncode(cases[label]!(), JSON_PRESERVE_ZERO_FRACTION), label);
+    }
+    Assert.assertSame(jsonEncode(Object.keys(cases).sort()), jsonEncode(LAZY_RANGE.map(([label]) => label).sort()));
   },
 );

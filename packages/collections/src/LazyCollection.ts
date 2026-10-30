@@ -32,6 +32,9 @@ import { Arrayable, CanBeEscapedWhenCastToString, Jsonable } from "@xaravel/cont
 import { Macroable } from "@xaravel/macroable";
 import {
   abs,
+  minus,
+  plus,
+  spaceship,
   array_slice,
   ceil,
   toFloat,
@@ -200,7 +203,7 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) imp
   }
 
   /** Create a collection with the given range, by `step` (its absolute value), up or down. Throws for a zero step. */
-  static range<R>(this: new (source?: unknown, ...args: any[]) => R, from: number, to: number, step: number = 1, ...args: unknown[]): R {
+  static range<R>(this: new (source?: unknown, ...args: any[]) => R, from: unknown, to: unknown, step: unknown = 1, ...args: unknown[]): R {
     if (looseEquals(step, 0)) {
       throw new InvalidArgumentException("Step value cannot be zero.");
     }
@@ -208,14 +211,18 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) imp
     void args;
 
     return new this(function* () {
-      // PHP's `use ($from, $to, $step)` copies the bounds into each call, so every enumeration starts afresh.
+      // PHP's `use ($from, $to, $step)` copies the bounds into each call, so every enumeration starts afresh. The
+      // comparisons and steps are PHP's `<=`, `>=`, `+=` and `-=` through the runtime's operators, so numeric strings
+      // count and a non-numeric bound throws PHP's `Unsupported operand types` TypeError.
       let current = from;
-      if (current <= to) {
-        for (; current <= to; current += Number(abs(step))) {
+      if (spaceship(current, to) <= 0) {
+        for (; spaceship(current, to) <= 0; current = plus(current, abs(step))) {
           yield current;
         }
       } else {
-        for (; current >= to; current -= Number(abs(step))) {
+        // PHP compiles `$from >= $to` as `$to <= $from` (ZEND_IS_SMALLER_OR_EQUAL with swapped operands), so an
+        // uncomparable pair (NAN) ends the loop as it does in PHP; `spaceship(current, to) >= 0` would not.
+        for (; spaceship(to, current) <= 0; current = minus(current, abs(step))) {
           yield current;
         }
       }
