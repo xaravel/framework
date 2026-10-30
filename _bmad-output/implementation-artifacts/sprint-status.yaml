@@ -169,7 +169,7 @@ development_status:
 
   epic-15: in-progress
   15-1-config-repository: done
-  15-2-phpdotenv-grammar-port: blocked  # ESC-15.2-6 (contract, second key: DIRECTORY_SEPARATOR, array_reduce, EmptyIterator for the runtime) and the CI-signed XT-config-3/4 fixtures; phpdotenv, PhpOption and ResultType ported in packages/config
+  15-2-phpdotenv-grammar-port: blocked  # ESC-15.2-6 (contract, second key: DIRECTORY_SEPARATOR, array_reduce, EmptyIterator for the runtime); XT-config-3/4 pass on their signed fixtures; phpdotenv, PhpOption and ResultType ported in packages/config
   15-3-bun-s-env-autoload-neutralised: backlog
   epic-15-retrospective: optional
 
