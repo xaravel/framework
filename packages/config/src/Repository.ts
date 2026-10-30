@@ -8,10 +8,12 @@
 // the base. A config write made before the Application is `sealed` must change the base instead; that write needs the
 // `sealed` state and its runtime seam, so it lands with them (Story 17.4 or 51.1), as ESC-15.1-2 rules.
 //
-// PHP's `ArrayAccess` and the config contract are brand getters (AD-9.5); index syntax is `get()` and the `offset*`
-// methods (DIV-12.6, DIV-12.17). Upstream's `Macroable` waits on ESC-15.1-1. Config is sync (AD-6).
+// PHP's `ArrayAccess` and the config contract are brand getters (AD-9.5); index syntax is the `offset*` methods
+// (DIV-12.6, DIV-12.17). Upstream's `use Macroable` is `mixin(null, Macroable)`, as `Collection` does, through
+// the `@xaravel/macroable` edge ESC-15.1-1 adds. Config is sync (AD-6).
 import { Arr, Collection } from "@xaravel/collections";
 import { Repository as ConfigContract, type PhpArrayLike } from "@xaravel/contracts/config";
+import { Macroable } from "@xaravel/macroable";
 import {
   ArrayAccess,
   array_unshift,
@@ -26,6 +28,7 @@ import {
   is_int,
   is_numeric,
   is_string,
+  mixin,
   PhpArray,
   type PhpKeyInput,
   Ref,
@@ -39,12 +42,13 @@ import { frameOverlay } from "@xaravel/runtime/scope";
 const ITEMS = Symbol.for("xaravel.config.Repository.items");
 
 /** A configuration repository: Laravel's `Illuminate\Config\Repository`. */
-export class Repository implements ConfigContract {
+export class Repository extends mixin(null, Macroable) implements ConfigContract {
   /** All of the configuration items: the base, as the constructor received them. */
   protected readonly items: unknown;
 
   /** Create a new configuration repository. */
   constructor(items: PhpArrayLike = []) {
+    super();
     this.items = valueCopy(items);
   }
 
