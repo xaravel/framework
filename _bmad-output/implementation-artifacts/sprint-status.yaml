@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-30-2026 01:01
+last_updated: 10-30-2026 03:10
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -169,7 +169,7 @@ development_status:
 
   epic-15: in-progress
   15-1-config-repository: done
-  15-2-phpdotenv-grammar-port: blocked  # contract Escalations ESC-15.2-1 (runtime builtins), -2 (superglobals and getenv/putenv), -3 (sync env-file read, AD-6) and -4 (PhpOption/ResultType ownership) need a second key (MAINT amendment 2026-10-30); they hold XT-config-3 and XT-config-4
+  15-2-phpdotenv-grammar-port: blocked  # ESC-15.2-1 approved by the monitor (parts a-f, items epic-15-item-1 and -2; part g waits on -2); ESC-15.2-2 (superglobals, getenv/putenv), -3 (sync env-file read, AD-6) and -4 (PhpOption/ResultType owners, AD-22) wait on the Maintainer (decisions/MAINT-2026-10-30-story-15-2.md)
   15-3-bun-s-env-autoload-neutralised: backlog
   epic-15-retrospective: optional
 
@@ -2324,3 +2324,34 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-29-epic-14-retro-minus.md"
+  - id: "epic-15-item-1-runtime-phpdotenv-builtins"
+    epic: 15
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-30-story-15-2.md),
+      in scope packages/runtime: @xaravel/runtime/php exports, under their PHP names
+      with PHP 8.5.11 behaviour (ESC-15.2-1 parts a-e): strpos, str_replace, ltrim
+      and rtrim with PHP character lists and .. ranges, ord, strtok, addcslashes with
+      ranges, stripcslashes; ctype_space, ctype_digit; mb_strlen, mb_substr, mb_strpos,
+      mb_convert_encoding, mb_list_encodings and mb_encoding_aliases over UTF-8; function_exists;
+      class_exists over the Class Registry; filter_var with FILTER_VALIDATE_BOOLEAN,
+      FILTER_VALIDATE_INT and FILTER_NULL_ON_FAILURE as phpdotenv Validator.php uses
+      them. Notices and warnings are not raised (DIV-9.17). XT-runtime cases against
+      PHP; existing exports stay; no other runtime behaviour changes; getenv and putenv
+      are not part of this item"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-30-story-15-2.md"
+  - id: "epic-15-item-2-runtime-pcre-functions"
+    epic: 15
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-30-story-15-2.md),
+      in scope packages/runtime: @xaravel/runtime/php exports preg_match, preg_match_all,
+      preg_split, preg_replace_callback with $limit, preg_last_error and preg_last_error_msg
+      under their PHP names with PHP 8.5.11 behaviour, taking a PHP pattern string
+      converted by PORTING.md PCRE conversion under the existing DIV-10.1 (ESC-15.2-1
+      part f). Cover every pattern form phpdotenv v5.7.0 uses (the A and u modifiers,
+      unicode property classes, start and end anchors, and the branch-reset group);
+      a form the PORTING rule does not cover raises a new Escalation instead of an
+      invented conversion. XT-runtime cases against PHP; existing exports stay; no
+      other runtime behaviour changes"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-30-story-15-2.md"
