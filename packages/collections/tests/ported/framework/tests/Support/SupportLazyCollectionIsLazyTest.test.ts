@@ -1,4 +1,4 @@
-// Canonical Story 14.8 tests in Upstream order; FlatMap is pending whole in ESC-14.8-2.
+// Canonical Story 14.8 tests in Upstream order; FlatMap is registered now that runtime exports array_sum (ESC-14.8-2).
 // CountsEnumerations retains all source-count assertions.
 // Fidelity evidence for the disputed registrations (pinned Upstream SupportLazyCollectionIsLazyTest.php):
 // - testIntersectIsLazy, lines 532..540, uses intersect([1, 2, 3]) in BOTH callbacks, exactly as below.
@@ -6,12 +6,12 @@
 // - testSortKeysIsLazy, lines 1264..1272, is registered below with both assertion-helper calls.
 // - testSortKeysDescIsLazy, lines 1275..1283, is registered below with both assertion-helper calls.
 // Each of the latter three asserts zero construction enumeration and one full all() enumeration.
-// These are executable registrations, not the pending FlatMap comment or the documentary XT16 snippet.
+// The intersectByKeys, sortKeys and sortKeysDesc registrations listed above are executable registrations.
 import { portedTest } from "@xaravel/assert";
 import { Collection, LazyCollection, ItemNotFoundException, MultipleItemsFoundException } from "@xaravel/collections";
 import { Mockery } from "@xaravel/mockery";
 import { Exception, Ref, PhpArray, looseEquals, toPhpString, fqcn, BlockedByComponentError } from "@xaravel/runtime";
-import { stdClass, max as phpMax } from "@xaravel/runtime/php";
+import { stdClass, max as phpMax, array_sum, range } from "@xaravel/runtime/php";
 import { CountsEnumerations } from "../../../../support/CountsEnumerations";
 import { SupportLazyCollectionBlockedBySupportTest } from "../../../../support/SupportClockBoundary";
 
@@ -450,7 +450,22 @@ portedTest(`${ID}::testFirstWhereIsLazy`, { case: SupportLazyCollectionIsLazyTes
 
 });
 
-// testFlatMapIsLazy remains unregistered pending ESC-14.8-2: runtime array_sum contract.
+portedTest(`${ID}::testFlatMapIsLazy`, { case: SupportLazyCollectionIsLazyTest }, async function () {
+    const data = this.make([1, 2, 3, 4, 5]);
+
+    this.assertDoesNotEnumerateCollection(data, (collection: LazyCollection) => {
+        collection.flatMap((values: number[]) => {
+            return array_sum(values);
+        });
+    });
+
+    this.assertEnumeratesCollection(data, 3, (collection: LazyCollection) => {
+        collection.flatMap((value: number) => {
+            return range(1, value);
+        }).take(5).all();
+    });
+
+});
 
 portedTest(`${ID}::testFlattenIsLazy`, { case: SupportLazyCollectionIsLazyTest }, async function () {
     const data = this.make([1, [2, 3], [4, 5], [6, 7]]);
