@@ -11,6 +11,7 @@ export class GuardedWriter implements WriterInterface {
   /** The variable name allow list. */
   private readonly allowList: readonly string[];
 
+  /** The `WriterInterface` brand: an `instanceof WriterInterface` check finds this class (AD-9.5). */
   get [WriterInterface.brand](): true {
     return true;
   }

@@ -7,6 +7,7 @@ export class MultiWriter implements WriterInterface {
   /** The set of writers to use. */
   private readonly writers: readonly WriterInterface[];
 
+  /** The `WriterInterface` brand: an `instanceof WriterInterface` check finds this class (AD-9.5). */
   get [WriterInterface.brand](): true {
     return true;
   }

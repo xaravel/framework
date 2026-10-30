@@ -5,6 +5,7 @@ import { ExceptionInterface } from "./ExceptionInterface";
 
 /** Thrown when an environment file's contents cannot be parsed. */
 export class InvalidFileException extends InvalidArgumentException implements ExceptionInterface {
+  /** The `ExceptionInterface` brand: an `instanceof ExceptionInterface` check finds this class (AD-9.5). */
   get [ExceptionInterface.brand](): true {
     return true;
   }

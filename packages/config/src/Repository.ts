@@ -52,10 +52,12 @@ export class Repository extends mixin(null, Macroable) implements ConfigContract
     this.items = valueCopy(items);
   }
 
+  /** The `ArrayAccess` brand: an `instanceof ArrayAccess` check finds this class (AD-9.5). */
   get [ArrayAccess.brand](): true {
     return true;
   }
 
+  /** The `ConfigContract` brand: an `instanceof ConfigContract` check finds this class (AD-9.5). */
   get [ConfigContract.brand](): true {
     return true;
   }

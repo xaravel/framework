@@ -167,10 +167,10 @@ development_status:
   14-8-lazycollection-laziness-guarantees: done  # ESC-14.8-3 tool fix landed (#537); Fidelity re-run passed tree 8956514a (two passes, current); story:check 14.8 pass; Epic-close checks met.
   epic-14-retrospective: done
 
-  epic-15: in-progress
+  epic-15: done
   15-1-config-repository: done
   15-2-phpdotenv-grammar-port: done  # ESC-15.2-6 landed (#569); three runtime throws became Upstream code; two current Fidelity passes at tree 6095fb1a; XT-config-3 and XT-config-4 pass against the signed fixtures.
-  15-3-bun-s-env-autoload-neutralised: in-progress  # ESC-15.3-1 (entry-scripts check, this PR) and ESC-15.3-2 (48 config additions, #572) approved by the Maintainer; write XT-config-6 over the tool and XT-config-7 (Epic-close checks)
+  15-3-bun-s-env-autoload-neutralised: done
   epic-15-retrospective: optional
 
   epic-16: backlog

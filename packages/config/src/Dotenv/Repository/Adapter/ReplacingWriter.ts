@@ -16,6 +16,7 @@ export class ReplacingWriter implements WriterInterface {
   /** The record of seen variables. */
   private readonly seen: PhpArray<string | number, string>;
 
+  /** The `WriterInterface` brand: an `instanceof WriterInterface` check finds this class (AD-9.5). */
   get [WriterInterface.brand](): true {
     return true;
   }

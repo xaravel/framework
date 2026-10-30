@@ -13,6 +13,7 @@ import { ParserInterface } from "./ParserInterface";
 
 /** phpdotenv's parser: content into entries. */
 export class Parser implements ParserInterface {
+  /** The `ParserInterface` brand: an `instanceof ParserInterface` check finds this class (AD-9.5). */
   get [ParserInterface.brand](): true {
     return true;
   }

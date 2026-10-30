@@ -9,6 +9,7 @@ export class MultiReader implements ReaderInterface {
   /** The set of readers to use. */
   private readonly readers: readonly ReaderInterface[];
 
+  /** The `ReaderInterface` brand: an `instanceof ReaderInterface` check finds this class (AD-9.5). */
   get [ReaderInterface.brand](): true {
     return true;
   }

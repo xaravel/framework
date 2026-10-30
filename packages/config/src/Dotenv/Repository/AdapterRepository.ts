@@ -13,6 +13,7 @@ export class AdapterRepository implements RepositoryInterface {
   /** The writer to use. */
   private readonly writer: WriterInterface;
 
+  /** The `RepositoryInterface` brand: an `instanceof RepositoryInterface` check finds this class (AD-9.5). */
   get [RepositoryInterface.brand](): true {
     return true;
   }

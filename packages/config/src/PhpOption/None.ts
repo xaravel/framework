@@ -12,6 +12,7 @@ const CREATE: unique symbol = Symbol("None");
 export class None extends Option<never> {
   private static instance: None | null = null;
 
+  /** Returns the one `None` instance, creating it on first use. */
   static create(): None {
     if (null === None.instance) {
       None.instance = new None(CREATE);
@@ -20,83 +21,101 @@ export class None extends Option<never> {
     return None.instance;
   }
 
+  /** {@inheritDoc Option.get} */
   get(): never {
     throw new RuntimeException("None has no value.");
   }
 
+  /** {@inheritDoc Option.getOrCall} */
   getOrCall<S>(callable: () => S): S {
     return (callable() ?? null) as S;
   }
 
+  /** {@inheritDoc Option.getOrElse} */
   getOrElse<S>(defaultValue: S): S {
     return defaultValue;
   }
 
+  /** {@inheritDoc Option.getOrThrow} */
   getOrThrow(ex: Exception): never {
     throw ex;
   }
 
+  /** {@inheritDoc Option.isEmpty} */
   isEmpty(): boolean {
     return true;
   }
 
+  /** {@inheritDoc Option.isDefined} */
   isDefined(): boolean {
     return false;
   }
 
+  /** {@inheritDoc Option.orElse} */
   orElse<S>(elseOption: Option<S>): Option<S> {
     return elseOption;
   }
 
+  /** {@inheritDoc Option.ifDefined} */
   ifDefined(callable: (value: never) => unknown): void {
     // Just do nothing in that case.
     void callable;
   }
 
+  /** {@inheritDoc Option.forAll} */
   forAll(callable: (value: never) => unknown): None {
     void callable;
     return this;
   }
 
+  /** {@inheritDoc Option.map} */
   map<S>(callable: (value: never) => S): None {
     void callable;
     return this;
   }
 
+  /** {@inheritDoc Option.flatMap} */
   flatMap<S>(callable: (value: never) => Option<S>): None {
     void callable;
     return this;
   }
 
+  /** {@inheritDoc Option.filter} */
   filter(callable: (value: never) => unknown): None {
     void callable;
     return this;
   }
 
+  /** {@inheritDoc Option.filterNot} */
   filterNot(callable: (value: never) => unknown): None {
     void callable;
     return this;
   }
 
+  /** {@inheritDoc Option.select} */
   select(value: unknown): None {
     void value;
     return this;
   }
 
+  /** {@inheritDoc Option.reject} */
   reject(value: unknown): None {
     void value;
     return this;
   }
 
+  /** {@inheritDoc Option.getIterator} */
   getIterator(): EmptyIterator {
     return new EmptyIterator();
   }
 
+  /** {@inheritDoc Option.foldLeft} */
   foldLeft<S>(initialValue: S, callable: (accumulator: S, value: never) => S): S {
     void callable;
     return initialValue;
   }
 
+  /** {@inheritDoc Option.foldRight} */
   foldRight<S>(initialValue: S, callable: (value: never, accumulator: S) => S): S {
     void callable;
     return initialValue;

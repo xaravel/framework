@@ -10,6 +10,7 @@ import { Resolver } from "./Resolver";
 
 /** Loads parsed entries into a repository, resolving nested variables. */
 export class Loader implements LoaderInterface {
+  /** The `LoaderInterface` brand: an `instanceof LoaderInterface` check finds this class (AD-9.5). */
   get [LoaderInterface.brand](): true {
     return true;
   }

@@ -9,7 +9,10 @@
 //
 // F-10 recorded reason: Bun's `.env` autoload is a Bun runtime behaviour with no PHP counterpart, so no Upstream test
 // (in the Test Inventory or in phpdotenv) covers it, and the Oracle cannot run it. The test contains no Upstream test.
-// The entry-script lint (XT-config-6) and the Epic-close checks (XT-config-7) wait on ESC-15.3-1 and ESC-15.3-2.
+//
+// XT-config-6 is the config-side acceptance of the entry-script lint (ESC-15.3-1): it drives the check's CLI,
+// `tools/entry-scripts/entry-scripts.ts check --root <dir>`, over fixture roots and over the repository itself (the
+// tool's own tests are XT-conformance-272). The Epic-close checks (XT-config-7) are in `epic-close.test.ts`.
 import { join, resolve } from "node:path";
 import { copyFileSync, mkdtempSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -114,4 +117,66 @@ xaravelTest(
     Assert.assertSame("real", real.after.getenv[SHARED], "real env: getenv reads the real value");
     Assert.assertSame("dot", real.after.env[DOT], "real env: .env's other key still loads");
   },
+);
+
+/** The entry-script check's CLI, which `bun run entry-scripts:check` runs. */
+const ENTRY_SCRIPTS = join(REPO, "tools", "entry-scripts", "entry-scripts.ts");
+
+/** The parent's environment without `BUN_OPTIONS` and `NODE_OPTIONS`, as `run` above and the harness spawn. */
+function childEnv(): Record<string, string> {
+  const env: Record<string, string> = {};
+  for (const [key, value] of Object.entries(process.env)) {
+    if (value !== undefined && key !== "BUN_OPTIONS" && key !== "NODE_OPTIONS") env[key] = value;
+  }
+  return env;
+}
+
+/** Runs `args` after `bun --no-env-file` as a child process from the repository root. */
+function bunChild(args: string[]): { exitCode: number; stdout: string; stderr: string } {
+  const child = Bun.spawnSync([process.execPath, "--no-env-file", ...args], { cwd: REPO, env: childEnv(), timeout: 60_000, stdin: "ignore", stdout: "pipe", stderr: "pipe" });
+  return { exitCode: child.exitCode ?? -1, stdout: child.stdout.toString(), stderr: child.stderr.toString() };
+}
+
+/** Runs `entry-scripts.ts check --root <root>` as a child Bun process with `--no-env-file`. */
+function entryScriptsCheck(root: string): { exitCode: number; stdout: string; stderr: string } {
+  return bunChild([ENTRY_SCRIPTS, "check", "--root", root]);
+}
+
+/** Runs the check over a fresh temp root whose `package.json` has one script, `start`; the root is removed in `finally`. */
+function checkStartScript(start: string): { exitCode: number; stdout: string; stderr: string } {
+  const dir = mkdtempSync(join(tmpdir(), "xaravel-xt-config-6-"));
+  try {
+    writeFileSync(join(dir, "package.json"), `{ "name": "fixture", "private": true, "scripts": { "start": ${JSON.stringify(start)} } }\n`);
+    return entryScriptsCheck(dir);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+xaravelTest(
+  "XT-config-6",
+  "the entry-script lint fails an entry script that lacks --no-env-file, naming it (FR-20.2): run over a fixture root whose package.json has \"start\": \"bun entry.ts\", entry-scripts.ts check exits 1 with \"entry-scripts: package.json: scripts.start: bun command lacks --no-env-file (FR-20.2)\" on stderr; with \"bun --no-env-file entry.ts\" it exits 0 and prints Entry scripts OK; a chained script whose second bun command lacks the flag fails; and bun run entry-scripts:check passes over the repository's own entry scripts with no violation line",
+  () => {
+    const violation = "entry-scripts: package.json: scripts.start: bun command lacks --no-env-file (FR-20.2)";
+
+    const missing = checkStartScript("bun entry.ts");
+    Assert.assertSame(1, missing.exitCode, `missing flag: exit code\n${missing.stdout}${missing.stderr}`);
+    Assert.assertStringContainsString(violation, missing.stderr, "missing flag: the violation names the script");
+
+    const present = checkStartScript("bun --no-env-file entry.ts");
+    Assert.assertSame(0, present.exitCode, `flag present: exit code\n${present.stdout}${present.stderr}`);
+    Assert.assertStringContainsString("Entry scripts OK", present.stdout, "flag present: the check reports OK");
+    Assert.assertSame("", present.stderr, "flag present: no violation");
+
+    const chained = checkStartScript("bun --no-env-file a.ts && bun b.ts");
+    Assert.assertSame(1, chained.exitCode, `chained: exit code\n${chained.stdout}${chained.stderr}`);
+    Assert.assertStringContainsString(violation, chained.stderr, "chained: the violation names the script");
+
+    // The repository, through the lint itself: `bun run entry-scripts:check`.
+    const repository = bunChild(["run", "entry-scripts:check"]);
+    Assert.assertSame(0, repository.exitCode, `repository: exit code\n${repository.stdout}${repository.stderr}`);
+    Assert.assertStringContainsString("Entry scripts OK", repository.stdout, "repository: the check reports OK");
+    Assert.assertFalse(/^entry-scripts: /m.test(repository.stderr), `repository: no violation line\n${repository.stderr}`);
+  },
+  120_000,
 );
