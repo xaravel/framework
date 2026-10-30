@@ -60,6 +60,7 @@
     "scan:closures": "bun tools/scans/closures.ts",
     "scan:div12": "bun tools/scans/div12.ts",
     "scan:test-api": "bun tools/scans/test-api.ts",
+    "scan:builtins": "bun --no-env-file tools/scans/builtins.ts",
     "assert:coverage": "bun tools/assert-coverage/coverage.ts",
     "mockery:coverage": "bun tools/mockery-coverage/coverage.ts",
     "component-map:check": "bun tools/component-map/component-map.ts check",
