@@ -1,12 +1,22 @@
-// Ported from Laravel v13.37.0 framework/tests/Config/RepositoryTest.php, in Upstream's order. An index write, `isset`
-// or `unset` on the Repository is `offsetSet` / `offsetExists` / `offsetUnset` (DIV-12.17). testItIsMacroable waits on
-// ESC-15.1-1 (Macroable edge for `config`); testOffsetGet and testOffsetSet, which read the Repository by index, wait on
-// ESC-15.1-4 (no DIV clause covers an index read on a non-Collection `ArrayAccess` object).
+// Ported from Laravel v13.37.0 framework/tests/Config/RepositoryTest.php, in Upstream's order. An index read on the
+// Repository is `offsetGet(k)`, the method PHP calls (DIV-12.6, ESC-15.1-4), and an index write, `isset` or `unset` is
+// `offsetSet` / `offsetExists` / `offsetUnset` (DIV-12.17). In testItIsMacroable, `$repository->macro()` is the static
+// `macro` on the Repository's class, written `classOf(repository).macro()` as SupportMacroableTest writes `$obj::m()`;
+// the macro is a `function` expression, as Upstream rebinds it, and is called through a typed view of the Repository,
+// as `macro()` installs it at run time.
 // `portedTest` runs each body in a test frame, so the Repository's writes land in that frame's overlay (AD-5.5).
 import { portedTest, TestCase } from "@xaravel/assert";
 import { Collection } from "@xaravel/collections";
 import { InvalidArgumentException, PhpArray } from "@xaravel/runtime";
 import { Repository } from "../../../../../src";
+
+/** The class of `obj`, whose static side `$obj->macro()` reaches in PHP. */
+function classOf(obj: Repository): typeof Repository {
+  return obj.constructor as typeof Repository;
+}
+
+/** The Repository with the macro testItIsMacroable registers. */
+type WithFoo = Repository & { foo(): unknown };
 
 class RepositoryTest extends TestCase {
   repository!: Repository;
@@ -213,6 +223,35 @@ portedTest('Illuminate\\Tests\\Config\\RepositoryTest::testOffsetExists', { case
   this.assertFalse(this.repository.offsetExists('non_numeric')); // adapted:DIV-12.17
 });
 
+portedTest('Illuminate\\Tests\\Config\\RepositoryTest::testOffsetGet', { case: RepositoryTest }, async function () {
+  this.assertNull(this.repository.offsetGet('not-exist')); // adapted:DIV-12.6
+  this.assertSame('bar', this.repository.offsetGet('foo')); // adapted:DIV-12.6
+  this.assertSame({
+    x: 'xxx',
+    y: 'yyy',
+  }, this.repository.offsetGet('associate')); // adapted:DIV-12.6
+});
+
+portedTest('Illuminate\\Tests\\Config\\RepositoryTest::testOffsetSet', { case: RepositoryTest }, async function () {
+  this.assertNull(this.repository.offsetGet('key')); // adapted:DIV-12.6
+
+  this.repository.offsetSet('key', 'value'); // adapted:DIV-12.17
+
+  this.assertSame('value', this.repository.offsetGet('key')); // adapted:DIV-12.6
+
+  this.repository.offsetSet('key', 'new_value'); // adapted:DIV-12.17
+  this.assertSame('new_value', this.repository.offsetGet('key')); // adapted:DIV-12.6
+
+  this.repository.offsetSet('new_key', null); // adapted:DIV-12.17
+  this.assertNull(this.repository.offsetGet('new_key')); // adapted:DIV-12.6
+
+  this.repository.offsetSet('', 'value'); // adapted:DIV-12.17
+  this.assertSame('value', this.repository.offsetGet('')); // adapted:DIV-12.6
+
+  this.repository.offsetSet(123, '123'); // adapted:DIV-12.17
+  this.assertSame('123', this.repository.offsetGet(123)); // adapted:DIV-12.6
+});
+
 portedTest('Illuminate\\Tests\\Config\\RepositoryTest::testOffsetUnset', { case: RepositoryTest }, async function () {
   this.assertArrayHasKey('associate', this.repository.all());
   this.assertSame(this.config['associate'], this.repository.get('associate'));
@@ -221,6 +260,14 @@ portedTest('Illuminate\\Tests\\Config\\RepositoryTest::testOffsetUnset', { case:
 
   this.assertArrayHasKey('associate', this.repository.all());
   this.assertNull(this.repository.get('associate'));
+});
+
+portedTest('Illuminate\\Tests\\Config\\RepositoryTest::testItIsMacroable', { case: RepositoryTest }, async function () {
+  classOf(this.repository).macro('foo', function () {
+    return 'macroable';
+  });
+
+  this.assertSame('macroable', (this.repository as WithFoo).foo());
 });
 
 portedTest('Illuminate\\Tests\\Config\\RepositoryTest::testItGetsAsString', { case: RepositoryTest }, async function () {
