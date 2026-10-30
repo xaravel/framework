@@ -19,7 +19,8 @@ Xaravel is an independent open-source project. It is not affiliated with, sponso
 - [Userland arguments and returns](docs/php-userland-arguments.md): explicit weak parameter binding and normalized returns.
 - [Chunking, sorting, arithmetic and callables](docs/php-chunk-sort-arith-callables.md): PHP builtins and owned generator cleanup.
 - [PHP generators and functions](docs/php-functions.md): `Generator`, `keyed` and `yieldFrom` (DIV-12.18), and
-  PHP's array, `range` and string functions under their PHP names (`in_array`, `array_unique`, `substr`, …).
+  PHP's array, `range` and string functions under their PHP names (`in_array`, `array_unique`, `substr`, …), and the
+  process environment and file read (`getenv`, `putenv`, `superglobals`, `file_get_contents`).
 - [Traits and `inject` metadata](docs/traits-and-inject.md): `mixin`, trait boot and initialize, `inject`, the Spec
   values and `returns`.
 - [PHP reflection and attributes](docs/reflection.md): `ReflectionClass` and its kin over `inject` metadata,

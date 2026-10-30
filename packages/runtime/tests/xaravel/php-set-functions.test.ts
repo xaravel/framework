@@ -688,8 +688,9 @@ xaravelTest(
       Assert.assertSame((php as Record<string, unknown>)[fn.name], fn.fn, fn.name);
     }
     // The original 100 plus array_is_list, array_push, http_build_query and array_sum, the 19 phpdotenv builtins
-    // (ESC-15.2-1 parts a-e) and the 6 PCRE functions (ESC-15.2-1 part f).
-    Assert.assertSame(129, registry().length);
+    // (ESC-15.2-1 parts a-e), the 6 PCRE functions (ESC-15.2-1 part f) and the 3 process-environment functions getenv,
+    // putenv and file_get_contents (ESC-15.2-1 part g, ESC-15.2-3).
+    Assert.assertSame(132, registry().length);
 
     // Xaravel-only: the helpers, classes and constants are never resolved; a non-string is no name.
     for (const helper of ["arrayUnion", "arrayEntries", "offsetAssign", "phpFunction", "bindPhpArguments", "phpReturn", "ArrayObject", "SORT_STRING", "Foo::bar", "strlen::x"]) {

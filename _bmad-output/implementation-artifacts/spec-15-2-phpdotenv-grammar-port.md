@@ -16,7 +16,24 @@ context:
   - '{project-root}/conformance/escalations/ESC-15.2-3.md'
   - '{project-root}/conformance/escalations/ESC-15.2-4.md'
 warnings: []
-deferred: []
+deferred:
+  - summary: >-
+      preg_last_error() reads 0 outside a Scope Frame, so Validator.php:144's idiom (@preg_match($regex, '') === false && preg_last_error() === PREG_INTERNAL_ERROR) misses an invalid allowedRegexValues pattern when Dotenv loads outside a frame.
+    evidence: |-
+      Deferred here by action item epic-15-item-2-runtime-pcre-functions (its spec's deferred list). Settle it by
+      asserting that an invalid allowedRegexValues pattern throws phpdotenv's exception where Dotenv loads.
+    location: >-
+      packages/runtime/src/php/pcreFunctions.ts (record); phpdotenv Validator.php:144
+    severity: medium (unverified)
+  - summary: >-
+      file_get_contents throws the runtime's UTF-8 limit for a readable file that is no valid UTF-8, so Reader cannot load a Latin-1 or Windows-1252 .env file through Str::utf8 with $fileEncoding.
+    evidence: |-
+      Deferred here by action item epic-15-item-3-runtime-process-environment (its spec's deferred list). The bytes
+      limit is the runtime's rule for every PHP string. Decide whether a non-UTF-8 env file must load; if so, raise
+      an Escalation (the runtime has no byte-string form).
+    location: >-
+      packages/runtime/src/php/fileFunctions.ts (decodeResult call); phpdotenv Store/File/Reader.php:73, Util/Str.php
+    severity: medium
 ---
 
 <intent-contract>

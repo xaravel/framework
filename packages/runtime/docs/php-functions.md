@@ -11,14 +11,16 @@ the set, merge and replace functions, `array_pad`, `is_int`, `arrayUnion` and th
 string, ctype, mbstring, filter and existence functions vlucas/phpdotenv calls (ESC-15.2-1, action item
 `epic-15-item-1-runtime-phpdotenv-builtins`; see [phpdotenv builtins](#phpdotenv-builtins)), and the PCRE functions
 it calls (ESC-15.2-1 part f, ESC-15.2-5, action item `epic-15-item-2-runtime-pcre-functions`; see
-[PCRE functions](#pcre-functions)).
+[PCRE functions](#pcre-functions)), and the process environment and file read it uses (ESC-15.2-1 part g, ESC-15.2-2,
+ESC-15.2-3, action item `epic-15-item-3-runtime-process-environment`; see
+[Process environment and file read](#process-environment-and-file-read)).
 Everything here is exported from `@xaravel/runtime/php` and from the package root, under its PHP name, and is
 synchronous. Each function ports PHP 8.5.11's C source (`ext/standard/array.c`, `ext/standard/string.c`,
 `ext/spl/spl_iterators.c`, `Zend/zend_generators.c`, `Zend/zend_sort.c`, `ext/standard/formatted_print.c`,
 `ext/standard/math.c`, `ext/standard/type.c`, `ext/standard/strnatcmp.c`, `Zend/zend_builtin_functions.c`,
 `Zend/zend_API.c`, `Zend/zend_operators.c`, `ext/ctype/ctype.c`, `ext/mbstring/mbstring.c`, `ext/filter/filter.c`,
-`ext/filter/logical_filters.c`) in coercive typing mode, PHP's mode for a file without `strict_types`, as
-Laravel's are.
+`ext/filter/logical_filters.c`, `ext/standard/basic_functions.c`, `ext/standard/file.c`, `main/php_variables.c`) in
+coercive typing mode, PHP's mode for a file without `strict_types`, as Laravel's are.
 
 Common rules:
 
@@ -30,7 +32,8 @@ Common rules:
   except as an optional argument: an `undefined` optional argument is an omitted one, and takes PHP's default
   (`range(1, 2, undefined)` steps by 1, `iterator_to_array(it, undefined)` preserves keys).
 - **Arrays** come in as `arrayEntries` reads them and go out through `arrayFromEntries` (the AD-9 form: a list is an
-  `Array`, all string keys a plain object, anything else a `PhpArray`). `toPhpArray` alone returns a `PhpArray`.
+  `Array`, all string keys a plain object, anything else a `PhpArray`). `toPhpArray` and `getenv()` alone return a
+  `PhpArray`, as `superglobals` hold them.
 
 ## Generators (DIV-12.18)
 
@@ -727,6 +730,51 @@ the slot is read; in a keyed array (a named group) it throws at once. A subject 
 and a `preg_replace_callback` result that is no valid UTF-8, throw the limit. Each call compiles its pattern; nothing
 is cached.
 
+## Process environment and file read
+
+The process environment and file read vlucas/phpdotenv v5.7.0 uses (ESC-15.2-1 part g, ESC-15.2-2, ESC-15.2-3), ports
+of PHP 8.5.11's CLI. `getenv`, `putenv` and `file_get_contents` are [registry](#callables-php-function-names) entries
+with PHP's `ReflectionFunction` counts. All are sync.
+
+- `superglobals`: `{ server, env }`, two `PhpArray`s that stand for `$_SERVER` and `$_ENV`. Each is seeded once, when
+  `@xaravel/runtime/php` loads, from `process.env`, as the PHP CLI seeds them under the Oracle image's
+  `variables_order`: `php:8.5.11-cli-trixie` ships no php.ini, so PHP's built-in `EGPCS` applies and both arrays get
+  the environment. They are never re-read: a later `putenv` or `process.env` write changes neither, as in PHP. They are
+  boot-time process state, outside AD-5's frame slots (ESC-15.2-2); a port reads and writes them as PHP code reads
+  and writes the superglobals. `superglobals.server` holds the environment entries only (see Not ported).
+- `getenv(name = null, local_only = false)`: the value of `name` in `process.env` at the call (`""` when set empty), or
+  `false` when it is not set or `name` is `""`; with `name` null, a `PhpArray` of every entry, filtered and keyed as
+  `$_ENV` is. `local_only` changes nothing in the CLI. A name holding `=` is no entry, as glibc's `getenv` (the Oracle
+  image's) gives.
+- `putenv(assignment)`: `"NAME=value"` sets `NAME` to everything after the first `=` (`""` included), `"NAME"` unsets
+  it; `true` either way. It writes `process.env` only. An empty assignment or one starting with `=` throws PHP's
+  `ValueError` `putenv(): Argument #1 ($assignment) must have a valid syntax`.
+- `file_get_contents(filename, use_include_path = false, context = null, offset = 0, length = null)`: the contents of
+  the local file `filename` (relative to the working directory) from byte `offset` (negative from the end), at most
+  `length` bytes, read with `readFileSync` at each call. A missing or unreadable file, a path through a file
+  (`file/x`) or a negative `offset` before the start gives `false` with no warning (DIV-9.17); an `offset` past the end
+  gives `""`, and so does a directory. An empty `filename` throws PHP's `ValueError` `Path must not be empty`, one
+  holding a NUL byte `file_get_contents(): Argument #1 ($filename) must not contain any null bytes`, and a negative
+  `length` `file_get_contents(): Argument #5 ($length) must be greater than or equal to 0`.
+
+Both arrays and `getenv()` import an entry as PHP's `import_environment_variable` does: a name that is empty or holds
+` `, `.` or `[` is skipped, and an integer-like name (`12`, `-3`, not `007`) is an int key. Their order is
+`process.env`'s, the source ESC-15.2-2 rules: a JS object enumerates integer-like names first, where PHP keeps
+`environ` order, so only those names can sit earlier than in PHP.
+
+The runtime has no resources or stream wrappers: a `filename` with one of PHP 8.5.11's registered wrappers (`php://`,
+`file://`, `glob://`, `data:`, `http://`, `https://`, `ftp://`, `ftps://`, `phar://`, `zip://`, `compress.zlib://`,
+`compress.bzip2://`, the scheme in any case), `use_include_path` true or a non-null `context` throws a JS `TypeError`
+naming the limit, and so do file contents (or an `offset` / `length` cut) that are no valid UTF-8, a NUL byte in a
+`getenv` name or a `putenv` assignment (no C environment string holds one), and a lone surrogate in any of them.
+Another scheme (`foo://x`, or one character, `c://x`) is a local relative path, as PHP reads it.
+
+`process.env` is Bun's decoding of `environ`, so an environment name or value that is no valid UTF-8 arrives with
+U+FFFD where PHP keeps the bytes; no limit is thrown, since the runtime never sees the bytes. `putenv` writes
+`process.env` for the whole process and nothing is restored afterwards, as in the CLI; PHP's non-CLI SAPIs restore
+`putenv` values at request end, which the runtime does not (ESC-15.2-2 rules `getenv` and `putenv` over
+`process.env`).
+
 ## Values JS cannot hold
 
 A PHP string is bytes; a JS string is UTF-16. A result or input JS cannot hold throws a JS `TypeError` that names the
@@ -794,3 +842,10 @@ byte of 0x80 or more on its own), and a string holding a lone surrogate passed t
 - `method_exists` counts a JS method named `toString` (the `__toString` port) under that name too.
 - `min` and `max` with two arguments always take PHP 8.5's direct-call form; PHP's variadic form, which a call through
   a callable or with a spread takes, keeps the first of two equal values for `min` too.
+- `$_SERVER`'s keys the PHP CLI sets that are no environment values (`PHP_SELF`, `SCRIPT_NAME`, `SCRIPT_FILENAME`,
+  `PATH_TRANSLATED`, `DOCUMENT_ROOT`, `REQUEST_TIME`, `REQUEST_TIME_FLOAT`, `argv`, `argc`): `superglobals.server`
+  holds the environment entries only, so an environment variable of one of those names keeps its environment value.
+  A later Http Story builds its own request bag (ESC-15.2-2). The other superglobals, `$_GET`, `$_POST`, `$_COOKIE`,
+  `$_FILES`, `$_REQUEST` and `$GLOBALS`, are not ported.
+- `file_get_contents` over a stream wrapper, the include path or a stream context, and PHP's other file functions
+  (`file_put_contents`, `fopen`, `file`, …). `getenv`'s `sapi_getenv` (no SAPI but the CLI), and `apache_getenv`.
