@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-30-2026 15:23
+last_updated: 10-30-2026 15:46
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -2393,7 +2393,7 @@ action_items:
       on a sealed Application inside a unit frame), as decisions/ESC-15.1-2.md says.
       Mirrors epic-11-retro-item-7-macroable-boot-write. Edits epics.md."
     owner: "Maintainer"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md"
   - id: "epic-15-retro-item-2-untargeted-deferrals"
     epic: 15
@@ -2443,7 +2443,7 @@ action_items:
       PHP because every preg_* call recompiles its pattern (pcre.ts reads AD-5 as
       forbidding a cache)."
     owner: "Maintainer"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md"
   - id: "epic-15-retro-item-7-builtin-scan-vendor-constants-classes"
     epic: 15
@@ -2455,3 +2455,30 @@ action_items:
     owner: "orchestrator"
     status: open
     ref: "_bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md"
+  - id: "epic-15-retro-item-8-config-presealed-base-write"
+    epic: 15
+    action: "In scope packages/config, after Story 17.4 adds the Application sealed
+      state and its base-write seam: before sealed, a config Repository write (config([...]),
+      set, push, prepend, offsetSet, offsetUnset) lands in the Repository base items
+      through that seam; after sealed, a write inside a unit frame still goes to the
+      frame overlay (decisions/ESC-15.1-2.md). XT-config-1 gains its full wording,
+      config([...]) on a sealed Application inside a unit frame; no assertion weakened.
+      Waits in epic 15 waiting_on_maintainer until Story 17.4 is done; Story 17.4
+      PR takes it out (decisions/MAINT-2026-10-30-epic-15-items.md)"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-30-epic-15-items.md"
+  - id: "epic-15-retro-item-9-runtime-pcre-pattern-cache"
+    epic: 15
+    action: "In scope packages/runtime: the preg_* functions cache compiled patterns
+      keyed only by pattern text and flags, a process-wide memo of a pure conversion
+      that AD-5 allows (decisions/MAINT-2026-10-30-epic-15-items.md). No call ever
+      shares a stateful RegExp with another: a g or y pattern is a fresh RegExp from
+      the cached source and flags, or one whose lastIndex is reset and that no concurrent
+      call can observe. It may be bounded (LRU). Results, errors and preg_last_error
+      stay exactly as without the cache. XT-runtime cases show interleaved calls with
+      one sticky or global pattern give PHP results; pcre.ts cites the ruling; no
+      other runtime behaviour changes"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-30-epic-15-items.md"
