@@ -57,6 +57,16 @@ export function plus(a: unknown, b: unknown): unknown {
   return float(double(left) + double(right));
 }
 
+/** PHP's `$a - $b` (`sub_function`): numeric subtraction only, preserving int64 and float identity; an array throws. */
+export function minus(a: unknown, b: unknown): number | bigint | PhpFloat {
+  const [left, right] = operands(a, b, "-");
+  if ("int" in left && "int" in right) {
+    const difference = BigInt(left.int) - BigInt(right.int);
+    return difference >= INT_MIN && difference <= INT_MAX ? intKey(difference) : float(Number(left.int) - Number(right.int));
+  }
+  return float(double(left) - double(right));
+}
+
 /**
  * PHP 8.5.11's `array_sum` (`php_array_binop`): int 0 plus each value in order, through `plus`. An operand
  * `add_function` rejects (an array, an object, a non-numeric string) is skipped; PHP's warnings for it are not

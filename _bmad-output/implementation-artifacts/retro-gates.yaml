@@ -102,10 +102,10 @@ epic-13:
 epic-14:
   # Items 18 and 19 were ruled in decisions/MAINT-2026-10-29-collections-gate.md: #529 merged; U1 cited to DIV-12.21;
   # U2 (remove Enumerable::reduceWithKeys) landed in #535.
+  # Item 7 left waiting_on_maintainer when item 8 (runtime minus, decisions/MAINT-2026-10-29-epic-14-retro-minus.md) landed.
   verdict: accepted-with-open-items
   attempts: 1
   doc: _bmad-output/implementation-artifacts/epic-14-retro-2026-10-29.md
   blocked: false
   checkpoint_approved: false
-  waiting_on_maintainer:
-    - epic-14-retro-item-7-lazy-range-php-arithmetic
+  waiting_on_maintainer: []
