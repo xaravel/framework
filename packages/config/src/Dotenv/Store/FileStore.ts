@@ -17,6 +17,7 @@ export class FileStore implements StoreInterface {
   /** The file encoding. */
   private readonly fileEncoding: string | null;
 
+  /** The `StoreInterface` brand: an `instanceof StoreInterface` check finds this class (AD-9.5). */
   get [StoreInterface.brand](): true {
     return true;
   }

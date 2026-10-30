@@ -6,6 +6,10 @@ It ports `illuminate/config` from Laravel v13.37.0.
 
 Xaravel is an independent open-source project. It is not affiliated with, sponsored by or endorsed by Laravel Holdings Inc.
 
+## Documentation
+
+- [Configuration](docs/config.md): the `Repository`, env files through `Dotenv`, the `.env` grammar, repository modes, Bun's `.env` autoload switched off, and the Divergences.
+
 ## Dependencies
 
 - `@xaravel/collections` (workspace): Upstream `composer.json` `require` (AD-2).
@@ -16,6 +20,7 @@ Xaravel is an independent open-source project. It is not affiliated with, sponso
 ## Ported libraries
 
 - `vlucas/phpdotenv` v5.7.0, under `src/Dotenv/`: AD-22 makes this package its owner. It is ported, not taken from npm, because the same `.env` file must give the same values as in PHP Laravel (FR-20), and neither Bun's built-in `.env` loader (which Xaravel switches off) nor npm's `dotenv` follows phpdotenv's grammar (`${VAR}` interpolation, escape sequences, multiline values, its error messages).
-- `phpoption/phpoption` 1.10.0 (`src/PhpOption/`) and `graham-campbell/result-type` 1.2.0 (`src/GrahamCampbell/ResultType/`): phpdotenv is built on them, and ESC-15.2-4 gives them to this package.
+- `phpoption/phpoption` 1.10.0 (`src/PhpOption/`): phpdotenv is built on its `Option` type, and ESC-15.2-4 gives it to this package.
+- `graham-campbell/result-type` 1.2.0 (`src/GrahamCampbell/ResultType/`): phpdotenv is built on its `Result` type, and ESC-15.2-4 gives it to this package.
 
 Each class is registered under its Upstream FQCN. Their licenses are in `NOTICE`.

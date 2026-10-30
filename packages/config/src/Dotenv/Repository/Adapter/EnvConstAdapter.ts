@@ -14,14 +14,17 @@ const CREATE: unique symbol = Symbol("EnvConstAdapter");
 
 /** The `$_ENV` adapter. */
 export class EnvConstAdapter implements AdapterInterface {
+  /** The `AdapterInterface` brand: an `instanceof AdapterInterface` check finds this class (AD-9.5). */
   get [AdapterInterface.brand](): true {
     return true;
   }
 
+  /** The `ReaderInterface` brand: an `instanceof ReaderInterface` check finds this class (AD-9.5). */
   get [ReaderInterface.brand](): true {
     return true;
   }
 
+  /** The `WriterInterface` brand: an `instanceof WriterInterface` check finds this class (AD-9.5). */
   get [WriterInterface.brand](): true {
     return true;
   }

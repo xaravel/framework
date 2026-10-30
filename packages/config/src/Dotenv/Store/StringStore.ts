@@ -9,6 +9,7 @@ export class StringStore implements StoreInterface {
   /** The file content. */
   private readonly content: string;
 
+  /** The `StoreInterface` brand: an `instanceof StoreInterface` check finds this class (AD-9.5). */
   get [StoreInterface.brand](): true {
     return true;
   }

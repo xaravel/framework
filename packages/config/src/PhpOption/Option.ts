@@ -47,10 +47,12 @@ function arrayValue(array: unknown, key: unknown): { found: boolean; value: unkn
 
 /** An optional value: PhpOption's `Option`. */
 export abstract class Option<T> implements IteratorAggregate {
+  /** The `IteratorAggregate` brand: an `instanceof IteratorAggregate` check finds this class (AD-9.5). */
   get [IteratorAggregate.brand](): true {
     return true;
   }
 
+  /** The `Traversable` brand: an `instanceof Traversable` check finds this class (AD-9.5). */
   get [Traversable.brand](): true {
     return true;
   }

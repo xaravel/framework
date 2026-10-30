@@ -5,6 +5,7 @@ import { ExceptionInterface } from "./ExceptionInterface";
 
 /** Thrown when an environment variable fails a validator assertion. */
 export class ValidationException extends RuntimeException implements ExceptionInterface {
+  /** The `ExceptionInterface` brand: an `instanceof ExceptionInterface` check finds this class (AD-9.5). */
   get [ExceptionInterface.brand](): true {
     return true;
   }

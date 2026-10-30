@@ -16,6 +16,7 @@ export class ImmutableWriter implements WriterInterface {
   /** The record of loaded variables. */
   private readonly loaded: PhpArray<string | number, string>;
 
+  /** The `WriterInterface` brand: an `instanceof WriterInterface` check finds this class (AD-9.5). */
   get [WriterInterface.brand](): true {
     return true;
   }
