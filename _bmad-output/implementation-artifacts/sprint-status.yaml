@@ -169,7 +169,7 @@ development_status:
 
   epic-15: in-progress
   15-1-config-repository: done
-  15-2-phpdotenv-grammar-port: in-progress  # ESC-15.2-6 approved by the monitor (decisions/ESC-15.2-6.md); action item epic-15-item-4 (DIRECTORY_SEPARATOR, array_reduce, EmptyIterator) lands first, then the three BlockedByComponentError(runtime) throws become Upstream code
+  15-2-phpdotenv-grammar-port: done  # ESC-15.2-6 landed (#569); three runtime throws became Upstream code; two current Fidelity passes at tree 6095fb1a; XT-config-3 and XT-config-4 pass against the signed fixtures.
   15-3-bun-s-env-autoload-neutralised: backlog
   epic-15-retrospective: optional
 

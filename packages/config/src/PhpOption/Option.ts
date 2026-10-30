@@ -6,8 +6,8 @@
 // reaches them through the Class Registry by FQCN (AD-10) rather than a static import, which would evaluate a
 // subclass before its parent. `===` on the option's value is `identical` (PORTING.md § Idiom table). A callable is
 // a JS function; `null` is the only absent value (AD-9).
-import { BlockedByComponentError, registerClass, resolveClass } from "@xaravel/runtime";
-import { ArrayAccess, arrayEntries, type Exception, identical, is_array, IteratorAggregate, normalizeKey, PhpArray, Traversable } from "@xaravel/runtime/php";
+import { registerClass, resolveClass } from "@xaravel/runtime";
+import { array_reduce, ArrayAccess, call_user_func_array, arrayEntries, type Exception, identical, is_array, IteratorAggregate, normalizeKey, PhpArray, Traversable } from "@xaravel/runtime/php";
 import type { LazyOption } from "./LazyOption";
 import type { None } from "./None";
 import type { Some } from "./Some";
@@ -137,14 +137,31 @@ export abstract class Option<T> implements IteratorAggregate {
    * is empty, the function will return None. Otherwise, we will pass all parameters to the original callback and
    * return the value inside a new Option, unless an Option is returned from the function, in which case, we use that.
    *
-   * Upstream folds the arguments with `array_reduce`, which `@xaravel/runtime` does not export yet (ESC-15.2-6), so
-   * the lifted function throws `BlockedByComponentError(runtime)` when called.
+   * The arguments fold with PHP's `array_reduce` from `@xaravel/runtime/php` (ESC-15.2-6); `func_get_args()` is the
+   * rest parameter, `array_map` over a list is `Array.prototype.map`, and the callback runs through PHP's
+   * `call_user_func_array`, so every PHP callable form works; an `undefined` result reads as `null` (AD-9).
    */
   static lift<S>(callback: (...args: never[]) => S, noneValue: unknown = null): (...args: Option<unknown>[]) => Option<S> {
-    void callback;
-    void noneValue;
-    return (): Option<S> => {
-      throw new BlockedByComponentError("runtime", "array_reduce (ESC-15.2-6)");
+    return (...args: Option<unknown>[]): Option<S> => {
+      const reducedArgs = array_reduce(
+        args,
+        (status: unknown, o: Option<unknown>): unknown => {
+          return o.isEmpty() ? true : status;
+        },
+        false,
+      );
+      // if at least one parameter is empty, return None
+      if (reducedArgs) {
+        return none();
+      }
+
+      const values = args.map((o: Option<unknown>): unknown => {
+        // it is safe to do so because the fold above checked
+        // that all arguments are of type Some
+        return o.get();
+      });
+
+      return Option.ensure((call_user_func_array(callback, values) ?? null) as S | Option<S>, noneValue) as Option<S>;
     };
   }
 

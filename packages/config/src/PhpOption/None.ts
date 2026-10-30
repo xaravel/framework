@@ -1,9 +1,8 @@
 // `PhpOption\None` (phpoption/phpoption 1.10.0, Apache-2.0, Copyright 2012 Johannes M. Schmitt), ported line for
 // line (ESC-15.2-4). The one instance `create()` returns is immutable process state, not per-request state (AD-5).
-// Upstream's `getIterator()` returns PHP's `EmptyIterator`, which `@xaravel/runtime` does not export yet
-// (ESC-15.2-6), so it throws `BlockedByComponentError(runtime)`.
-import { BlockedByComponentError, registerClass } from "@xaravel/runtime";
-import { type Exception, RuntimeException, type Traversable, Error as PhpError } from "@xaravel/runtime/php";
+// `getIterator()` returns PHP's `EmptyIterator` from `@xaravel/runtime/php` (ESC-15.2-6).
+import { registerClass } from "@xaravel/runtime";
+import { EmptyIterator, type Exception, RuntimeException, Error as PhpError } from "@xaravel/runtime/php";
 import { Option } from "./Option";
 
 /** The key to Upstream's private constructor. */
@@ -89,8 +88,8 @@ export class None extends Option<never> {
     return this;
   }
 
-  getIterator(): Traversable {
-    throw new BlockedByComponentError("runtime", "EmptyIterator (ESC-15.2-6)");
+  getIterator(): EmptyIterator {
+    return new EmptyIterator();
   }
 
   foldLeft<S>(initialValue: S, callable: (accumulator: S, value: never) => S): S {
