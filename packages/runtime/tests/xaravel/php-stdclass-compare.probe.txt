@@ -1,0 +1,7 @@
+eq	[true,false,false,true,true,true,true,false]
+spaceship	[-1,1,1,1,-1,1,1]
+recursion	["Error: Nesting level too deep - recursive dependency?",true]
+recursion.mutual	"Error: Nesting level too deep - recursive dependency?"
+json_decode.spaceship	[-1,1,0,1]
+unserialize	[true,false]
+codecs	["{}","{\"1\":\"x\",\"a\":2}","O:8:\"stdClass\":1:{s:1:\"a\";i:1;}",{"1":"x"}]
