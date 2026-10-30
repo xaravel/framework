@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-30-2026 04:47
+last_updated: 10-30-2026 05:04
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -169,7 +169,7 @@ development_status:
 
   epic-15: in-progress
   15-1-config-repository: done
-  15-2-phpdotenv-grammar-port: blocked  # ESC-15.2-1 approved by the monitor (parts a-f, items epic-15-item-1 and -2; part g waits on -2); ESC-15.2-2 (superglobals, getenv/putenv), -3 (sync env-file read, AD-6) and -4 (PhpOption/ResultType owners, AD-22) wait on the Maintainer (decisions/MAINT-2026-10-30-story-15-2.md)
+  15-2-phpdotenv-grammar-port: blocked  # ESC-15.2-1 approved by the monitor (parts a-f, items epic-15-item-1 and -2; part g waits on -2); ESC-15.2-2 (superglobals, getenv/putenv), -3 (sync env-file read, AD-6) and -4 (PhpOption/ResultType owners, AD-22) wait on the Maintainer (decisions/MAINT-2026-10-30-story-15-2.md); ESC-15.2-5 (PCRE forms for item -2, divergence) waits on the Maintainer
   15-3-bun-s-env-autoload-neutralised: backlog
   epic-15-retrospective: optional
 
@@ -2353,5 +2353,5 @@ action_items:
       invented conversion. XT-runtime cases against PHP; existing exports stay; no
       other runtime behaviour changes"
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "decisions/MAINT-2026-10-30-story-15-2.md"
