@@ -29,7 +29,7 @@
 {"id":"Illuminate\\Tests\\Support\\SupportLazyCollectionIsLazyTest::testFindFirstOrFailIsLazy","variant":"none","status":"pass","reason":null,"adapted":"DIV-9.2","escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportLazyCollectionIsLazyTest::testFirstIsLazy","variant":"none","status":"pass","reason":null,"adapted":"DIV-9.2","escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportLazyCollectionIsLazyTest::testFirstWhereIsLazy","variant":"none","status":"pass","reason":null,"adapted":"DIV-9.2","escalation":null}
-{"id":"Illuminate\\Tests\\Support\\SupportLazyCollectionIsLazyTest::testFlatMapIsLazy","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":"ESC-14.8-2"}
+{"id":"Illuminate\\Tests\\Support\\SupportLazyCollectionIsLazyTest::testFlatMapIsLazy","variant":"none","status":"pass","reason":null,"adapted":"DIV-9.2","escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportLazyCollectionIsLazyTest::testFlattenIsLazy","variant":"none","status":"pass","reason":null,"adapted":"DIV-9.2","escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportLazyCollectionIsLazyTest::testFlipIsLazy","variant":"none","status":"pass","reason":null,"adapted":"DIV-9.2","escalation":null}
 {"id":"Illuminate\\Tests\\Support\\SupportLazyCollectionIsLazyTest::testForPageIsLazy","variant":"none","status":"pass","reason":null,"adapted":"DIV-9.2","escalation":null}

@@ -38,9 +38,9 @@
 // Both the `merge()` and `union()` results are compared with the signed Oracle output. XT-collections-8 also checks, inline and with no Oracle request, members this Story adds that no ported
 // test runs: `implode` (testImplode is `blocked-by:support`), `Arr.dot`'s AD-26 options form and prefix, and
 // `combine`'s `ValueError` (LazyCollection's only when enumerated, with Laravel's message).
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
+import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { join, relative, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Arr, Collection, collect, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
 import { TestBackedEnum, TestStringBackedEnum, FIXTURES as ENUM_FIXTURES } from "../ported/framework/tests/Support/Fixtures/Enums";
@@ -2104,4 +2104,87 @@ xaravelTest(
     Assert.assertSame([1, 2, 3], infinite.take(3).all());
     Assert.assertSame(3, infiniteCount);
   },
+);
+
+/**
+ * Installs `@xaravel/collections` with only its production dependency closure (runtime, contracts, macroable,
+ * conditionable) in an isolated workspace outside the repository, with no link to the repository's `node_modules`,
+ * then runs public imports there: Collection mapping and JSON, and finite consumption of an infinite LazyCollection.
+ * This proves the source installation closure; publishing tarballs is the Maintainer's release step (AD-18).
+ */
+function standaloneCollectionsInstall(): void {
+  const dir = mkdtempSync(join(tmpdir(), "xaravel-collections-standalone-"));
+  try {
+    for (const name of ["runtime", "contracts", "macroable", "conditionable", "collections"]) {
+      const target = join(dir, "packages", name);
+      mkdirSync(join(dir, "packages"), { recursive: true });
+      const source = join(REPO, "packages", name);
+      cpSync(source, target, {
+        recursive: true,
+        filter: (path) => !/(^|\/)(node_modules|dist|tests)(\/|$)/.test(relative(source, path)),
+      });
+      const path = join(target, "package.json");
+      const pkg = JSON.parse(readFileSync(path, "utf8")) as { devDependencies?: unknown };
+      delete pkg.devDependencies;
+      writeFileSync(path, JSON.stringify(pkg));
+    }
+    writeFileSync(join(dir, "package.json"), JSON.stringify({
+      private: true, type: "module", workspaces: ["packages/*"],
+      dependencies: { "@xaravel/collections": "workspace:*" },
+    }));
+    const install = Bun.spawnSync([process.execPath, "install", "--production", "--ignore-scripts"], {
+      cwd: dir, timeout: 60_000, stdout: "pipe", stderr: "pipe",
+    });
+    Assert.assertSame(0, install.exitCode, install.stdout.toString() + install.stderr.toString());
+    writeFileSync(join(dir, "smoke.ts"), `
+import { Collection, LazyCollection } from "@xaravel/collections";
+if (new Collection([1, 2, 3]).map(x => Number(x) * 2).toJson() !== "[2,4,6]") throw new Error("collection");
+let seen = 0;
+const lazy = LazyCollection.make(function* () { for (let i = 1; ; i++) { seen++; yield i; } }).map(x => Number(x) * 2);
+if (seen !== 0 || lazy.take(3).toJson() !== "[2,4,6]" || seen !== 3) throw new Error("lazy " + seen);
+`);
+    const smoke = Bun.spawnSync([process.execPath, "--no-env-file", "smoke.ts"], {
+      cwd: dir, timeout: 60_000, stdout: "pipe", stderr: "pipe",
+    });
+    Assert.assertSame(0, smoke.exitCode, smoke.stdout.toString() + smoke.stderr.toString());
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+}
+
+xaravelTest(
+  "XT-collections-16",
+  "Collections closes its Epic only when all four canonical files have no not-ported-yet outcomes, the unchanged API gate passes, async companions and divergence docs exist, notices are retained, and a standalone installation works (FR-23, AD-2, AD-6)",
+  () => {
+    const files = ["SupportCollectionTest", "SupportLazyCollectionTest", "SupportLazyCollectionIsLazyTest", "SupportArrTest"];
+    for (const file of files) {
+      const rows = readFileSync(join(REPO, "conformance/expectations/collections/framework/tests/Support", `${file}.jsonl`), "utf8").trim().split("\n").map((line) => JSON.parse(line) as { reason: string | null });
+      Assert.assertFalse(rows.some((row) => row.reason === "not-ported-yet"), file);
+    }
+    const reflection = readFileSync(join(REPO, "conformance/expectations/reflection/framework/tests/Support/SupportReflectorTest.jsonl"), "utf8").trim().split("\n").map((line) => JSON.parse(line) as { id: string; status: string; reason: string | null });
+    const attributes = reflection.filter((row) => row.id.endsWith("::testGetClassAttributes"));
+    Assert.assertNotEmpty(attributes);
+    for (const row of attributes) {
+      Assert.assertNotSame("blocked-by:collections", row.reason, row.id);
+      Assert.assertSame("pass", row.status, row.id);
+    }
+    const surface = JSON.parse(readFileSync(join(REPO, "packages/collections/async-surface.json"), "utf8")) as { method: string; root: string }[];
+    for (const klass of ["Collection", "LazyCollection", "Enumerable"]) {
+      for (const companion of ["eachAsync", "mapAsync", "filterAsync", "rejectAsync", "firstAsync", "everyAsync", "containsAsync", "partitionAsync"]) {
+        Assert.assertTrue(surface.some((row) => row.method === `${klass}.${companion}` && row.root === "callback"));
+      }
+    }
+    const docs = readFileSync(join(REPO, "packages/collections/docs/collections.md"), "utf8");
+    Assert.assertStringContainsString("## Divergences", docs);
+    Assert.assertStringContainsString("DIV-1", docs);
+    Assert.assertMatchesRegularExpression(/DIV-1(?!\d)/, docs);
+    Assert.assertStringContainsString("DIV-12", docs);
+    const license = readFileSync(join(REPO, "packages/collections/LICENSE"), "utf8");
+    Assert.assertStringContainsString("Taylor Otwell", license);
+    Assert.assertStringContainsString("Xaravel", license);
+    standaloneCollectionsInstall();
+    const gate = Bun.spawnSync([process.execPath, "run", "api-surface:gate", "collections"], { cwd: REPO, timeout: 60_000, stdout: "pipe", stderr: "pipe" });
+    Assert.assertSame(0, gate.exitCode, new TextDecoder().decode(gate.stdout) + new TextDecoder().decode(gate.stderr));
+  },
+  200_000,
 );

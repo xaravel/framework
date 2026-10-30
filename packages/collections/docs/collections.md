@@ -298,18 +298,25 @@ requesting an already cached prefix does not read the source again. Keys remain
 attached to each yielded value, including duplicate keys during iteration;
 materializing with `all()` applies PHP's last-value-at-first-key-position rule.
 
-The source-count suite releases 132 independent canonical tests. Three more
-retain their full bodies behind the genuine Support clock dependency boundary,
-in addition to the four earlier clock tests described above. The complete
-`testFlatMapIsLazy` remains pending in ESC-14.8-2 until the runtime exports PHP's
-`array_sum`; this is a shared runtime contract gap, not a Collections substitute.
-Epic closure also remains pending. With the API-surface analysis following
-`extends`, mixin traits and aliases, and the genuine Collections findings fixed
-(epic-14-item-19), every remaining line is explained: the deferred members and
-verbatim helper names (#533), and the Maintainer's gate ruling
-(`decisions/MAINT-2026-10-29-collections-gate.md`): DIV-1.2 for the async
+The source-count suite releases 133 independent canonical tests, including
+`testFlatMapIsLazy`, which uses the runtime's `array_sum` and `range`
+(ESC-14.8-2). Three more retain their full bodies behind the genuine Support
+clock dependency boundary, in addition to the four earlier clock tests described
+above.
+
+XT-collections-16 checks the Epic close: no `not-ported-yet` outcome remains in
+the four canonical files, Reflection's `testGetClassAttributes` no longer waits
+on Collections, `async-surface.json` lists the eight async companions for
+`Collection`, `LazyCollection` and `Enumerable`, this page cites DIV-1 and
+DIV-12, the `LICENSE` keeps Laravel's notice beside Xaravel's,
+`api-surface:gate collections` passes, and the package installs with only its
+production dependencies (runtime, contracts, macroable, conditionable) in an
+isolated workspace and runs there (ESC-14.8-1). The API-surface analysis follows
+`extends`, mixin traits and aliases; every remaining line is explained by the
+deferred members and verbatim helper names (#533) and the Maintainer's gate
+ruling (`decisions/MAINT-2026-10-29-collections-gate.md`): DIV-1.2 for the async
 companions, DIV-12.18 for `entries`, DIV-12.21 for the `func_get_args()` rest
 parameters, and `reduceWithKeys` removed from `Enumerable` to match Upstream,
-while `Collection` and `LazyCollection` keep it. `api-surface:gate collections`
-reports zero unexplained lines. Activating XT-collections-16 stays with Story 14.8
-(ESC-14.8-1). No Epic-close pass is claimed.
+while `Collection` and `LazyCollection` keep it. The standalone check proves the
+source installation closure; publishing release tarballs is the Maintainer's
+release step (AD-18).
