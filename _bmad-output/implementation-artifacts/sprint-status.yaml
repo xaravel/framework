@@ -167,8 +167,8 @@ development_status:
   14-8-lazycollection-laziness-guarantees: done  # ESC-14.8-3 tool fix landed (#537); Fidelity re-run passed tree 8956514a (two passes, current); story:check 14.8 pass; Epic-close checks met.
   epic-14-retrospective: done
 
-  epic-15: backlog
-  15-1-config-repository: backlog
+  epic-15: in-progress
+  15-1-config-repository: blocked  # ESC-15.1-1 (Macroable edge), ESC-15.1-2 (no sealed Application), ESC-15.1-3 (no config consequence row); spec planned, implementation waits on the rulings
   15-2-phpdotenv-grammar-port: backlog
   15-3-bun-s-env-autoload-neutralised: backlog
   epic-15-retrospective: optional
