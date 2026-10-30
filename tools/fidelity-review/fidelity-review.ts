@@ -99,7 +99,9 @@
 // its source in `tools/expectations/reasons.ts`, and for each group of such
 // lines the Phase and first Epic of the test's Component and of every
 // Component the line's `blocked-by` or Escalation names, with what that rule
-// says of `blocked-by:<c>` for each (`skipEligibilityEvidence`, ESC-14.2-5).
+// says of `blocked-by:<c>` for each (`skipEligibilityEvidence`, ESC-14.2-5),
+// then the Escalation such a group cites, in full, and its decision record when
+// it has one (`escalationEvidence`, ESC-15.1-5).
 // Everything is read from the working tree. A missing evidence file is named
 // ("unavailable: <why>"), never dropped.
 //
@@ -300,7 +302,7 @@ export interface Evidence {
   readonly decisions: readonly EvidenceEntry[];
   /** (g) Each `packages/<name>/src/` file the change adds or modifies, as its declaration-and-tag listing (`sourceSurface`, F-9, ESC-9.3-2). */
   readonly sourceSurface: readonly EvidenceEntry[];
-  /** (i) The `blocked-by` rule and the Components' Phases and first Epics, for added `not-ported-yet` and `blocked-by` skip lines (`skipEligibilityEvidence`, F-4, ESC-14.2-5). */
+  /** (i) The `blocked-by` rule and the Components' Phases and first Epics, for added `not-ported-yet` and `blocked-by` skip lines, with the Escalations they cite and their decisions (`skipEligibilityEvidence`, F-4, ESC-14.2-5, ESC-15.1-5). */
   readonly skipEligibility: readonly EvidenceEntry[];
   /** (h) Each changed file in full, the decision and DIV records they cite, the repository files they import, and the data files changed tests read (ESC-10.1-5), within the prompt cap (`wholeFileEvidence`, MAINT-2026-10-22-fidelity-whole-files). */
   readonly wholeFiles: readonly WholeFileEntry[];
@@ -539,7 +541,7 @@ export function buildPrompt(input: PromptInput): Prompt {
   for (const entry of evidence.wholeFiles) {
     sections.push("", `#### ${entry.path} (${entry.reason})`, "", entry.text === null ? (entry.note ?? "unavailable: not read") : fence(entry.text, wholeFileLang(entry.path)));
   }
-  evidenceSection(sections, "### (i) The `blocked-by` rule, and the Phases and first Epics of the Components added skip lines name (F-4, ESC-14.2-5)", evidence.skipEligibility, "No added Expectations line is a `skip` with reason `not-ported-yet` or `blocked-by:<c>` that names another Component.", "markdown");
+  evidenceSection(sections, "### (i) The `blocked-by` rule, the Phases and first Epics of the Components added skip lines name, and the Escalations they cite (F-4, ESC-14.2-5, ESC-15.1-5)", evidence.skipEligibility, "No added Expectations line is a `skip` with reason `not-ported-yet` or `blocked-by:<c>` that names another Component.", "markdown");
   sections.push("", PRIOR_HEADING, "");
   if (prior.length === 0) {
     sections.push(NO_PRIOR);
@@ -1534,7 +1536,8 @@ function blockedByRule(root: string): EvidenceEntry {
  * such lines (same Component, reason and Escalation) that names another Component, in its `blocked-by` or in its
  * Escalation's text (`NAMED_COMPONENT`). Each group gives the Phase (`tools/scaffold/packages.jsonl`) and first Epic
  * (the lowest `epic` of a `stories/` manifest) of the test's Component and of each named one, read as
- * `expectations:reasons` reads them (`contextFor`), and what `checkLine` says of the line with `blocked-by:<c>`.
+ * `expectations:reasons` reads them (`contextFor`), and what `checkLine` says of the line with `blocked-by:<c>`. A group
+ * that cites an Escalation is followed by that Escalation and its decision (`escalationEvidence`, ESC-15.1-5), once each.
  * Empty when no such line names another Component.
  */
 export function skipEligibilityEvidence(root: string, files: readonly ChangedFile[]): EvidenceEntry[] {
@@ -1589,6 +1592,7 @@ export function skipEligibilityEvidence(root: string, files: readonly ChangedFil
   }
   const where = (name: string): string => `\`${name}\`: Phase ${context.phases.get(name) ?? "unknown"}, first Epic ${context.firstEpics.get(name) ?? "none (no Story manifest names it)"}`;
   const entries: EvidenceEntry[] = [];
+  const shown = new Set<string>();
   for (const group of groups.values()) {
     if (group.named.length === 0) {
       continue;
@@ -1610,8 +1614,32 @@ export function skipEligibilityEvidence(root: string, files: readonly ChangedFil
       }),
     ].join("\n");
     entries.push({ label: `${group.component ?? "unknown Component"}, ${group.reason}, ${group.escalation ?? "no Escalation"}`, text, unavailable: null });
+    if (group.escalation !== null && !shown.has(group.escalation)) {
+      shown.add(group.escalation);
+      entries.push(...escalationEvidence(root, group.escalation));
+    }
   }
   return entries.length === 0 ? [] : [blockedByRule(root), ...entries];
+}
+
+/**
+ * The Escalation `id` that an (i) group's lines cite (ESC-15.1-5): `conformance/escalations/<id>.md` in full, then
+ * `decisions/<id>.md` in full, or why it is unavailable (an open Escalation has no decision yet). An id that is not a
+ * plain file name, or has no Escalation file, is one unavailable entry that says why.
+ */
+export function escalationEvidence(root: string, id: string): EvidenceEntry[] {
+  const rel = `conformance/escalations/${id}.md`;
+  if (!/^[A-Za-z0-9.-]+$/.test(id)) {
+    return [{ label: `Escalation ${id}, which the lines cite`, text: null, unavailable: `${JSON.stringify(id)} is not an Escalation id` }];
+  }
+  const escalation = readEvidenceFile(root, rel);
+  const entries: EvidenceEntry[] = [{ ...escalation, label: `${rel}, the Escalation the lines cite` }];
+  if (escalation.text === null) {
+    return entries;
+  }
+  const decision = `decisions/${id}.md`;
+  entries.push(existsSync(join(root, decision)) ? { ...readEvidenceFile(root, decision), label: `${decision}, its decision` } : { label: `${decision}, its decision`, text: null, unavailable: `${decision} does not exist: ${id} is open, with no decision yet` });
+  return entries;
 }
 
 /**
