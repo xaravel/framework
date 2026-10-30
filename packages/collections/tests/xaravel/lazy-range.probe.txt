@@ -1,0 +1,25 @@
+int.up	[1,2,3]
+int.down	[3,2,1]
+numeric_string.up	["1",2,3]
+numeric_string.down	["3",2,1]
+mixed_bound	[1,2,3]
+float_step	[0,0.5,1.0]
+string_step	[1,3,5]
+negative_step	[5,3,1]
+null_bound	[null,1,2]
+letters.up	"TypeError: Unsupported operand types: string + int"
+letters.down	"TypeError: Unsupported operand types: string - int"
+letters.up.steps	["Illuminate\\Support\\LazyCollection","a","TypeError: Unsupported operand types: string + int"]
+letters.down.steps	["Illuminate\\Support\\LazyCollection","e","TypeError: Unsupported operand types: string - int"]
+non_numeric_step	"TypeError: abs(): Argument #1 ($num) must be of type int|float, string given"
+non_numeric_step.steps	["Illuminate\\Support\\LazyCollection",1,"TypeError: abs(): Argument #1 ($num) must be of type int|float, string given"]
+nan.to	[]
+nan.from	[]
+nan.step	[5]
+multi_digit_string.up	["9",10]
+multi_digit_string.down	["10",9]
+float_bounds.up	[0.5,1.5]
+float_bounds.down	[2.5,1.5,0.5]
+int_max	[9223372036854775806,9223372036854775807,9.223372036854776e+18,9.223372036854776e+18]
+float_drift	[0,0.1,0.2,0.30000000000000004,0.4,0.5,0.6,0.7,0.7999999999999999,0.8999999999999999,0.9999999999999999]
+zero_step	"InvalidArgumentException: Step value cannot be zero."
