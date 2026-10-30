@@ -12,3 +12,10 @@ Xaravel is an independent open-source project. It is not affiliated with, sponso
 - `@xaravel/contracts` (workspace): allowed for every package (AD-2).
 - `@xaravel/macroable` (workspace): used directly by Upstream source and reached through its `composer.json` `require` graph (AD-2): Illuminate\Config\Repository uses Illuminate\Support\Traits\Macroable, reached through illuminate/collections' require.
 - `@xaravel/runtime` (workspace): allowed for every package (AD-2).
+
+## Ported libraries
+
+- `vlucas/phpdotenv` v5.7.0, under `src/Dotenv/`: AD-22 makes this package its owner. It is ported, not taken from npm, because the same `.env` file must give the same values as in PHP Laravel (FR-20), and neither Bun's built-in `.env` loader (which Xaravel switches off) nor npm's `dotenv` follows phpdotenv's grammar (`${VAR}` interpolation, escape sequences, multiline values, its error messages).
+- `phpoption/phpoption` 1.10.0 (`src/PhpOption/`) and `graham-campbell/result-type` 1.2.0 (`src/GrahamCampbell/ResultType/`): phpdotenv is built on them, and ESC-15.2-4 gives them to this package.
+
+Each class is registered under its Upstream FQCN. Their licenses are in `NOTICE`.
