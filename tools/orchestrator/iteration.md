@@ -94,6 +94,7 @@ I. **Nothing to do.** Every remaining Story is blocked, or is waiting on the Mai
 ## 3. Rules while working
 
 - One unit of work per iteration. Don't start a second Story.
+- Wait for every subagent in the same turn. Ending your turn ends the iteration, and a subagent still running is cut off, with no outcome written (2026-10-29, twice in Epic 14's retrospective). Launch subagents in the foreground, or wait for background ones before you reply.
 - Change an existing tracked file in place, with the Edit tool or by applying a patch. Never replace it wholesale with `cp`, `mv` or a shell redirect (`>`): auto mode refuses that as irreversible local destruction, which blocks the Story. This includes a spec rewritten during a review loopback; edit its sections in place.
 - Branch names: `story/<story-id>` for Stories and `planning/<topic>` for everything else. Never commit on `main`.
 - A Story edits only what AGENTS.md allows it to. Never touch `AGENTS.md` or create a `CLAUDE.md`. If work requires that, mark it blocked for the Maintainer.
