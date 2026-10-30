@@ -199,6 +199,28 @@ export { chunk_split, explode, implode, lcfirst, str_contains, str_starts_with, 
 export { addcslashes, ltrim, ord, rtrim, str_replace, stripcslashes, strpos, strtok } from "./stringFunctions";
 export { ctype_digit, ctype_space } from "./ctypeFunctions";
 export { FILTER_DEFAULT, FILTER_NULL_ON_FAILURE, FILTER_VALIDATE_BOOL, FILTER_VALIDATE_BOOLEAN, FILTER_VALIDATE_INT, filter_var } from "./filterFunctions";
+export {
+  PREG_BACKTRACK_LIMIT_ERROR,
+  PREG_BAD_UTF8_ERROR,
+  PREG_BAD_UTF8_OFFSET_ERROR,
+  PREG_INTERNAL_ERROR,
+  PREG_JIT_STACKLIMIT_ERROR,
+  preg_last_error,
+  preg_last_error_msg,
+  preg_match,
+  preg_match_all,
+  PREG_NO_ERROR,
+  PREG_OFFSET_CAPTURE,
+  PREG_PATTERN_ORDER,
+  PREG_RECURSION_LIMIT_ERROR,
+  preg_replace_callback,
+  PREG_SET_ORDER,
+  preg_split,
+  PREG_SPLIT_DELIM_CAPTURE,
+  PREG_SPLIT_NO_EMPTY,
+  PREG_SPLIT_OFFSET_CAPTURE,
+  PREG_UNMATCHED_AS_NULL,
+} from "./pcreFunctions";
 export { mb_convert_encoding, mb_encoding_aliases, mb_list_encodings, mb_strlen, mb_strpos, mb_substr } from "./mbstringFunctions";
 export { is_a, is_array, is_bool, is_callable, is_int, is_iterable, is_null, is_object, is_string } from "./typeTests";
 export { UnitEnum } from "./UnitEnum";

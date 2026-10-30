@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-30-2026 07:34
+last_updated: 10-30-2026 09:15
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -2353,7 +2353,7 @@ action_items:
       invented conversion. XT-runtime cases against PHP; existing exports stay; no
       other runtime behaviour changes"
     owner: "orchestrator"
-    status: in-progress
+    status: done
     ref: "decisions/MAINT-2026-10-30-story-15-2.md"
   - id: "epic-15-item-3-runtime-process-environment"
     epic: 15

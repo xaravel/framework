@@ -27,7 +27,7 @@ import { ValueError } from "./ValueError";
 const decoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
 /** `s`, refused with a JS `TypeError` when it holds a lone surrogate, which has no UTF-8 form. */
-function wellFormed(fn: string, s: string): string {
+export function wellFormed(fn: string, s: string): string {
   if (LONE_SURROGATE.test(s)) {
     throw new TypeError(`${fn}(): the string holds a lone surrogate, which has no UTF-8 form`);
   }
@@ -35,7 +35,7 @@ function wellFormed(fn: string, s: string): string {
 }
 
 /** `bytes` as a JS string; a JS `TypeError` naming `fn` when they split a UTF-8 sequence. */
-function decodeResult(fn: string, bytes: Uint8Array): string {
+export function decodeResult(fn: string, bytes: Uint8Array): string {
   try {
     return decoder.decode(bytes);
   } catch {

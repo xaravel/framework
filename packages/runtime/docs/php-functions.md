@@ -9,7 +9,9 @@ comparisons `Collection::sortBy` calls (ESC-14.2-4, action item `epic-14-item-6-
 the set, merge and replace functions, `array_pad`, `is_int`, `arrayUnion` and the PHP function-name resolver Story
 14.4 calls (ESC-14.4-1, ESC-14.4-2, action item `epic-14-item-9-runtime-set-functions-callable-names`), and the
 string, ctype, mbstring, filter and existence functions vlucas/phpdotenv calls (ESC-15.2-1, action item
-`epic-15-item-1-runtime-phpdotenv-builtins`; see [phpdotenv builtins](#phpdotenv-builtins)).
+`epic-15-item-1-runtime-phpdotenv-builtins`; see [phpdotenv builtins](#phpdotenv-builtins)), and the PCRE functions
+it calls (ESC-15.2-1 part f, ESC-15.2-5, action item `epic-15-item-2-runtime-pcre-functions`; see
+[PCRE functions](#pcre-functions)).
 Everything here is exported from `@xaravel/runtime/php` and from the package root, under its PHP name, and is
 synchronous. Each function ports PHP 8.5.11's C source (`ext/standard/array.c`, `ext/standard/string.c`,
 `ext/spl/spl_iterators.c`, `Zend/zend_generators.c`, `Zend/zend_sort.c`, `ext/standard/formatted_print.c`,
@@ -639,6 +641,92 @@ filters, exported with their constants `FILTER_DEFAULT` (516), `FILTER_VALIDATE_
   `FILTER_REQUIRE_SCALAR`, …), `$options` key (`filter`) or option (`decimal`) throws a JS `TypeError` naming the
   limit, so none is silently ignored.
 
+## PCRE functions
+
+The PCRE functions vlucas/phpdotenv v5.7.0 calls (ESC-15.2-1 part f), ports of PHP 8.5.11's `ext/pcre/php_pcre.c`. Each
+takes PHP's pattern string, delimiters and modifiers included, and converts it by PORTING.md § PCRE conversion
+(DIV-10.1, with the four forms of ESC-15.2-5); a port passes Upstream's pattern unchanged. Each is a
+[registry](#callables-php-function-names) entry with PHP's `ReflectionFunction` counts.
+
+- `preg_match(pattern, subject, matches = null, flags = 0, offset = 0)`: 1 or 0. `matches` is a `Ref` (DIV-9.2) that
+  receives PHP's array: the whole match at 0, each group at its number, a named group under its name first. Without
+  `PREG_UNMATCHED_AS_NULL` trailing unmatched groups are dropped and middle ones are `""`; with it every group is
+  present, an unmatched one null. `PREG_OFFSET_CAPTURE` makes each entry `[string, byte offset]` (`["", -1]` or
+  `[null, -1]` unmatched). `offset` is a byte offset; a negative one counts from the end. Another `flags` throws PHP's
+  `ValueError` `preg_match(): Argument #4 ($flags) must be a PREG_* constant`.
+- `preg_match_all(pattern, subject, matches = null, flags = 0, offset = 0)`: the number of matches. `matches` is
+  grouped by subpattern (`PREG_PATTERN_ORDER`, the default; a group a match did not reach is `""` or null) or by
+  match (`PREG_SET_ORDER`, each as `preg_match` gives it), with `PREG_OFFSET_CAPTURE` and `PREG_UNMATCHED_AS_NULL`.
+  Another order in `flags` throws PHP's `ValueError` `preg_match_all(): Argument #4 ($flags) must be a PREG_*
+  constant`.
+- `preg_split(pattern, subject, limit = -1, flags = 0)`: the pieces between matches, at most `limit` (-1 or 0 for no
+  limit; 1 or below -1 the whole subject), with `PREG_SPLIT_NO_EMPTY`, `PREG_SPLIT_DELIM_CAPTURE` and
+  `PREG_SPLIT_OFFSET_CAPTURE`.
+- `preg_replace_callback(pattern, callback, subject, limit = -1, count = null, flags = 0)`: each match replaced by
+  `callback`'s result as PHP's `(string)` (an int its digits, null `""`, an array `"Array"`, an object through its
+  `__toString` port). `callback` receives `preg_match`'s array (with `PREG_OFFSET_CAPTURE` and
+  `PREG_UNMATCHED_AS_NULL` from `flags`). An array `pattern` applies each pattern in turn; an array `subject` gives
+  an array with its keys kept. `limit` counts per pattern and subject; a negative one is no limit, and 0 makes no
+  replacement (`count` 0). `count`, a `Ref`,
+  receives the number of replacements, also when the callback throws (the exception is rethrown).
+- `preg_last_error()` and `preg_last_error_msg()`: the code (`PREG_NO_ERROR`, `PREG_INTERNAL_ERROR`,
+  `PREG_BAD_UTF8_OFFSET_ERROR`, …) and message (`No error`, `Internal error`, `The offset did not correspond to the
+  beginning of a valid UTF-8 code point`) of the last call. Every call sets it, 0 on success. It lives in a Scope Frame
+  slot (AD-5), as `jsonLastError` does: a call records only inside a frame, and outside one (or in a narrow frame no
+  unit encloses) the reads give 0 and `No error`.
+
+Matching follows PHP: after an empty match the next try is a non-empty match anchored at the same place, and failing
+that one character on (one byte without `u`, one code point with it). The constants `PREG_PATTERN_ORDER`,
+`PREG_SET_ORDER`, `PREG_OFFSET_CAPTURE`, `PREG_UNMATCHED_AS_NULL`, `PREG_SPLIT_NO_EMPTY`, `PREG_SPLIT_DELIM_CAPTURE`,
+`PREG_SPLIT_OFFSET_CAPTURE`, `PREG_NO_ERROR`, `PREG_INTERNAL_ERROR`, `PREG_BACKTRACK_LIMIT_ERROR`,
+`PREG_RECURSION_LIMIT_ERROR`, `PREG_BAD_UTF8_ERROR`, `PREG_BAD_UTF8_OFFSET_ERROR` and `PREG_JIT_STACKLIMIT_ERROR`
+have PHP's values.
+
+### Failures
+
+A pattern PHP cannot compile (no ending delimiter, an alphanumeric, backslash or NUL delimiter, an unknown modifier, an
+unbalanced `(`, a bad quantifier, escape (`\l`, `\L`, `\u`, `\U`, `\x` with no digit), class (`[:alpha:]` outside a
+class) or group name, an empty `\p{}`, an unbounded lookbehind) gives PHP's failure value with
+no warning (DIV-9.17): `false` from `preg_match`, `preg_match_all` and `preg_split`, null from
+`preg_replace_callback` (an array subject drops that key), with `preg_last_error()` 1. An offset past the subject is
+`false` with 1 too, and with `u` an offset inside a UTF-8 sequence is `false` with 5. On a compile failure `matches`
+is left as it was; otherwise it is `[]` before the match.
+
+### The conversion
+
+The delimiters are parsed as PHP parses them (leading whitespace skipped, `( [ { <` closed by their pair with nesting
+counted), then the modifiers `i m s u A D S X` and space, `\n` and `\r`. The body is converted token by token:
+
+- `.` matches one character but `\n` (any with `s`); `^` and `$` keep PCRE's meaning (with `m` at line starts and
+  before each `\n`, `$` also before a final `\n` unless `D`); `\A` and `\z` are the subject's ends.
+- `(?P<n>…)` and `(?'n'…)` are `(?<n>…)`; with `u` a name may hold Unicode letters and digits (`(?<é>a)`, the
+  `$matches` key `é`), without it only ASCII word characters. A branch-reset group `(?|…)` numbers each alternative's groups from the
+  same number, and `matches` gives each number the group that took part.
+- `A` anchors every match at its start offset (the `RegExp` sticky flag).
+- Without `u` the pattern and subject are UTF-8 bytes: offsets, lengths and `{n}` counts are in bytes, `.` takes one
+  byte, and `\s`, `\S`, `\d`, `\w`, `\b` and the POSIX classes are ASCII. With `u` they are code points, and `\s` is
+  PCRE2 10.49's Unicode whitespace (`\t` to `\r`, space, U+0085, U+00A0, U+1680, U+180E, U+2000 to U+200A, U+2028,
+  U+2029, U+202F, U+205F, U+3000; not U+FEFF).
+- `\xHH`, `\x{H…}`, `\0` octal, `\a`, `\e`, `\f`, `\n`, `\r`, `\t`, an escaped non-alphanumeric (`\#`, `\$`), a `{`
+  that starts no quantifier, the quantifiers (`{,n}` and spaces inside them too), classes (a leading `]` literal),
+  lookarounds and general-category properties (`\p{Lu}`, `\pL`, `\p{^L}`, `\P{…}`) keep their PCRE meaning. A
+  `\E` that closes no `\Q` is ignored, as PCRE ignores it (`/a\E+/` repeats `a`).
+
+Any other form throws a JS `TypeError` naming it and records no error code, never a silent conversion: PORTING.md's
+PCRE-only list (possessive quantifiers, atomic groups, recursion, conditionals, `\G`, `\Z`, `\K`, inline flags, the `x`
+modifier), the modifiers `U`, `J`, `n` and `r`, backreferences in any spelling, `\w \W \d \D \b \B` and POSIX classes
+with `u` (PCRE's UCP makes them Unicode), a non-ASCII character or class range under `i` without `u`, `\p` under `i`,
+a property that is not a general category, the POSIX word boundaries `[[:<:]]` and `[[:>:]]`, `\Q…\E`, `\h`, `\v`, `\R`, `\N`, `\X`, `\c`, `\o`, `\u`, comments, verbs,
+a non-ASCII group name, a named group inside a branch reset, a capturing group inside a lookbehind, a quantified
+lookaround, and a capturing group inside a repeated group or a repeated group that can match empty (JS resets such a
+group's capture where PCRE keeps it).
+
+A captured value JS cannot hold, bytes that split a UTF-8 sequence (a pattern without `u` capturing one byte of `é`, as
+phpdotenv's Lexer does in a group it never reads), stays in its slot of a list and throws the JS `TypeError` limit when
+the slot is read; in a keyed array (a named group) it throws at once. A subject or pattern holding a lone surrogate,
+and a `preg_replace_callback` result that is no valid UTF-8, throw the limit. Each call compiles its pattern; nothing
+is cached.
+
 ## Values JS cannot hold
 
 A PHP string is bytes; a JS string is UTF-16. A result or input JS cannot hold throws a JS `TypeError` that names the
@@ -674,6 +762,9 @@ byte of 0x80 or more on its own), and a string holding a lone surrogate passed t
 - Every mbstring encoding but UTF-8, `mb_convert_encoding`'s `auto` list, `mb_internal_encoding`,
   `mb_preferred_mime_name` and the other mbstring functions.
 - `filter_var`'s other filters, flags and options, `filter_var_array`, `filter_input` and `filter_list`.
+- `preg_replace`, `preg_replace_callback_array`, `preg_quote`, `preg_grep` and `preg_filter`, and the constants
+  `PREG_GREP_INVERT`, `PCRE_VERSION`, `PCRE_VERSION_MAJOR`, `PCRE_VERSION_MINOR` and `PCRE_JIT_SUPPORT`; `(*MARK)` names; PCRE's
+  backtrack, recursion and JIT stack limits (a pattern that would exhaust one in PHP runs to its end in JS).
 - A trait no `mixin` call has composed yet: `class_exists` cannot tell it from a class and gives `true`.
 - A ctype locale other than C, and the ctype functions other than `ctype_space` and `ctype_digit`.
 - `callMethod`'s visibility checks, and Closure's `bind`, `bindTo`, `call`, `fromCallable` and `getCurrent` through it

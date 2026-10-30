@@ -295,3 +295,26 @@ export {
   strpos,
   strtok,
 } from "./php/index";
+
+export {
+  PREG_BACKTRACK_LIMIT_ERROR,
+  PREG_BAD_UTF8_ERROR,
+  PREG_BAD_UTF8_OFFSET_ERROR,
+  PREG_INTERNAL_ERROR,
+  PREG_JIT_STACKLIMIT_ERROR,
+  preg_last_error,
+  preg_last_error_msg,
+  preg_match,
+  preg_match_all,
+  PREG_NO_ERROR,
+  PREG_OFFSET_CAPTURE,
+  PREG_PATTERN_ORDER,
+  PREG_RECURSION_LIMIT_ERROR,
+  preg_replace_callback,
+  PREG_SET_ORDER,
+  preg_split,
+  PREG_SPLIT_DELIM_CAPTURE,
+  PREG_SPLIT_NO_EMPTY,
+  PREG_SPLIT_OFFSET_CAPTURE,
+  PREG_UNMATCHED_AS_NULL,
+} from "./php/index";
