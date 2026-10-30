@@ -1,8 +1,7 @@
-// `Dotenv\Store\File\Paths` (vlucas/phpdotenv v5.7.0, `@internal`), ported line for line, except that PHP's
-// `DIRECTORY_SEPARATOR` constant, which `@xaravel/runtime/php` does not export yet (ESC-15.2-6), makes `filePaths`
-// throw `BlockedByComponentError(runtime)` when it has a path to join.
-import { BlockedByComponentError, registerClass } from "@xaravel/runtime";
-import { Error as PhpError } from "@xaravel/runtime/php";
+// `Dotenv\Store\File\Paths` (vlucas/phpdotenv v5.7.0, `@internal`), ported line for line over PHP's `rtrim` and
+// `DIRECTORY_SEPARATOR` from `@xaravel/runtime/php` (ESC-15.2-6).
+import { registerClass } from "@xaravel/runtime";
+import { DIRECTORY_SEPARATOR, Error as PhpError, rtrim } from "@xaravel/runtime/php";
 
 /** The key to Upstream's private constructor. */
 const CREATE: unique symbol = Symbol("Paths");
@@ -23,9 +22,7 @@ export class Paths {
 
     for (const path of paths) {
       for (const name of names) {
-        void path;
-        void name;
-        throw new BlockedByComponentError("runtime", "DIRECTORY_SEPARATOR (ESC-15.2-6)");
+        files.push(rtrim(path, DIRECTORY_SEPARATOR) + DIRECTORY_SEPARATOR + name);
       }
     }
 
