@@ -3970,6 +3970,11 @@ So that concurrent requests never share container state (FR-19, NFR-4, AD-5).
 **Then** `@xaravel/runtime` routes it to the active Application's base, through a seam this Story adds (`decisions/ESC-11.1-2.md`)
 **And** this Story's PR takes `epic-11-retro-item-7-macroable-boot-write` out of epic 11's `waiting_on_maintainer`, so the orchestrator routes Macroable's half (MAINT-2026-10-24-epic-11-items).
 
+**Given** an Application that is not yet `sealed` and no open unit frame
+**When** a config Repository write (`config([...])`, `set`, `push`, `prepend`, `offsetSet` or `offsetUnset`) is made during register or boot
+**Then** it lands in the Repository's base items through the same seam, and after `sealed` a write inside a unit frame still goes to that frame's overlay (`decisions/ESC-15.1-2.md`)
+**And** this Story's PR takes `epic-15-retro-item-8-config-presealed-base-write` out of epic 15's `waiting_on_maintainer`, so the orchestrator routes config's half, and XT-config-1 gains its full wording: `config([...])` on a sealed Application inside a unit frame (MAINT-2026-10-30-epic-15-items).
+
 **Given** a base singleton whose constructor resolves a frame-owned binding (a request-like fixture)
 **When** dev mode is on
 **Then** resolution throws, naming both bindings (AD-5).
