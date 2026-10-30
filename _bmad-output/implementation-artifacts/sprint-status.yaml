@@ -169,7 +169,7 @@ development_status:
 
   epic-15: in-progress
   15-1-config-repository: done
-  15-2-phpdotenv-grammar-port: backlog
+  15-2-phpdotenv-grammar-port: in-progress
   15-3-bun-s-env-autoload-neutralised: backlog
   epic-15-retrospective: optional
 
