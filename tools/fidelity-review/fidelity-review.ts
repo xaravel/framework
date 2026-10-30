@@ -77,12 +77,15 @@
 // (a heuristic line scanner, `sourceSurface`; ESC-9.3-2); (h) whole files
 // (MAINT-2026-10-22-fidelity-whole-files): every file the change adds or
 // modifies, in full, then every decision and DIV record those files cite
-// anywhere, then the repository files they import (relative and dynamic-idiom
+// anywhere, with the text of each `PORTING.md` `##` section they cite (`PORTING.md § <heading>`, `'s § <heading>`,
+// `'s <heading>` or `:<line>`; `portingSections`; epic-15-retro-item-3), then the repository files they import (relative and dynamic-idiom
 // imports, `WHOLE_FILE_DEPTH` levels), the file that declares each name a
 // changed line imports from another workspace package, resolved through its
 // `exports` map and re-exports (`packageImports`; ESC-14.8-3), and the repository files changed test
 // files read as data (`dataFileReads`, `copyFileSync` sources included; one over `WHOLE_FILE_CAP` as the lines
-// the test's string literals select, `dataFileExcerpt`; ESC-10.1-5, ESC-10.2-7), a changed data file that a changed
+// the test's string literals select, `dataFileExcerpt`; ESC-10.1-5, ESC-10.2-7), the repository TypeScript files
+// changed test files run and do not import (a spawned `.ts` path, or the first `.ts` path of the root `package.json`
+// script a `bun run <script>` names; `scriptRuns`; epic-15-retro-item-3), a changed data file that a changed
 // test, or an unchanged test file beside it, reads coming first with them as `changed; read by <test>`, and one that
 // does not fit what is left as the lines its reader selects when they fit (epic-14-retro-item-3), the Upstream
 // counterpart `conformance/upstream/<sub-path>.php` of each listed file under `packages/<c>/tests/ported/` that is not
@@ -725,11 +728,12 @@ export function sourceDocTexts(root: string, files: readonly ChangedFile[]): str
     .flatMap((file) => sourceDocComments(readEvidenceFile(root, file.filename).text ?? ""));
 }
 
-/** One file of evidence (h): its repository path, why it is included, and its full text or a note saying why not. */
+/** One file of evidence (h): its repository path (`PORTING.md § <heading>` for a cited section, E2), why it is included, and its full text or a note saying why not. */
 export interface WholeFileEntry {
   readonly path: string;
   /**
-   * "changed", "cited by <path>", "imported by <path>" or "read by <path>" (with "; excerpt: …" when `dataFileExcerpt`
+   * "changed", "cited by <path>", "imported by <path>", "run by <path>" (with " as `bun run <script>`" when through a
+   * script) or "read by <path>" (with "; excerpt: …" when `dataFileExcerpt`
    * cut it, or, for an Upstream source, "from <dir>/: …" and "; its declaration lines only, …" when it is cut to them).
    */
   readonly reason: string;
@@ -761,7 +765,8 @@ function wholeFileSkipped(path: string): boolean {
 
 /** The fence language of a whole file, by extension. */
 function wholeFileLang(path: string): string {
-  const ext = /\.([a-z0-9]+)$/.exec(path)?.[1] ?? "";
+  // A `PORTING.md § <heading>` entry is a section of a Markdown file (epic-15-retro-item-3, E2).
+  const ext = /\.([a-z0-9]+)$/.exec(path.split(" § ")[0]!)?.[1] ?? "";
   return ({ ts: "ts", tsx: "tsx", mts: "ts", cts: "ts", js: "js", md: "markdown", json: "json", jsonl: "jsonl", yml: "yaml", yaml: "yaml", php: "php", toml: "toml", sh: "sh" } as Record<string, string>)[ext] ?? "";
 }
 
@@ -1030,14 +1035,16 @@ export function upstreamTraitPaths(path: string, text: string, exists: (path: st
 
 /**
  * Evidence (h), whole files: every file the change adds or modifies, in full; the decision and DIV records those files
- * cite anywhere, not only on changed lines; then the repository files they import, followed `WHOLE_FILE_DEPTH` levels
+ * cite anywhere, not only on changed lines, and the text of each `PORTING.md` section they cite, as
+ * `PORTING.md § <heading>` (`portingSections`; none when `PORTING.md` is itself changed; epic-15-retro-item-3, E2); then the repository files they import, followed `WHOLE_FILE_DEPTH` levels
  * deep, and the file that declares each name a changed line imports from another workspace package (ESC-14.8-3); the repository files changed test files read as data or copy into a fixture (ESC-10.1-5, ESC-10.2-7),
- * and a changed data file a changed test, or an unchanged test file beside it, reads, as `changed; read by <test>`
+ * the repository tools changed test files run, as `run by <test>` or ``run by <test> as `bun run <script>` ``
+ * (`scriptRuns`; epic-15-retro-item-3, E3), and a changed data file a changed test, or an unchanged test file beside it, reads, as `changed; read by <test>`
  * (epic-14-retro-item-3, E1); the Upstream counterpart of each listed Ported Test fixture or support module under
  * `packages/<c>/tests/ported/` (`upstreamCounterpart`, E3); and the
  * Upstream sources they read through a computed path, of the classes a changed file names (ESC-10.2-7). A file another
  * section already shows in full (`shown`, path → section) is named, not repeated. The entries fill `budget` characters
- * in this order: the cited records, and the files changed test files read or import (their data, changed data files
+ * in this order: the cited records and `PORTING.md` sections, and the files changed test files read, run or import (their data, changed data files
  * included, Upstream sources, helpers and fixtures) with the Upstream counterparts, which no other section shows; then the changed TypeScript and Markdown, whose diff is above;
  * then the other imports by level, then the package imports' declaring files; then the other changed files, those outside the Story's scope (`inScope`,
  * ESC-9.10-3) among them. A file longer than `WHOLE_FILE_CAP`, or one that does not fit, is named as omitted for size,
@@ -1120,9 +1127,41 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
       add(0, record, `cited by ${by}`);
     }
   }
+  // Each PORTING.md section a changed file cites, beside the records it cites, as the section's text; none when
+  // PORTING.md is itself changed, since it is listed whole (epic-15-retro-item-3, E2).
+  const porting = changed.some((file) => file.filename === PORTING_FILE) ? null : read(PORTING_FILE);
+  if (porting !== null) {
+    for (const [path, text] of changedTexts) {
+      for (const section of portingSections(text, porting)) {
+        const label = `${PORTING_FILE} § ${section.heading}`;
+        if (!listed.has(label)) {
+          listed.add(label);
+          tiers[0]!.push({ path: label, reason: `cited by ${path}`, text: section.text, note: null });
+        }
+      }
+    }
+  }
   for (const [path, text] of changedTexts) {
     if (TS_FILE.test(path) && isTestPath(path)) {
       readData(path, text);
+    }
+  }
+  // The source of each repository tool a changed test file runs, which its assertions on exit status and output depend
+  // on: a spawned `.ts` path, or the script a `bun run <script>` names. A file the test imports comes with the imports,
+  // and a changed one follows `readData`'s scope rule (ESC-9.10-3; epic-15-retro-item-3, E3).
+  for (const [path, text] of changedTexts) {
+    if (!TS_FILE.test(path) || !isTestPath(path)) {
+      continue;
+    }
+    for (const run of scriptRuns(path, text, exists, read)) {
+      if (listed.has(run.target) || wholeFileSkipped(run.target)) {
+        continue;
+      }
+      // A changed tool in the scope is already listed as changed; one outside it stays last (ESC-9.10-3).
+      if (changed.some((file) => file.filename === run.target)) {
+        continue;
+      }
+      add(1, run.target, `run by ${path}${run.script === null ? "" : ` as \`bun run ${run.script}\``}`);
     }
   }
   // A changed data file whose reader the change leaves alone: a test file beside it that reads it (E1).
@@ -2473,6 +2512,230 @@ export function dataFileReads(path: string, text: string, exists: (path: string)
   }
   out.delete(path);
   return [...out].sort(compareUnits);
+}
+
+/** The repository file whose `##` sections a change may cite (epic-15-retro-item-3, E2). */
+export const PORTING_FILE = "PORTING.md";
+
+/**
+ * A `PORTING.md` section citation: `PORTING.md § <heading>`, `PORTING.md's § <heading>`, `PORTING.md's <heading>` (the
+ * rest of the line up to the next citation, matched against the headings) or `PORTING.md:<line>`.
+ */
+const PORTING_CITATION = /(?<![\w./-])PORTING\.md`?(?::(\d+)|(?:['’]s)?\s*§\s*((?:(?!PORTING\.md)[^\n])*)|['’]s\s+((?:(?!PORTING\.md)[^\n])*))/g;
+
+/** One `##` section of `PORTING.md`: its heading's text and the section's text, the heading line included. */
+export interface PortingSection {
+  readonly heading: string;
+  readonly text: string;
+}
+
+/**
+ * The `##` sections of `porting` (the text of `PORTING.md`) that `text` cites (epic-15-retro-item-3, E2), each once, in
+ * citation order. A `§` or `'s` citation names the section whose heading, or whose heading without a trailing
+ * parenthesis (`PCRE conversion` for `PCRE conversion (DIV-10)`), the cited text starts with, case-insensitively and
+ * up to a word boundary; the longest such name wins, and text no heading starts is no citation (`PORTING.md's spread
+ * row`). A `PORTING.md:<line>` citation names the section that holds the line; a line past the end, or before the first
+ * `##` heading, names none. A section runs from its heading up to the next `##` heading, or the end of the file.
+ */
+export function portingSections(text: string, porting: string): PortingSection[] {
+  const lines = porting.split("\n");
+  // A final newline ends the last line; it starts none.
+  const count = porting.endsWith("\n") ? lines.length - 1 : lines.length;
+  const sections: { heading: string; from: number; to: number }[] = [];
+  let fenced = false;
+  lines.forEach((line, index) => {
+    if (/^\s*(?:```|~~~)/.test(line)) {
+      fenced = !fenced;
+    }
+    const heading = fenced ? null : /^## (.+?)\s*$/.exec(line);
+    if (heading !== null) {
+      if (sections.length > 0) {
+        sections.at(-1)!.to = index;
+      }
+      sections.push({ heading: heading[1]!, from: index, to: count });
+    }
+  });
+  const named = (cited: string): (typeof sections)[number] | null => {
+    // A citation wrapped onto the next comment line starts with its `//` or `*` marker.
+    const lower = cited.replace(/^(?:[`*"'\s]|\/\/)+/, "").toLowerCase();
+    let best: (typeof sections)[number] | null = null;
+    let length = 0;
+    for (const section of sections) {
+      for (const name of new Set([section.heading, section.heading.replace(/\s*\([^()]*\)$/, "")])) {
+        const candidate = name.toLowerCase();
+        if (candidate !== "" && candidate.length > length && lower.startsWith(candidate) && !/[\w-]/.test(lower[candidate.length] ?? "")) {
+          best = section;
+          length = candidate.length;
+        }
+      }
+    }
+    return best;
+  };
+  const out: PortingSection[] = [];
+  const seen = new Set<string>();
+  for (const match of text.matchAll(PORTING_CITATION)) {
+    const line = match[1] === undefined ? null : Number(match[1]);
+    const section = line === null ? named(match[2] ?? match[3]!) : line < 1 || line > count ? null : (sections.find((entry) => entry.from < line && line <= entry.to) ?? null);
+    if (section !== null && !seen.has(section.heading)) {
+      seen.add(section.heading);
+      out.push({ heading: section.heading, text: `${lines.slice(section.from, section.to).join("\n").replace(/\s+$/, "")}\n` });
+    }
+  }
+  return out;
+}
+
+/** A repository TypeScript file a test file runs: its path, and the root `package.json` script it runs through, if any. */
+export interface ScriptRun {
+  readonly target: string;
+  readonly script: string | null;
+}
+
+/**
+ * The text of each string literal in `code` (comments already removed), from its opening quote to its closing one, so
+ * a quote inside another literal (a backtick in a message) opens none.
+ */
+function stringLiteralTexts(code: string): string[] {
+  const out: string[] = [];
+  let quote: string | null = null;
+  let from = 0;
+  for (let i = 0; i < code.length; i++) {
+    const char = code[i]!;
+    if (quote !== null) {
+      if (char === "\\") {
+        i++;
+      } else if (char === quote || (char === "\n" && quote !== "`")) {
+        out.push(code.slice(from, i));
+        quote = null;
+      }
+    } else if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+      from = i + 1;
+    }
+  }
+  return out;
+}
+
+/** `text` with its `//` and block comments removed, outside quotes, heuristically. */
+function withoutComments(text: string): string {
+  let out = "";
+  let quote: string | null = null;
+  for (let i = 0; i < text.length; i++) {
+    const char = text[i]!;
+    if (quote !== null) {
+      if (char === "\\") {
+        out += text.slice(i, i + 2);
+        i++;
+        continue;
+      }
+      if (char === quote || (char === "\n" && quote !== "`")) {
+        quote = null;
+      }
+    } else if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+    } else if (char === "/" && text[i + 1] === "/") {
+      const end = text.indexOf("\n", i);
+      i = end === -1 ? text.length : end - 1;
+      continue;
+    } else if (char === "/" && text[i + 1] === "*") {
+      const end = text.indexOf("*/", i + 2);
+      i = end === -1 ? text.length : end + 1;
+      out += " ";
+      continue;
+    }
+    out += char;
+  }
+  return out;
+}
+
+/**
+ * The elements of each array literal in `text` that may be an argument list, split at their top-level commas and
+ * trimmed. A `[` that follows a name, a `)` or a `]` is an index or a type, not a literal. An array that is the direct
+ * argument of `expect(`, a `.to<Matcher>(` call or an `assert…(`/`Assert.<name>(` call, or that follows `of` or `in`,
+ * is data, and so is every array inside it. Quotes and comments are skipped, heuristically.
+ */
+function arrayLiteralElements(text: string): string[][] {
+  const out: string[][] = [];
+  const open: (number | "index" | "data")[] = [];
+  const code = withoutComments(text);
+  let quote: string | null = null;
+  for (let i = 0; i < code.length; i++) {
+    const char = code[i]!;
+    if (quote !== null) {
+      if (char === "\\") {
+        i++;
+      } else if (char === quote || (char === "\n" && quote !== "`")) {
+        quote = null;
+      }
+    } else if (char === '"' || char === "'" || char === "`") {
+      quote = char;
+    } else if (char === "[") {
+      const before = code.slice(Math.max(0, i - 60), i);
+      const data = open.includes("data") || /(?<![\w$.])(?:of|in)\s*$/.test(before) || /(?:(?<![\w$.])expect|\.to[A-Z]\w*|(?<![\w$.])assert\w*|(?<![\w$.])Assert\.\w+)\s*\(\s*$/.test(before);
+      open.push(data ? "data" : /[\w$)\]]\s*$/.test(before) && !/(?<![\w$.])(?:return|yield|await|case|typeof|void|throw|new|else|do)\s*$/.test(before) ? "index" : i);
+    } else if (char === "]") {
+      const from = open.pop();
+      if (typeof from === "number") {
+        out.push(topLevelSplit(code.slice(from + 1, i), ",").map((part) => part.trim()).filter((part) => part !== ""));
+      }
+    }
+  }
+  return out;
+}
+
+/** The contents of a plain string literal (`"…"` or `'…'`, no escapes), or null. */
+function stringLiteral(text: string): string | null {
+  return /^(["'])([^"'\\\n]*)\1$/.exec(text)?.[2] ?? null;
+}
+
+/**
+ * The repository TypeScript files the test file `path` runs (epic-15-retro-item-3, E3), each once, sorted: each array
+ * literal element (a spawn's argument list) that resolves through `pathExpression`, or as a root-relative string
+ * literal, to a `.ts` file; and, for each script a `["run", "<script>"]` element pair or a string literal starting
+ * `bun run <script>` names, the first `.ts` path in that script of the root `package.json`, with the script. Only a
+ * file `exists` accepts that is not a test file and that the test does not import (`fileImports`) counts; an unknown
+ * script, or no `package.json`, names none.
+ */
+export function scriptRuns(path: string, text: string, exists: (path: string) => boolean, read: (path: string) => string | null): ScriptRun[] {
+  const consts = fileConsts(testUnits(text));
+  const imported = new Set(fileImports(path, text, exists));
+  const out = new Map<string, string | null>();
+  const take = (target: string | null, script: string | null): void => {
+    if (target === null || target === "" || target.startsWith("..") || posix.isAbsolute(target) || !target.endsWith(".ts") || target === path || isTestPath(target) || imported.has(target) || out.has(target) || !exists(target)) {
+      return;
+    }
+    out.set(target, script);
+  };
+  let scripts: Record<string, unknown> | null | undefined;
+  const scriptTarget = (name: string): string | null => {
+    if (scripts === undefined) {
+      try {
+        const manifest = JSON.parse(read("package.json") ?? "null") as { scripts?: unknown } | null;
+        scripts = manifest !== null && typeof manifest.scripts === "object" && manifest.scripts !== null ? (manifest.scripts as Record<string, unknown>) : null;
+      } catch {
+        scripts = null;
+      }
+    }
+    const command = scripts !== null && Object.hasOwn(scripts, name) ? scripts[name] : null;
+    const target = typeof command === "string" ? /(?:^|[\s"'=])((?:\.\/)?[\w@.-]+(?:\/[\w@.-]+)*\.ts)(?=$|[\s"';&|)])/.exec(command)?.[1] : undefined;
+    return target === undefined ? null : posix.normalize(target);
+  };
+  for (const elements of arrayLiteralElements(text)) {
+    elements.forEach((element, index) => {
+      const literal = stringLiteral(element);
+      take(literal !== null && !literal.startsWith(".") ? posix.normalize(literal) : pathExpression(element, path, consts), null);
+      const script = literal === "run" ? stringLiteral(elements[index + 1] ?? "") : null;
+      if (script !== null && script !== "") {
+        take(scriptTarget(script), script);
+      }
+    });
+  }
+  for (const literal of stringLiteralTexts(withoutComments(text))) {
+    const script = /^bun\s+run\s+([\w:.-]+)/.exec(literal)?.[1];
+    if (script !== undefined) {
+      take(scriptTarget(script), script);
+    }
+  }
+  return [...out].sort((a, b) => compareUnits(a[0], b[0])).map(([target, script]) => ({ target, script }));
 }
 
 /** Where `bun run upstream:sync` puts the Upstream snapshot (gitignored): one directory per package, each with its `src/`. */
