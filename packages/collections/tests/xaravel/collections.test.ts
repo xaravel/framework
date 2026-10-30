@@ -2276,7 +2276,7 @@ xaravelTest(
 
     // zip take(2).
     log = [];
-    Assert.assertSame(2, lazy(log, "this").zip(lazy(log, "a")).take(2).all().length);
+    Assert.assertSame([[1, 1], [2, 2]], (lazy(log, "this").zip(lazy(log, "a")).take(2).all() as LazyCollection[]).map((row) => row.all()));
     Assert.assertSame(["start this", "start a", "finally this", "finally a"], log);
 
     // zip over an array source.
@@ -2295,8 +2295,13 @@ xaravelTest(
 
     // zip exhausted: unchanged.
     log = [];
-    Assert.assertSame(3, lazy(log, "this").zip(lazy(log, "a")).all().length);
+    Assert.assertSame([[1, 1], [2, 2], [3, 3]], (lazy(log, "this").zip(lazy(log, "a")).all() as LazyCollection[]).map((row) => row.all()));
     Assert.assertSame(["start this", "start a", "finally this", "finally a"], log);
+
+    // zip with a shorter owned source that runs out while zip continues.
+    log = [];
+    Assert.assertSame([[1, 1], [2, null], [3, null]], (lazy(log, "this", 3).zip(lazy(log, "b", 1)).all() as LazyCollection[]).map((row) => row.all()));
+    Assert.assertSame(["start this", "start b", "finally b", "finally this"], log);
 
     // combine abandoned by first() and by take(2).
     log = [];
@@ -2316,9 +2321,16 @@ xaravelTest(
     Assert.assertSame([], lazy(log, "this", 0).combine(lazy(log, "values", 0)).all());
     Assert.assertSame(["start this", "finally this", "start values", "finally values"], log);
 
+    // combine with an empty source and some values: the closing valid() starts the values source.
+    log = [];
+    let failure = failureOf(() => lazy(log, "this", 0).combine(lazy(log, "values", 3)).all());
+    Assert.assertInstanceOf(ValueError, failure);
+    Assert.assertSame("Both parameters should have an equal number of elements", (failure as ValueError).message);
+    Assert.assertSame(["start this", "finally this", "start values", "finally values"], log);
+
     // combine with fewer values: unchanged.
     log = [];
-    let failure = failureOf(() => lazy(log, "this", 3).combine(lazy(log, "values", 2)).all());
+    failure = failureOf(() => lazy(log, "this", 3).combine(lazy(log, "values", 2)).all());
     Assert.assertInstanceOf(ValueError, failure);
     Assert.assertSame("Both parameters should have an equal number of elements", (failure as ValueError).message);
     Assert.assertSame(["start this", "start values", "finally values", "finally this"], log);

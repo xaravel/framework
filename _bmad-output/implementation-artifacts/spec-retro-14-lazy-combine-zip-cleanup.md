@@ -4,13 +4,27 @@ type: 'bugfix'
 created: '2026-10-29'
 status: 'in-review'
 baseline_revision: '3ab17b602bec9c62408b6eabb463d5d68265d221'
-review_loop_iteration: 0
+review_loop_iteration: 1
 followup_review_recommended: false
 context:
   - '{project-root}/decisions/DIV-9.md'
   - '{project-root}/conformance/review/fidelity.md'
 warnings: []
-deferred: []
+deferred:
+  - summary: >-
+      When two owned zip or combine sources both throw from their finally during one close, Xaravel surfaces the first cleanup exception; PHP may surface the later one with the earlier as previous.
+    evidence: |-
+      deferredIteratorScopes nests the scopes, so JS iterator-close keeps the first throw completion and drops a later return() exception. DIV-9.16 covers a loop-body exception against one finally exception, not two cleanup exceptions. Unverified: a PHP 8.5.11 probe of two throwing generator finally blocks destroyed together would settle PHP's result; if it differs, it needs a DIV clause through the Maintainer.
+    location: >-
+      packages/collections/src/LazyCollection.ts (deferredIteratorScopes)
+    severity: medium (unverified)
+  - summary: >-
+      A callable returning a freshly built runtime Generator, or a userland IteratorAggregate, is not closed by zip or combine although PHP would destroy it.
+    evidence: |-
+      makeIterator owns only JS generators it wraps and LazyCollection iterators; this ownership rule predates this item and is shared by every iteratorScope member, since the port cannot tell an unreferenced runtime Generator from a user-held one.
+    location: >-
+      packages/collections/src/LazyCollection.ts (makeIterator)
+    severity: low
 ---
 
 <intent-contract>
@@ -76,6 +90,30 @@ Sources are generator functions logging `start <n>` on entry and `finally <n>` i
 
 ## Review Triage Log
 
+### 2026-10-29 — Review pass
+- verdicts: 20 findings — high 0, medium 1, low 12, false 5, maybe-false 2
+- findings:
+  - `[maybe-false]` `[defer]` (blind) Two owned sources whose `finally` both throw: nested scopes surface the first cleanup exception, PHP likely surfaces the later one with the earlier as `previous`; not under DIV-9.16's wording — settle with a PHP 8.5.11 probe of two throwing generator `finally`s in one array destruction; deferred as medium (unverified).
+  - `[low]` `[reject]` (blind) No case where a source throws mid-enumeration — the outer generator ending by a throw is the same scope exit the `ValueError` rows exercise (thrown inside the lazy generator, both scopes close in the logged order); a separate source-throw row adds no new path.
+  - `[low]` `[reject]` (blind) Consequence string names `break` and resumable Generators for both members, tests cover them on `zip` only — `combine` uses the same `deferredIteratorScope` / ownership rule; both Fidelity reviewers passed F-7 on the string.
+  - `[low]` `[reject]` (blind) PHP probe not committed beside the test as XT-17/18 did — the logs are in the test header and the spec matrix; committing a re-runnable probe is new tooling, not a direct correction.
+  - `[low]` `[patch]` (blind) `zip take(2)` / `zip exhausted` assert only lengths, and no shorter owned source runs out mid-zip — assertions now check the zipped rows, and a shorter-source case was added.
+  - `[low]` `[reject]` (blind) Nested `zip` / `combine` arguments untested — ownership passes through `makeIterator` unchanged by this diff; the nested source closes through its own scope.
+  - `[low]` `[reject]` (blind) `zip` setup spreads twice and repeats the ownership check — cosmetic, no behaviour difference.
+  - `[false]` `[reject]` (blind) `StartingCursor` lacks brands / `registerClass` — it is module-private and only read by the proxy's `valid`/`current`/`next` in `zip`; it never reaches `fqcn` or `instanceof`.
+  - `[false]` `[reject]` (blind) Design Notes snippet shows the eager start shape — fix would edit this build's spec; the amended Execution task already records the change.
+  - `[maybe-false]` `[defer]` (edge) Two throwing cleanup `finally`s: grouped with the first row (same root cause).
+  - `[low]` `[reject]` (edge) `entries()` throwing before `opened.traversal` is set lets a later `start()` retry — owned iterators are fresh framework wrappers whose `entries()` does not throw; the fix adds a guard for an undemonstrated state.
+  - `[medium]` `[patch]` (verification-gap) `combine`'s closing `start()` has no test where removing it shows — added the empty-keys / non-empty-values `ValueError` case.
+  - `[low]` `[defer]` (intent) A callable returning a fresh runtime `Generator`, or a userland `IteratorAggregate`, is not closed though PHP would destroy it — pre-existing ownership rule shared by every `iteratorScope` member, not introduced here.
+  - `[false]` `[reject]` (intent) Mechanism goes through the runtime's `TRAVERSAL_EXIT` rather than a direct `return()` — the public-API tests show every `finally` runs.
+  - `[false]` `[reject]` (intent) Start timing, order and DIV-9.16 handling exceed the action text — the action asks for `finally` to run "as in PHP", which includes them.
+  - `[low]` `[reject]` (intent) Oracle logs transcribed by hand — grouped with the probe-not-committed row.
+  - `[low]` `[reject]` (intent) `adapted:DIV-9.16` markers in a Xaravel Test — DIV-9.16 itself asks that an Xaravel Test checking this case be marked with the clause.
+  - `[false]` `[reject]` (intent) Spec status reads `in-review`, merge gate not in the diff — workflow bookkeeping, checked at Finalize.
+  - `[low]` `[reject]` (verification-gap, other) Spec file modified during the review — the parent session set `in-review` and the Fidelity tool recorded verdicts; expected.
+  - `[low]` `[reject]` (verification-gap, other) 29 failures in `bun test packages/collections` — pre-existing blocked-by tests (30 at baseline); the harness reports no differences.
+
 ## Design Notes
 
 PHP 8.5.11 probe (Upstream `LazyCollection.php` at the Pin, run 2026-10-29) printed exactly the logs in the matrix; the unfixed port printed none of the `finally` events on the abandoned rows and missed `finally values` on "combine values long". Shape of the zip fix:
@@ -94,3 +132,55 @@ for (const starts of this.deferredIteratorScopes(iteratorList)) {
 - `bun run harness` -- expected: `SUMMARY` with no differences
 - `bun run harness --xaravel` -- expected: no differences
 - `bun run typecheck` and `bun run lint` -- expected: exit 0
+
+## Fidelity Review
+
+### Reviewer 1: pass at tree 383fa4e6f4d64de4135676697a16ae1b23a42cf8
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `claude` loop, against base `3ab17b602bec9c62408b6eabb463d5d68265d221`, on 2026-10-30T02:51:42.195Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The diff adds or changes no Ported Test; the action item assigns no Ported Test IDs. |
+| F-2: No expected value is weakened | pass | The test diff only adds assertions; no existing expected value is weakened. The two body-error expectations carry DIV-9.16 markers. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test changes or assertion removals appear in the diff. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line is changed or set to skip. |
+| F-5: Every `adapted` marker matches its clause | pass | Both added adapted:DIV-9.16 markers check that a loop body's exception wins over a throwing generator finally, exactly as the supplied clause permits. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The supplied fixture inventory identifies no relied-on Oracle error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | XT-collections-19 checks exact source-start and cleanup logs, early exits, exhaustion, mismatched counts, held-generator resumption and competing exceptions, matching its consequence and the recorded PHP probe observations. |
+| F-8: No stub, fake or partial implementation of another Component | pass | All changed files belong to collections. The cursor and cleanup helpers coordinate existing runtime iterator behavior without implementing another Component. |
+| F-9: Every `@asyncRoot` tag is true | pass | The eight retained callback tags correspond to methods that await permitted async callbacks. The added iterator scopes and cursor helpers are synchronous generators or methods and require no async-root tag. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file changes, so there are no changed setup or exprs inputs to compare. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"383fa4e6f4d64de4135676697a16ae1b23a42cf8","base":"3ab17b602bec9c62408b6eabb463d5d68265d221","cli":"codex","model":"gpt-6.1-sol","loop_cli":"claude","fallback":null,"date":"2026-10-30T02:51:42.195Z","items":[{"id":"F-1","result":"n/a","note":"The diff adds or changes no Ported Test; the action item assigns no Ported Test IDs.","findings":[]},{"id":"F-2","result":"pass","note":"The test diff only adds assertions; no existing expected value is weakened. The two body-error expectations carry DIV-9.16 markers.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test changes or assertion removals appear in the diff.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is changed or set to skip.","findings":[]},{"id":"F-5","result":"pass","note":"Both added adapted:DIV-9.16 markers check that a loop body's exception wins over a throwing generator finally, exactly as the supplied clause permits.","findings":[]},{"id":"F-6","result":"n/a","note":"The supplied fixture inventory identifies no relied-on Oracle error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"XT-collections-19 checks exact source-start and cleanup logs, early exits, exhaustion, mismatched counts, held-generator resumption and competing exceptions, matching its consequence and the recorded PHP probe observations.","findings":[]},{"id":"F-8","result":"pass","note":"All changed files belong to collections. The cursor and cleanup helpers coordinate existing runtime iterator behavior without implementing another Component.","findings":[]},{"id":"F-9","result":"pass","note":"The eight retained callback tags correspond to methods that await permitted async callbacks. The added iterator scopes and cursor helpers are synchronous generators or methods and require no async-root tag.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file changes, so there are no changed setup or exprs inputs to compare.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: pass at tree 383fa4e6f4d64de4135676697a16ae1b23a42cf8
+
+Reviewed by `claude` (model `claude-opus-5-5`) for a `claude` loop, against base `3ab17b602bec9c62408b6eabb463d5d68265d221`, on 2026-10-30T02:51:42.195Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | The action item adds or changes no Expectations line and no Ported Test file; the only test change is the new Xaravel Test XT-collections-19. No Ported Test assertions to compare with Upstream. |
+| F-2: No expected value is weakened | pass | No existing assertion in collections.test.ts is altered: the diff only appends helpers and XT-collections-19. The new test uses exact assertSame comparisons and exact class plus exact message checks. The two body-exception assertions carry adapted:DIV-9.16, and that clause permits exactly this outcome (the loop body's exception wins). |
+| F-3: No assertion is removed without a DIV clause | pass | The diff removes no assertion. Its only removal is the docs paragraph about the old combine/zip cleanup gap (collections.md 245-247), which the action item asks for. No Ported Test assertion count changes. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line is added or set to skip. |
+| F-5: Every `adapted` marker matches its clause | pass | The two '// adapted:DIV-9.16' markers in XT-collections-19 are on assertSame(bodyError, failure), once for a user for…of over zip and once for combine(...).each(throw). DIV-9.16 says the loop body's exception is the one the caller sees, whether the loop is framework code or a user's for…of, and that the generator's finally still runs once. The adjacent log assertions check that it ran once. Neither marker adapts more than the clause allows. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | Evidence (c) shows no assigned committed Oracle request and no error fixture, base or changed; the item relies on no Oracle fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | The XT-collections-19 body checks every claim in its consequence string: - start points: start logs for owned sources, in order among a user-held unstarted Generator and a userland LoggingIterator. - abandonment: first, take(2) and a break on zip; first and take(2) on combine. - destruction order: zip's sources in order; combine's values before this collection's source. - exhausted runs: zip all() and combine with both sources empty. - error runs: combine with fewer or more values, with exact ValueError and message. - a user-held runtime Generator stays resumable after first(). - a cleanup exception propagates when no other is active, and the body exception wins (DIV-9.16).  The orderings agree with Upstream zip (contains->valid, map->current, destroying $iterators in order) and combine. For combine, PHP's zend_generator_close frees CVs ('$values') before the foreach temporary. The string cites no FR/AD consequence id. |
+| F-8: No stub, fake or partial implementation of another Component | pass | All changed files are under packages/collections (LazyCollection.ts, docs/collections.md, tests/xaravel/collections.test.ts), the component the item lists. No stub, fake or hard-coded behaviour of another Component is added. StartingCursor and closingScope are module-internal helpers for collections' own zip and combine. |
+| F-9: Every `@asyncRoot` tag is true | pass | The new members are synchronous: deferredIteratorScope and deferredIteratorScopes are sync generators, and StartingCursor and closingScope are not exported. None is async, so none needs a tag. The kept tags at lines 1408-1529 are on mapAsync, eachAsync and the six other async companions. Each awaits a caller-supplied callback, which matches AD-6's callback clause and DIV-1.2. No untagged async export is added. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | The change touches no file under conformance/oracle-requests/. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"383fa4e6f4d64de4135676697a16ae1b23a42cf8","base":"3ab17b602bec9c62408b6eabb463d5d68265d221","cli":"claude","model":"claude-opus-5-5","loop_cli":"claude","fallback":null,"date":"2026-10-30T02:51:42.195Z","items":[{"id":"F-1","result":"n/a","note":"The action item adds or changes no Expectations line and no Ported Test file; the only test change is the new Xaravel Test XT-collections-19. No Ported Test assertions to compare with Upstream.","findings":[]},{"id":"F-2","result":"pass","note":"No existing assertion in collections.test.ts is altered: the diff only appends helpers and XT-collections-19. The new test uses exact assertSame comparisons and exact class plus exact message checks. The two body-exception assertions carry adapted:DIV-9.16, and that clause permits exactly this outcome (the loop body's exception wins).","findings":[]},{"id":"F-3","result":"pass","note":"The diff removes no assertion. Its only removal is the docs paragraph about the old combine/zip cleanup gap (collections.md 245-247), which the action item asks for. No Ported Test assertion count changes.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is added or set to skip.","findings":[]},{"id":"F-5","result":"pass","note":"The two `// adapted:DIV-9.16` markers in XT-collections-19 are on assertSame(bodyError, failure), once for a user for…of over zip and once for combine(...).each(throw). DIV-9.16 says the loop body's exception is the one the caller sees, whether the loop is framework code or a user's for…of, and that the generator's finally still runs once. The adjacent log assertions check that it ran once. Neither marker adapts more than the clause allows.","findings":[]},{"id":"F-6","result":"n/a","note":"Evidence (c) shows no assigned committed Oracle request and no error fixture, base or changed; the item relies on no Oracle fixture.","findings":[]},{"id":"F-7","result":"pass","note":"The XT-collections-19 body checks every claim in its consequence string:\n- start points: start logs for owned sources, in order among a user-held unstarted Generator and a userland LoggingIterator.\n- abandonment: first, take(2) and a break on zip; first and take(2) on combine.\n- destruction order: zip's sources in order; combine's values before this collection's source.\n- exhausted runs: zip all() and combine with both sources empty.\n- error runs: combine with fewer or more values, with exact ValueError and message.\n- a user-held runtime Generator stays resumable after first().\n- a cleanup exception propagates when no other is active, and the body exception wins (DIV-9.16).\n\nThe orderings agree with Upstream zip (contains->valid, map->current, destroying $iterators in order) and combine. For combine, PHP's zend_generator_close frees CVs (`$values`) before the foreach temporary. The string cites no FR/AD consequence id.","findings":[]},{"id":"F-8","result":"pass","note":"All changed files are under packages/collections (LazyCollection.ts, docs/collections.md, tests/xaravel/collections.test.ts), the component the item lists. No stub, fake or hard-coded behaviour of another Component is added. StartingCursor and closingScope are module-internal helpers for collections' own zip and combine.","findings":[]},{"id":"F-9","result":"pass","note":"The new members are synchronous: deferredIteratorScope and deferredIteratorScopes are sync generators, and StartingCursor and closingScope are not exported. None is async, so none needs a tag. The kept tags at lines 1408-1529 are on mapAsync, eachAsync and the six other async companions. Each awaits a caller-supplied callback, which matches AD-6's callback clause and DIV-1.2. No untagged async export is added.","findings":[]},{"id":"F-10","result":"n/a","note":"The change touches no file under conformance/oracle-requests/.","findings":[]}],"prior":[]}
+```

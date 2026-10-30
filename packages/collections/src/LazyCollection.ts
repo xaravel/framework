@@ -23,8 +23,9 @@
 // its iterators' `contains->valid()`, `map->current()` and `each->next()` as the `__get` / `__call` calls PHP makes
 // (DIV-12.16's form); it and `combine` close the temporary generators they hold as manual cursors through
 // `deferredIteratorScope`, opened where PHP first reads each cursor and closed in PHP's destruction order. PHP's
-// `INF` (`flatten`, `dot`) is `Infinity`. The `*Using` members pass their comparison callback through to Collection's, so a PHP callable string such as `'strcasecmp'` reaches the runtime's `array_udiff`
-// & co., which call the runtime's export of that name (DIV-9.13, ESC-14.4-2).
+// `INF` (`flatten`, `dot`) is `Infinity`. The `*Using` members pass their comparison callback through to Collection's,
+// so a PHP callable string such as `'strcasecmp'` reaches the runtime's `array_udiff` & co., which call the runtime's
+// export of that name (DIV-9.13, ESC-14.4-2).
 import { Collection } from "./Collection";
 import { Arrayable, CanBeEscapedWhenCastToString, Jsonable } from "@xaravel/contracts/support";
 import { Macroable } from "@xaravel/macroable";
