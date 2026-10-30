@@ -14,74 +14,72 @@ Port Laravel's `illuminate/config` Repository as `@xaravel/config`, so App Devel
 
 ## Requirements & Constraints
 
-- **Scope boundaries.**
-  - This Epic owns the Repository and the env parser.
-  - `env()` itself is a Support helper (Epic 20).
-  - Which env file loads (`.env.<APP_ENV>`) and its precedence is Foundation bootstrap (Epic 51).
-  - `config:cache` is a Foundation command (Epic 55).
-  - Do not build those here.
+- **Scope boundaries.** This Epic owns the Repository and the env parser. Do not build these here:
+  - `env()` / `Env`, a Support helper (Epic 20);
+  - which env file loads (`.env.<APP_ENV>`) and its precedence, Foundation bootstrap (Epic 51);
+  - `config:cache` and the `{ "$class": "<FQCN>" }` rehydration form (Epic 55).
 - **Repository (15.1).**
-  - Every Test ID in `tests/Config/RepositoryTest.php` passes, or carries a valid Skip Reason other than `not-ported-yet`.
-  - The tests cover typed getters and their exceptions, `ArrayAccess`, and `Macroable`.
-- **Runtime config writes are frame-scoped.**
-  - A `config([...])` write on a sealed Application inside a unit frame goes to that frame's overlay.
-  - A concurrent unit still sees the base value. Prove this with `interleave` (XT-config-1).
-- **Classes in config.** A config value that holds a class or an FQCN string is returned exactly as stored (XT-config-2). The `{ "$class": "<FQCN>" }` rehydration form belongs to `config:cache`, not here.
-- **phpdotenv grammar (15.2).** The parser must match Oracle fixtures from phpdotenv at the Pin, both for parsed values and for error messages. The fixtures cover:
+  - Every Test ID in `tests/Config/RepositoryTest.php` passes, or carries a valid Skip Reason other than `not-ported-yet`. The tests cover typed getters and their exceptions, `ArrayAccess` and `Macroable`.
+  - A config value holding a class or an FQCN string is returned exactly as stored (XT-config-2).
+- **Runtime config writes are frame-scoped (XT-config-1).**
+  - Every write (`set`, `push`, `prepend`, `offsetSet`, `offsetUnset`) goes to the frame overlay over the constructor's base items. Reads fall back from the overlay to the base.
+  - A write in one unit is invisible to a concurrent unit (prove it with `interleave`). A write with no active frame throws `ScopeFrameException`.
+  - The sealed-Application form (`config([...])` on a sealed app) and the pre-sealed base write wait for the Story that adds the `sealed` state. Do not simulate an Application here.
+- **phpdotenv grammar (15.2).** The parser matches Oracle fixtures from phpdotenv at the Pin, for both parsed values and error messages. The fixtures cover:
   - unquoted, single-quoted and double-quoted values, and escape sequences;
   - `${VAR}` interpolation, including nested and undefined variables;
   - multiline quoted values and `export` prefixes;
-  - inline and full-line comments, empty values and whitespace;
-  - invalid lines.
-- **Repository modes (15.2).** Immutable and mutable modes follow phpdotenv's precedence: by default, real environment variables win.
-- **Oracle inputs.** phpdotenv is outside the Test Inventory, so it is graded by Oracle Differential Xaravel Tests. Their inputs go in `conformance/oracle-requests/<story-id>.jsonl`.
+  - comments, empty values, whitespace and invalid lines.
+- **Repository modes (15.2).** Immutable and mutable modes follow phpdotenv's precedence: real environment variables win by default (XT-config-4).
+- **Oracle inputs.** phpdotenv is outside the Test Inventory, so Oracle Differential Xaravel Tests grade it. Their inputs go in `conformance/oracle-requests/<story-id>.jsonl`.
 - **Bun autoload off (15.3).**
-  - Fixture app: `.env`, `.env.local` and `.env.production`. Run an entry script with the root or Skeleton `bunfig.toml` (`env = false`) and `--no-env-file`. `process.env` must hold none of those files' values until Xaravel's loader runs.
-  - The entry-script lint fails an entry script that lacks `--no-env-file`.
+  - Fixture app with `.env`, `.env.local` and `.env.production`. Run an entry script with the root or Skeleton `bunfig.toml` (`env = false`) and `--no-env-file`.
+  - `process.env` holds none of those files' values until Xaravel's loader runs.
+  - The entry-script lint fails any entry script that lacks `--no-env-file`.
 - **Epic close (in 15.3).**
   - `bun run api-surface:gate config` passes with zero unexplained members.
-  - The package docs mirror Laravel's config page and include a Divergences section.
-  - Every public API has a docblock.
-  - The README records the reason for any phpdotenv-related dependency (dependency policy: a Bun built-in first, then a maintained npm package, then our own code).
-  - `async-surface.json` is present.
+  - The package docs mirror Laravel's config page and have a Divergences section.
+  - Every public API has a docblock, and `async-surface.json` is present.
+  - The README records why each phpdotenv-related dependency exists. Dependency policy: a Bun built-in first, then a maintained npm package, then our own code.
   - `LICENSE` keeps Laravel's MIT notice.
   - Any `blocked-by:config` lines elsewhere are re-verified.
-- **Xaravel Tests.** Use `xaravelTest('XT-config-<n>', '<FR consequence>', fn)` with the IDs that each Story manifest assigns: XT-config-1..2 for 15.1, 3..4 for 15.2 and 5..7 for 15.3.
+- **Xaravel Tests.** Use `xaravelTest('XT-config-<n>', ...)` with the IDs each manifest assigns: 1..2 for 15.1, 3..4 for 15.2, 5..7 for 15.3. Declare `config` consequence ids (FR-20, AD-2, AD-6) where tested. Citing another Component's ids is allowed.
 
 ## Technical Decisions
 
 - **Ownership.**
-  - `@xaravel/config` is the single owner of the `vlucas/phpdotenv` port, and it registers phpdotenv symbols under their original FQCNs. A CI scan rejects duplicate FQCNs.
-  - Package edges mirror Upstream `composer.json`. A missing edge or primitive in another package is a `contract` Escalation, not an edit to that package.
-- **Sync only.** Config is explicitly not an async root. The Repository and the parser stay sync, and never return `T | Promise<T>`.
-- **Frame state.**
-  - Writes after `sealed` go to the innermost unit frame's overlay. Writes before `sealed` go to the Application's base. A write with no active frame throws `ScopeFrameException`.
-  - Inside a test frame, a config write lands in the nearest enclosing test frame.
-  - Never keep per-request state in singleton fields or module variables.
+  - `@xaravel/config` owns the full ports of `vlucas/phpdotenv`, `phpoption/phpoption` 1.10.0 (`Option`, `Some`, `None`, `LazyOption`) and `graham-campbell/result-type` 1.2.0 (`Result`, `Success`, `Error`).
+  - Each class is registered under its original FQCN and exported from the package root entry, with no new subpath. A CI scan rejects duplicate FQCNs.
+  - Package edges mirror Upstream `composer.json`. `config` also declares `@xaravel/macroable` through the scaffold's `uses` field, because Repository uses Macroable. Any other missing edge or primitive is a `contract` Escalation, not an edit to another package.
+- **PHP builtins come from `@xaravel/runtime/php`.** Never re-implement them in config. The runtime provides:
+  - the string, ctype, mb, `filter_var` and `class_exists` functions phpdotenv needs;
+  - `preg_*`, with patterns converted by PORTING.md's PCRE rule. That rule covers the `A` modifier as sticky `y`, branch-reset emulation, byte matching without `u`, and PCRE2 `\s` with `u`;
+  - `getenv` / `putenv` over `process.env`;
+  - `$_SERVER` / `$_ENV` superglobals, seeded once at module load as boot-time process state. They are not frame slots;
+  - a sync `file_get_contents`, which returns `false` on a missing file;
+  - `DIRECTORY_SEPARATOR`, `array_reduce` and `EmptyIterator`.
+
+  phpdotenv's Server/Env/Putenv adapters and its file `Reader` port line for line over these. A builtin that is still missing is a `contract` Escalation.
+- **Sync only.** Config is not an async root. The Repository, the parser and the env-file read stay sync, and never return `T | Promise<T>`.
+- **Frame state.** Per-request state never goes in singleton fields or module variables. Inside a test frame, a write lands in the nearest enclosing test frame.
 - **PHP value model.**
-  - `null` is the only absent value; never return `undefined`.
-  - Config arrays follow the PHP array model: a list is a JS `Array`, a string-keyed map is a plain object, and any other array is a `PhpArray`.
-  - Use `jsonEncode` / `phpSerialize`, never `JSON.stringify`.
-  - Loose comparison and key normalisation come from `@xaravel/runtime`. Never re-implement PHP builtins in the package.
+  - `null` is the only absent value.
+  - A list is a JS `Array`, a string-keyed map is a plain object, and any other array is a `PhpArray`.
+  - Use `jsonEncode` / `phpSerialize`, never `JSON.stringify`. Loose comparison and key normalisation come from the runtime.
+  - Notices and warnings that PHP builtins raise are not raised.
 - **PHP constructs.**
-  - `ArrayAccess` maps to `offsetGet` / `offsetSet` / `offsetExists` / `offsetUnset`, and test index access is adapted under DIV-12.
+  - `ArrayAccess` maps to `offsetGet` / `offsetSet` / `offsetExists` / `offsetUnset`. In tests, an index read `$x[k]` becomes `x.offsetGet(k)`, marked DIV-12.6, with assertions unchanged.
   - Macroable comes from `@xaravel/macroable` through `mixin`.
   - Each exception is a same-named `Error` subclass with Upstream's message.
-- **Layout and identity.**
-  - Files are `src/<Upstream sub-path>/<ClassName>.ts`, one public class per file, named exports only.
-  - Each class file ends with `registerClass('<FQCN>', X)`, and identity uses `fqcn()`.
-- **Env loading.** Bun's `.env` autoload is off: `env = false` at the top level of the root and Skeleton `bunfig.toml`, plus `--no-env-file` in every entry script. Only Xaravel's phpdotenv-grammar loader reads env files. The root `bunfig.toml` is a Protected Path, so a change to it needs an Escalation.
-- **Tests.**
-  - Ported Tests use only `portedTest(...)` and `@xaravel/assert`.
-  - Mark each changed assertion with `// adapted:DIV-<n>.<k>`, citing an existing clause. A new or changed divergence is an Escalation.
-- **Builtin scan.** Before the first Story, run `bun run scan:builtins config` and raise every missing runtime builtin in one `contract` Escalation round.
+- **Layout and identity.** Files are `src/<Upstream sub-path>/<ClassName>.ts`, one public class per file, named exports only. Each file ends with `registerClass('<FQCN>', X)`, and identity uses `fqcn()`.
+- **Env loading.** Bun's autoload is off: `env = false` at the top level of the root and Skeleton `bunfig.toml`, plus `--no-env-file` in every entry script. The root `bunfig.toml` and `tools/` are Protected Paths, so changing them needs an Escalation.
+- **Tests.** Ported Tests use only `portedTest(...)` and `@xaravel/assert`. Mark each changed assertion `// adapted:DIV-<n>.<k>` with an existing clause. A new or changed divergence is an Escalation.
 
 ## Cross-Story Dependencies
 
-- 15.2 and 15.3 sit in the same package as 15.1, and the Epic-close gate is in 15.3.
-- Upstream Epics are used as they are: Runtime (9), Contracts (10), Macroable (11) and Collections (14). If a test needs a later Component, mark it `blocked-by:<c>`, and only if the harness raises `BlockedByComponentError`.
+- All three Stories share `packages/config`, and the Epic-close gate is in 15.3. 15.1 and 15.2 are done, so 15.3 builds on both.
+- Upstream Epics are used as they are: Runtime (9), Contracts (10), Macroable (11) and Collections (14). Mark a test `blocked-by:<c>` only when it needs a later Component and the harness raises `BlockedByComponentError`.
 - Later consumers:
-  - Support's `env()` helper (Epic 20) reads through this parser and repository.
-  - Foundation bootstrap (Epic 51) selects env files and applies precedence.
-  - `config:cache` (Epic 55) handles `$class` rehydration.
-  - Testbench's `WithConfig` / `WithEnv` hooks build on this Epic.
+  - Support's `Env` (Story 20.2) imports `RepositoryBuilder` and `PhpOption\Option` from `@xaravel/config`. Its scaffold edge needs its own Infrastructure ruling first.
+  - The Story that adds the Application `sealed` state (17.4 or 51.1) adds config's pre-sealed base write and XT-config-1's full wording.
+  - Foundation bootstrap (Epic 51) selects env files. `config:cache` (Epic 55) handles `$class`. Testbench's `WithConfig` / `WithEnv` build on this Epic.
