@@ -56,7 +56,10 @@
 // is present, verified and not an error, as its request line and fixture
 // output in full (`touchedTestFixtures`; one that does not fit the prompt cap
 // is shown with its output in a lossless compact form, `compactOracleValue`,
-// and named as omitted for size if that does not fit either); (d) DIV-1, ESC-6.4-1 and
+// and named as omitted for size if that does not fit either), and, in its own
+// section, the same for each assigned Xaravel Test id no touched test declares
+// (`untouchedAssignedIds`; a Story's only, trimmed before the touched tests';
+// epic-14-retro-item-3); (d) DIV-1, ESC-6.4-1 and
 // AD-6's Derivation and Enforcement rules when an added line has `@asyncRoot`
 // or the change touches a `packages/*/src/` file (ESC-9.1-4, ESC-9.2-2); (e)
 // the full body and cited consequences of every Xaravel Test (a bare `AD-<n>`
@@ -79,7 +82,11 @@
 // changed line imports from another workspace package, resolved through its
 // `exports` map and re-exports (`packageImports`; ESC-14.8-3), and the repository files changed test
 // files read as data (`dataFileReads`, `copyFileSync` sources included; one over `WHOLE_FILE_CAP` as the lines
-// the test's string literals select, `dataFileExcerpt`; ESC-10.1-5, ESC-10.2-7), and the Upstream sources they read
+// the test's string literals select, `dataFileExcerpt`; ESC-10.1-5, ESC-10.2-7), a changed data file that a changed
+// test, or an unchanged test file beside it, reads coming first with them as `changed; read by <test>`, and one that
+// does not fit what is left as the lines its reader selects when they fit (epic-14-retro-item-3), the Upstream
+// counterpart `conformance/upstream/<sub-path>.php` of each listed file under `packages/<c>/tests/ported/` that is not
+// a `*.test.ts`, when the snapshot has it (`upstreamCounterpart`; epic-14-retro-item-3), and the Upstream sources they read
 // through a computed path under the snapshot (`upstreamReadDirs`): each one of a class a changed file names
 // (`upstreamSourcesNamed`), and one that does not fit as its declaration lines (`phpDeclarationLines`; ESC-10.2-7); a
 // path constant the test imports resolves in its module (`importedPathConsts`), and the classes the test names or whose
@@ -283,6 +290,8 @@ export interface Evidence {
   readonly headErrorFixtures: readonly EvidenceEntry[];
   /** (c) For each id a touched Xaravel Test declares, each committed request's line and fixture output, in full (`touchedTestFixtures`, F-7). */
   readonly testFixtures: readonly EvidenceEntry[];
+  /** (c) For each assigned Xaravel Test id no touched test declares, each committed request's line and fixture output, in full (`touchedTestFixtures`, F-6, F-7, epic-14-retro-item-3). */
+  readonly assignedTestFixtures: readonly EvidenceEntry[];
   /** (d) `decisions/DIV-1.md`, `decisions/ESC-6.4-1.md` and AD-6's Derivation and Enforcement bullets when an added line has `@asyncRoot` or a `packages/<name>/src/` file changes, else empty (F-9, ESC-9.1-4, ESC-9.2-2). */
   readonly asyncRoot: readonly EvidenceEntry[];
   /** (e) Each Xaravel Test the change touches, with its full body and cited consequences (`xaravelTestEvidence`, ESC-8.8-1). */
@@ -299,7 +308,7 @@ export interface Evidence {
   readonly outOfScopeTests: readonly string[];
 }
 
-export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], presentFixtures: [], headErrorFixtures: [], testFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [], wholeFiles: [], skipEligibility: [], outOfScopeTests: [] };
+export const NO_EVIDENCE: Evidence = { divRecords: [], consequences: [], errorFixtures: [], presentFixtures: [], headErrorFixtures: [], testFixtures: [], assignedTestFixtures: [], asyncRoot: [], xaravelTests: [], decisions: [], sourceSurface: [], wholeFiles: [], skipEligibility: [], outOfScopeTests: [] };
 
 export interface PromptInput {
   readonly checklistText: string;
@@ -472,6 +481,7 @@ export function buildPrompt(input: PromptInput): Prompt {
   evidenceSection(sections, "### (c) Oracle fixtures that are present, verify against oracle.pub and are not errors (F-6)", evidence.presentFixtures, "No fixture of an assigned committed Oracle request is present, verified and not an error.", "json");
   evidenceSection(sections, "### (c) Changed fixtures whose output is an error (F-6)", evidence.headErrorFixtures, "No fixture the change adds or modifies is an error.", "json");
   evidenceSection(sections, "### (c) The Oracle requests and fixture outputs of the touched Xaravel Tests, in full (F-7)", evidence.testFixtures, "No touched Xaravel Test declares an id with a committed Oracle request whose fixture is present, verifies and is not an error.", "json");
+  evidenceSection(sections, "### (c) The Oracle requests and fixture outputs of the assigned Xaravel Tests the change does not touch, in full (F-6, F-7)", evidence.assignedTestFixtures, "No assigned Xaravel Test the change does not touch has a committed Oracle request whose fixture is present, verifies and is not an error.", "json");
   evidenceSection(sections, "### (d) The rules for @asyncRoot tags: DIV-1, ESC-6.4-1 and AD-6 (F-9)", evidence.asyncRoot, "No added line contains `@asyncRoot`, and the change touches no `packages/*/src/` file.", "markdown");
   sections.push("", "### (e) Xaravel Tests the change touches, in full, with their consequences (F-2, F-7)");
   if (evidence.xaravelTests.length === 0) {
@@ -1019,14 +1029,18 @@ export function upstreamTraitPaths(path: string, text: string, exists: (path: st
 /**
  * Evidence (h), whole files: every file the change adds or modifies, in full; the decision and DIV records those files
  * cite anywhere, not only on changed lines; then the repository files they import, followed `WHOLE_FILE_DEPTH` levels
- * deep, and the file that declares each name a changed line imports from another workspace package (ESC-14.8-3); the repository files changed test files read as data or copy into a fixture (ESC-10.1-5, ESC-10.2-7); and the
+ * deep, and the file that declares each name a changed line imports from another workspace package (ESC-14.8-3); the repository files changed test files read as data or copy into a fixture (ESC-10.1-5, ESC-10.2-7),
+ * and a changed data file a changed test, or an unchanged test file beside it, reads, as `changed; read by <test>`
+ * (epic-14-retro-item-3, E1); the Upstream counterpart of each listed Ported Test fixture or support module under
+ * `packages/<c>/tests/ported/` (`upstreamCounterpart`, E3); and the
  * Upstream sources they read through a computed path, of the classes a changed file names (ESC-10.2-7). A file another
  * section already shows in full (`shown`, path → section) is named, not repeated. The entries fill `budget` characters
- * in this order: the cited records, and the files changed test files read or import (their data, Upstream sources,
- * helpers and fixtures), which no other section shows; then the changed TypeScript and Markdown, whose diff is above;
+ * in this order: the cited records, and the files changed test files read or import (their data, changed data files
+ * included, Upstream sources, helpers and fixtures) with the Upstream counterparts, which no other section shows; then the changed TypeScript and Markdown, whose diff is above;
  * then the other imports by level, then the package imports' declaring files; then the other changed files, those outside the Story's scope (`inScope`,
  * ESC-9.10-3) among them. A file longer than `WHOLE_FILE_CAP`, or one that does not fit, is named as omitted for size,
- * never dropped silently; an Upstream source so omitted shows its declaration lines when they fit.
+ * never dropped silently; an Upstream source so omitted shows its declaration lines when they fit, and a data file that
+ * does not fit what is left shows the lines its reader's string literals select when they fit (`dataFileExcerpt`, E1).
  */
 export function wholeFileEvidence(root: string, files: readonly ChangedFile[], shown: ReadonlyMap<string, string>, budget: number, inScope: (path: string) => boolean = () => true, upstreamTests: readonly string[] = []): WholeFileEntry[] {
   const read = (path: string): string | null => {
@@ -1055,19 +1069,31 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
     tiers[tier]!.push({ path, reason, text, note: text === null ? `unavailable: ${path} does not exist or cannot be read` : null });
   };
   // A changed test file's data files are what its tests compare against, as its helpers and fixtures are (ESC-10.1-5).
-  // One over the one-file limit shows the lines the test's string literals select (`dataFileExcerpt`).
+  // One over the one-file limit shows the lines the test's string literals select (`dataFileExcerpt`). A data file the
+  // change also modifies, such as a probe output, comes here too, as `changed; read by <test>`, rather than last
+  // among the other changed files (epic-14-retro-item-3, E1). Each one's reader is kept, so a data file that does not
+  // fit what the budget leaves still shows the rows its reader selects when they fit.
+  const dataReaders = new Map<string, { reason: string; testText: string }>();
+  const addData = (target: string, reason: string, testText: string): void => {
+    add(1, target, reason);
+    dataReaders.set(target, { reason, testText });
+    const entry = tiers[1]!.at(-1)!;
+    const excerpt = entry.text !== null && entry.text.length > WHOLE_FILE_CAP ? dataFileExcerpt(entry.text, testText) : null;
+    if (excerpt !== null) {
+      tiers[1]![tiers[1]!.length - 1] = { path: target, reason: excerptReason(reason, excerpt), text: excerpt.text, note: null };
+    }
+  };
   const readData = (path: string, text: string): void => {
     for (const target of dataFileReads(path, text, exists)) {
-      if (listed.has(target) || changed.some((file) => file.filename === target) || wholeFileSkipped(target)) {
+      if (listed.has(target) || wholeFileSkipped(target)) {
         continue;
       }
-      add(1, target, `read by ${path}`);
-      const entry = tiers[1]!.at(-1)!;
-      const excerpt = entry.text !== null && entry.text.length > WHOLE_FILE_CAP ? dataFileExcerpt(entry.text, text) : null;
-      if (excerpt !== null) {
-        const literals = excerpt.literals.map((literal) => `"${literal}"`).join(", ");
-        tiers[1]![tiers[1]!.length - 1] = { path: target, reason: `read by ${path}; excerpt: the ${excerpt.lines} of its ${excerpt.of} lines that hold ${literals}`, text: excerpt.text, note: null };
+      const isChanged = changed.some((file) => file.filename === target);
+      // A changed target counts only when it and its reader are the Story's (ESC-9.10-3).
+      if (isChanged && (!inScope(target) || !inScope(path))) {
+        continue;
       }
+      addData(target, `${isChanged ? "changed; " : ""}read by ${path}`, text);
     }
   };
   const changed = files.filter((file) => !file.status.startsWith("removed") && !file.status.includes("binary") && !wholeFileSkipped(file.filename));
@@ -1095,6 +1121,23 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
   for (const [path, text] of changedTexts) {
     if (TS_FILE.test(path) && isTestPath(path)) {
       readData(path, text);
+    }
+  }
+  // A changed data file whose reader the change leaves alone: a test file beside it that reads it (E1).
+  for (const file of other) {
+    if (listed.has(file.filename) || !inScope(file.filename)) {
+      continue;
+    }
+    const dir = posix.dirname(file.filename);
+    for (const sibling of siblingTestFiles(root, dir)) {
+      if (changed.some((entry) => entry.filename === sibling)) {
+        continue;
+      }
+      const text = read(sibling);
+      if (text !== null && dataFileReads(sibling, text, exists).includes(file.filename)) {
+        addData(file.filename, `changed; read by ${sibling}`, text);
+        break;
+      }
     }
   }
   // A changed test that reads Upstream sources through a computed path (a directory walk, or a file name built from a
@@ -1196,6 +1239,19 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
       }
     }
   }
+  // A Ported Test's fixture or support module is checked against the Upstream file it ports: each one (h) lists, under
+  // `packages/<c>/tests/ported/` and not a `*.test.ts`, brings `conformance/upstream/<sub-path>.php` when the snapshot
+  // has it (epic-14-retro-item-3, E3).
+  for (const entry of tiers.flat()) {
+    // A changed file outside the Story's scope is another PR's, so it brings no evidence (ESC-9.10-3).
+    if (changed.some((file) => file.filename === entry.path) && !inScope(entry.path)) {
+      continue;
+    }
+    const counterpart = upstreamCounterpart(entry.path);
+    if (counterpart !== null && exists(counterpart) && !changed.some((file) => file.filename === counterpart)) {
+      add(1, counterpart, `Upstream counterpart of ${entry.path}`);
+    }
+  }
   // Inventory shows method fragments, so resolve traits from the complete declaring test file (ESC-14.6-4).
   const pending = [...upstreamTests, ...tiers.flat().map((entry) => entry.path)];
   const visited = new Set<string>();
@@ -1255,6 +1311,18 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
     // Its text and fence; the heading is reserved above.
     const size = entry.text.length + 20;
     if (size > left + refund(entry.path)) {
+      // A data file that does not fit whole shows the rows its reader selects, when they fit (E1).
+      const data = dataReaders.get(entry.path);
+      const full = data === undefined ? null : read(entry.path);
+      const excerpt = data === undefined || full === null || left <= 20 ? null : dataFileExcerpt(full, data.testText, Math.min(left - 20, WHOLE_FILE_CAP));
+      if (excerpt !== null && excerpt.lines < excerpt.of) {
+        const reason = excerptReason(data!.reason, excerpt);
+        const cost = excerpt.text.length + 20 + reason.length - entry.reason.length;
+        if (cost <= left) {
+          left -= cost;
+          return { ...entry, reason, text: excerpt.text, note: null };
+        }
+      }
       return declared(entry, { ...entry, text: null, note: `omitted for size: ${entry.text.length} characters, and the prompt's ${PROMPT_CAP}-character cap leaves ${Math.max(left, 0)} for this section` });
     }
     left -= size - refund(entry.path);
@@ -1420,6 +1488,8 @@ export function gatherEvidence(root: string, files: readonly ChangedFile[], mani
     headErrorFixtures: [],
     // (c)'s touched-test fixtures need the touched tests (e), so the review fills them in (`touchedTestFixtures`).
     testFixtures: [],
+    // So do the assigned Xaravel Tests no touched test declares, which need the touched tests too.
+    assignedTestFixtures: [],
     // F-9 also judges kept tags and untagged new exports, so any framework source change gets the rules (ESC-9.2-2).
     asyncRoot: asyncRoot || files.some((file) => FRAMEWORK_SRC.test(file.filename)) ? asyncRootEvidence(root) : [],
     xaravelTests: [],
@@ -1703,6 +1773,15 @@ export function touchedTestFixtures(root: string, touched: readonly Pick<Xaravel
   return out;
 }
 
+/**
+ * The assigned Xaravel Test ids no touched test (e) declares, in manifest order, for (c)'s section of the assigned tests
+ * the change does not touch (epic-14-retro-item-3, E2).
+ */
+export function untouchedAssignedIds(assigned: readonly string[], touched: readonly Pick<XaravelTestEntry, "ids">[]): string[] {
+  const declared = new Set(itemXaravelTestIds(touched));
+  return assigned.filter((id) => !declared.has(id));
+}
+
 /** The label suffix of a (c) touched-test fixture shown in compact form (`compactOracleValue`). */
 export const COMPACT_FIXTURE_NOTE =
   "fixture output in compact form, to fit the prompt cap: an int is its bare decimal and an array whose keys are 0..n-1 in order is a JSON array of its values; every other value is in the Oracle encoding (docs/ops/oracle.md)";
@@ -1773,27 +1852,40 @@ function compactTestFixture(entry: EvidenceEntry): EvidenceEntry | null {
 }
 
 /**
- * `input` with (c)'s touched-test fixtures cut down until the prompt without (h) fits `PROMPT_CAP`: the longest shown
- * one is shown in compact form first (`compactOracleValue`), and named as omitted for size when that is not shorter or
- * still does not fit. (h) then fills what is left (`withWholeFiles`).
+ * `input` with (c)'s test fixtures cut down until the prompt without (h) fits `PROMPT_CAP`: the assigned Xaravel Tests'
+ * the change does not touch first (epic-14-retro-item-3), then the touched tests'. In each list the longest shown one is
+ * shown in compact form first (`compactOracleValue`), and named as omitted for size when that is not shorter or still
+ * does not fit. (h) then fills what is left (`withWholeFiles`).
  */
 export function fitTestFixtures(input: PromptInput): PromptInput {
+  let assigned = [...input.evidence.assignedTestFixtures];
   let fixtures = [...input.evidence.testFixtures];
   const compacted = new Set<EvidenceEntry>();
-  const build = (): PromptInput => ({ ...input, evidence: { ...input.evidence, testFixtures: fixtures } });
-  while (buildPrompt(build()).length > PROMPT_CAP) {
-    const shown = fixtures.filter((entry) => entry.text !== null);
+  const build = (): PromptInput => ({ ...input, evidence: { ...input.evidence, testFixtures: fixtures, assignedTestFixtures: assigned } });
+  const trim = (list: EvidenceEntry[]): EvidenceEntry[] | null => {
+    const shown = list.filter((entry) => entry.text !== null);
     if (shown.length === 0) {
-      break;
+      return null;
     }
     const longest = shown.reduce((a, b) => (b.text!.length > a.text!.length ? b : a));
     const compact = compacted.has(longest) ? null : compactTestFixture(longest);
     if (compact !== null) {
       compacted.add(compact);
-      fixtures = fixtures.map((entry) => (entry === longest ? compact : entry));
+      return list.map((entry) => (entry === longest ? compact : entry));
+    }
+    return list.map((entry) => (entry === longest ? { label: entry.label, text: null, unavailable: `omitted for size: ${entry.text!.length} characters, and the rest of the prompt leaves too little of the ${PROMPT_CAP}-character cap` } : entry));
+  };
+  while (buildPrompt(build()).length > PROMPT_CAP) {
+    const fromAssigned = trim(assigned);
+    if (fromAssigned !== null) {
+      assigned = fromAssigned;
       continue;
     }
-    fixtures = fixtures.map((entry) => (entry === longest ? { label: entry.label, text: null, unavailable: `omitted for size: ${entry.text!.length} characters, and the rest of the prompt leaves too little of the ${PROMPT_CAP}-character cap` } : entry));
+    const fromTouched = trim(fixtures);
+    if (fromTouched === null) {
+      break;
+    }
+    fixtures = fromTouched;
   }
   return build();
 }
@@ -2746,9 +2838,10 @@ export interface DataExcerpt {
  * The lines of a data file over `WHOLE_FILE_CAP` that the test reading it selects (ESC-10.1-5): each string literal of
  * `testText`, as written (so `"Psr\\Log\\"` matches a JSON line's `Psr\\Log\\`) or unescaped, selects the lines that
  * hold it. Literals are taken most selective first (fewest characters selected), each whole or not at all, while the
- * excerpt stays within `WHOLE_FILE_CAP`; the lines keep their file order. Null when no literal selects a line that fits.
+ * excerpt stays within `cap` (default `WHOLE_FILE_CAP`; (h) passes what its budget leaves for a data file that does not
+ * fit it whole, epic-14-retro-item-3); the lines keep their file order. Null when no literal selects a line that fits.
  */
-export function dataFileExcerpt(text: string, testText: string): DataExcerpt | null {
+export function dataFileExcerpt(text: string, testText: string, cap: number = WHOLE_FILE_CAP): DataExcerpt | null {
   const lines = text.split("\n").filter((line) => line !== "");
   const literals = new Set<string>();
   for (const match of testText.matchAll(STRING_LITERAL)) {
@@ -2768,7 +2861,7 @@ export function dataFileExcerpt(text: string, testText: string): DataExcerpt | n
   for (const selection of selections) {
     const added = selection.hit.filter((index) => !kept.has(index));
     const more = added.reduce((sum, index) => sum + lines[index]!.length + 1, 0);
-    if (added.length === 0 || size + more > WHOLE_FILE_CAP) {
+    if (added.length === 0 || size + more > cap) {
       continue;
     }
     added.forEach((index) => kept.add(index));
@@ -2861,6 +2954,38 @@ export function importedDeclarations(path: string, texts: readonly string[], uni
   return [...found.values()].sort((a, b) => compareUnits(a.path!, b.path!) || a.from - b.from);
 }
 
+
+/**
+ * The Upstream file a Ported Test's fixture or support module ports (E3): `packages/<c>/tests/ported/<sub-path>.ts`
+ * (any TypeScript extension) maps to `conformance/upstream/<sub-path>.php`. Null for a `*.test.ts` (its Upstream lines
+ * are the Inventory's), for a file that is not TypeScript, and for any other path.
+ */
+function upstreamCounterpart(path: string): string | null {
+  const match = /^packages\/[^/]+\/tests\/ported\/(.+)\.[cm]?tsx?$/.exec(path);
+  if (match === null || /\.test\.[cm]?tsx?$/.test(path)) {
+    return null;
+  }
+  return `${UPSTREAM_SNAPSHOT_DIR}/${match[1]!}.php`;
+}
+
+/** The reason of an (h) data-file entry shown as `excerpt`, the lines its reader's string literals select. */
+function excerptReason(reason: string, excerpt: DataExcerpt): string {
+  const literals = excerpt.literals.map((literal) => `"${literal}"`).join(", ");
+  return `${reason}; excerpt: the ${excerpt.lines} of its ${excerpt.of} lines that hold ${literals}`;
+}
+
+/** The TypeScript test files directly in the repository directory `dir`, sorted; none when it cannot be listed (E1). */
+function siblingTestFiles(root: string, dir: string): string[] {
+  try {
+    return readdirSync(join(root, dir), { withFileTypes: true })
+      .filter((entry) => entry.isFile() && TS_FILE.test(entry.name))
+      .map((entry) => (dir === "." ? entry.name : `${dir}/${entry.name}`))
+      .filter(isTestPath)
+      .sort(compareUnits);
+  } catch {
+    return [];
+  }
+}
 
 /** Whether `path` is a test file or test support module: under a `tests/` path segment, or a `*.test.ts`. */
 function isTestPath(path: string): boolean {
@@ -4715,6 +4840,9 @@ async function review(args: Args, cli: Cli, env: Env): Promise<RunResult> {
       ...gatherEvidence(root, storyFiles, { testIds, xaravelTestIds: args.subject === "item" ? itemXaravelTestIds(xaravelTests) : [...subject.xaravelTestIds] }),
       headErrorFixtures: headErrorFixtures(fixtures, requestIds),
       testFixtures: touchedTestFixtures(root, xaravelTests),
+      // An assigned Xaravel Test the change does not touch still compares against its fixtures (epic-14-retro-item-3, E2).
+      // An item's assigned ids are its touched tests' ids, so it has none.
+      assignedTestFixtures: args.subject === "item" ? [] : touchedTestFixtures(root, [{ ids: untouchedAssignedIds(subject.xaravelTestIds, xaravelTests) }]),
       xaravelTests,
       outOfScopeTests,
       // (f) also takes the decisions a touched Xaravel Test (ESC-9.2-1) or a changed source file's docblock (ESC-9.10-1) cites on an unchanged line.

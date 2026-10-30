@@ -41,6 +41,7 @@ import {
   inItemScope,
   itemXaravelTestIds,
   touchedTestFixtures,
+  untouchedAssignedIds,
   fitTestFixtures,
   compactOracleValue,
   COMPACT_FIXTURE_NOTE,
@@ -1520,6 +1521,81 @@ xaravelTest(
     expect(dataWhole.map((item) => [item.path, item.reason])).toEqual([["a/rows.json", "read by a/tests/rows.test.ts"], ["a/tests/rows.test.ts", "changed"]]);
     expect(dataWhole[0]!.text).toBe('{"rows":[1,2]}\n');
     expect(wholeFileEvidence(dataRoot, [{ filename: "a/source.ts", status: "added", patch: "@@ -0,0 +1 @@\n+x" }], new Map(), 400_000).map((item) => item.path)).toEqual(["a/source.ts"]);
+    // epic-14-retro-item-3 (E1): a changed data file a changed test reads comes first with the test's data, as
+    // `changed; read by <test>`, not last among the other changed files; one only an unchanged test file beside it
+    // reads comes there too, naming that test. One that does not fit what the budget leaves shows the rows its
+    // reader's string literals select when they fit, else it is named as omitted for size.
+    const probeRoot = tempDir("fidelity-probe-");
+    const probeTest = "a/tests/rows.test.ts";
+    const probeRows = "a/tests/rows.txt";
+    const probeFiller = Array.from({ length: 100 }, (_, index) => `filler\t${index}\t${"z".repeat(30)}`);
+    const probeText = `${["alpha\t1", ...probeFiller.slice(0, 50), "beta\t2", ...probeFiller.slice(50)].join("\n")}\n`;
+    write(probeRoot, probeTest, 'const rows = readFileSync(join(import.meta.dir, "rows.txt"), "utf8");\nrows.get("beta");\n');
+    write(probeRoot, probeRows, probeText);
+    write(probeRoot, "a/tests/other.test.ts", "const none = 1;\n");
+    const probePatch = "@@ -1 +1 @@\n-x\n+y";
+    const probeBoth = wholeFileEvidence(probeRoot, [{ filename: probeTest, status: "modified", patch: probePatch }, { filename: probeRows, status: "modified", patch: probePatch }], new Map(), 400_000);
+    expect(probeBoth.map((item) => [item.path, item.reason])).toEqual([[probeRows, `changed; read by ${probeTest}`], [probeTest, "changed"]]);
+    expect(probeBoth[0]!.text).toBe(probeText);
+    const probeAlone = wholeFileEvidence(probeRoot, [{ filename: probeRows, status: "modified", patch: probePatch }], new Map(), 400_000);
+    expect(probeAlone.map((item) => [item.path, item.reason, item.text])).toEqual([[probeRows, `changed; read by ${probeTest}`, probeText]]);
+    // Outside the scope it stays last among the other changed files.
+    expect(wholeFileEvidence(probeRoot, [{ filename: probeRows, status: "modified", patch: probePatch }], new Map(), 400_000, () => false).map((item) => [item.path, item.reason])).toEqual([[probeRows, "changed, outside the Story's scope"]]);
+    // Both changed, the data file outside the scope: it stays last; a reader outside the scope promotes none.
+    expect(wholeFileEvidence(probeRoot, [{ filename: probeTest, status: "modified", patch: probePatch }, { filename: probeRows, status: "modified", patch: probePatch }], new Map(), 400_000, (path) => path !== probeRows).map((item) => [item.path, item.reason])).toEqual([[probeTest, "changed"], [probeRows, "changed, outside the Story's scope"]]);
+    const probeOutReader = wholeFileEvidence(probeRoot, [{ filename: probeTest, status: "modified", patch: probePatch }, { filename: probeRows, status: "modified", patch: probePatch }], new Map(), 400_000, (path) => path !== probeTest);
+    expect(probeOutReader.find((item) => item.path === probeRows)!.reason).toBe("changed");
+    expect(probeOutReader.some((item) => item.reason.startsWith("changed; read by"))).toBe(false);
+    const probeRoom = probeRows.length + `changed; read by ${probeTest}`.length + 220;
+    const probeTight = wholeFileEvidence(probeRoot, [{ filename: probeRows, status: "modified", patch: probePatch }], new Map(), probeRoom + 1_000);
+    expect(probeTight.map((item) => [item.path, item.reason, item.text, item.note])).toEqual([[probeRows, `changed; read by ${probeTest}; excerpt: the 1 of its 102 lines that hold "beta"`, "beta\t2\n", null]]);
+    const probeNone = wholeFileEvidence(probeRoot, [{ filename: probeRows, status: "modified", patch: probePatch }], new Map(), probeRoom + 30);
+    expect([probeNone[0]!.text, probeNone[0]!.note]).toEqual([null, `omitted for size: ${probeText.length} characters, and the prompt's ${PROMPT_CAP}-character cap leaves 30 for this section`]);
+    // An unchanged data file a changed test reads that does not fit is excerpted the same way.
+    const probeRead = wholeFileEvidence(probeRoot, [{ filename: probeTest, status: "modified", patch: probePatch }], new Map(), probeRows.length + `read by ${probeTest}`.length + probeTest.length + "changed".length + 440 + 1_000);
+    expect(probeRead.map((item) => [item.path, item.reason])).toEqual([[probeRows, `read by ${probeTest}; excerpt: the 1 of its 102 lines that hold "beta"`], [probeTest, "changed"]]);
+    // The E1 case: php-set-functions.probe.txt, changed with no change to the XT-runtime-83..85 test that reads it.
+    const setProbe = "packages/runtime/tests/xaravel/php-set-functions.probe.txt";
+    const setProbeEntry = wholeFileEvidence(root, [{ filename: setProbe, status: "modified", patch: probePatch }], new Map(), 400_000).find((item) => item.path === setProbe)!;
+    expect([setProbeEntry.reason, setProbeEntry.text]).toEqual(["changed; read by packages/runtime/tests/xaravel/php-set-functions.test.ts", read(setProbe)]);
+    // epic-14-retro-item-3 (E3): a listed file under packages/<c>/tests/ported/ that is not a *.test.ts brings its
+    // Upstream counterpart conformance/upstream/<sub-path>.php, when the snapshot has it; a ported test file does not.
+    const portRoot = tempDir("fidelity-ported-");
+    const portBase = "packages/r/tests/ported/framework/tests/X";
+    const portFiles: Record<string, string> = {
+      [`${portBase}/Fixtures/F.ts`]: "export class F {}\n",
+      [`${portBase}/Fixtures/G.ts`]: "export class G {}\n",
+      [`${portBase}/Fixtures/Absent.ts`]: "export class Absent {}\n",
+      [`${portBase}/XTest.test.ts`]: 'import { G } from "./Fixtures/G";\nimport { Absent } from "./Fixtures/Absent";\n',
+      [`${UPSTREAM_SNAPSHOT_DIR}/framework/tests/X/Fixtures/F.php`]: "<?php\nclass F {}\n",
+      [`${UPSTREAM_SNAPSHOT_DIR}/framework/tests/X/Fixtures/G.php`]: "<?php\nclass G {}\n",
+      [`${UPSTREAM_SNAPSHOT_DIR}/framework/tests/X/XTest.php`]: "<?php\nclass XTest {}\n",
+    };
+    for (const [path, text] of Object.entries(portFiles)) {
+      write(portRoot, path, text);
+    }
+    const portWhole = wholeFileEvidence(portRoot, [{ filename: `${portBase}/Fixtures/F.ts`, status: "modified", patch: probePatch }, { filename: `${portBase}/XTest.test.ts`, status: "modified", patch: probePatch }], new Map(), 400_000);
+    expect(portWhole.map((item) => [item.path, item.reason])).toEqual([
+      [`${portBase}/Fixtures/Absent.ts`, `imported by ${portBase}/XTest.test.ts`],
+      [`${portBase}/Fixtures/G.ts`, `imported by ${portBase}/XTest.test.ts`],
+      [`${UPSTREAM_SNAPSHOT_DIR}/framework/tests/X/Fixtures/G.php`, `Upstream counterpart of ${portBase}/Fixtures/G.ts`],
+      [`${UPSTREAM_SNAPSHOT_DIR}/framework/tests/X/Fixtures/F.php`, `Upstream counterpart of ${portBase}/Fixtures/F.ts`],
+      [`${portBase}/Fixtures/F.ts`, "changed"],
+      [`${portBase}/XTest.test.ts`, "changed"],
+    ]);
+    expect(portWhole.find((item) => item.path.endsWith("F.php"))!.text).toBe(portFiles[`${UPSTREAM_SNAPSHOT_DIR}/framework/tests/X/Fixtures/F.php`]!);
+    // A changed ported fixture outside the scope brings no counterpart, and neither does a ported file that is not TypeScript.
+    write(portRoot, `${portBase}/Fixtures/data.json`, "{}\n");
+    write(portRoot, `${UPSTREAM_SNAPSHOT_DIR}/framework/tests/X/Fixtures/data.php`, "<?php\n");
+    const portOut = wholeFileEvidence(portRoot, [{ filename: `${portBase}/Fixtures/F.ts`, status: "modified", patch: probePatch }, { filename: `${portBase}/Fixtures/data.json`, status: "modified", patch: probePatch }], new Map(), 400_000, (path) => !path.endsWith("F.ts"));
+    expect(portOut.map((item) => item.path)).toEqual([`${portBase}/Fixtures/F.ts`, `${portBase}/Fixtures/data.json`]);
+    // The E3 case: ClassesWithAttributes.ts, shown with its Upstream counterpart when the snapshot is synced.
+    const attributesTs = "packages/reflection/tests/ported/framework/tests/Support/Fixtures/ClassesWithAttributes.ts";
+    const attributesPhp = `${UPSTREAM_SNAPSHOT_DIR}/framework/tests/Support/Fixtures/ClassesWithAttributes.php`;
+    if (existsSync(join(root, attributesPhp))) {
+      const attributesEntry = wholeFileEvidence(root, [{ filename: attributesTs, status: "modified", patch: probePatch }], new Map(), 400_000).find((item) => item.path === attributesPhp)!;
+      expect([attributesEntry.reason, attributesEntry.text]).toEqual([`Upstream counterpart of ${attributesTs}`, read(attributesPhp)]);
+    }
     // ESC-14.8-3: a name a changed line imports from another workspace package shows the file that declares it,
     // resolved through the package's exports map: a direct export, a barrel re-export with `as`, a star re-export and
     // a barrel's local re-export of an import. A name the package does not export, a subpath its exports map lacks and
@@ -2067,6 +2143,33 @@ class Real { use Concerns\CountsEnumerations; }
     expect(compactShown.fixture.output.results[1]!.value).toBeArrayOfSize(73);
     expect(compactEntry.text!.length).toBeLessThan(testFixtures[0]!.text!.length / 2);
     expect(buildPrompt(squeezed).user.length).toBeLessThanOrEqual(PROMPT_CAP);
+    // epic-14-retro-item-3 (E2): (c) also shows, in its own section, the request and fixture output of each assigned
+    // Xaravel Test id no touched test declares (Story 14.5's XT-collections-9, whose 14.5 fixture is signed).
+    expect(untouchedAssignedIds(["XT-collections-9", "XT-runtime-22"], [{ ids: ["XT-runtime-22"] }, { ids: [] }])).toEqual(["XT-collections-9"]);
+    expect(untouchedAssignedIds(["XT-runtime-22"], [{ ids: ["XT-runtime-22"] }])).toEqual([]);
+    // An item's assigned ids are its touched tests' ids, so it has none.
+    const itemTouched = [{ ids: ["XT-runtime-22", "XT-runtime-23"] }];
+    expect(untouchedAssignedIds(itemXaravelTestIds(itemTouched), itemTouched)).toEqual([]);
+    const collections9Sha = "80ac90c7a223bd951d659b4c3c410c38f9907f80a68b996b17040c9ae1aa8ed0";
+    const collections9Fixture = `conformance/fixtures/collections/${collections9Sha}.json`;
+    const assignedTestFixtures = touchedTestFixtures(root, [{ ids: untouchedAssignedIds(["XT-collections-9", "XT-runtime-22"], [{ ids: ["XT-runtime-22"] }]) }]);
+    expect(assignedTestFixtures.map((entry) => entry.label)).toEqual([`XT-collections-9 (conformance/oracle-requests/14.5.jsonl; ${collections9Fixture})`]);
+    const shownAssigned = JSON.parse(assignedTestFixtures[0]!.text!) as { request: { id: string; sha256: string }; fixture: { path: string; verified: boolean; output: unknown } };
+    expect([shownAssigned.request.id, shownAssigned.request.sha256, shownAssigned.fixture.path, shownAssigned.fixture.verified]).toEqual(["XT-collections-9", collections9Sha, collections9Fixture, true]);
+    expect(shownAssigned.fixture.output).toEqual((JSON.parse(readFileSync(join(root, collections9Fixture), "utf8")) as { output: unknown }).output);
+    const assignedHeading = "### (c) The Oracle requests and fixture outputs of the assigned Xaravel Tests the change does not touch, in full (F-6, F-7)";
+    const assignedUser = buildPrompt({ ...promptBase, evidence: { ...NO_EVIDENCE, testFixtures, assignedTestFixtures } }).user;
+    expect(assignedUser).toContain(`${assignedHeading}\n\n#### ${assignedTestFixtures[0]!.label}\n\n\`\`\`json\n${assignedTestFixtures[0]!.text}`);
+    expect(assignedUser.indexOf(assignedHeading)).toBeGreaterThan(assignedUser.indexOf("### (c) The Oracle requests and fixture outputs of the touched Xaravel Tests, in full (F-7)"));
+    expect(buildPrompt({ ...promptBase, evidence: NO_EVIDENCE }).user).toContain(`${assignedHeading}\n\nNo assigned Xaravel Test the change does not touch has a committed Oracle request whose fixture is present, verifies and is not an error.`);
+    // fitTestFixtures cuts the assigned tests' fixtures down first, then the touched tests'.
+    const halfTouched = { label: "XT-sample-1 (x.jsonl; y.json)", text: "t".repeat(PROMPT_CAP * 0.6), unavailable: null };
+    const halfAssigned = { label: "XT-sample-2 (x.jsonl; z.json)", text: "a".repeat(PROMPT_CAP * 0.6), unavailable: null };
+    const fittedAssigned = fitTestFixtures({ ...promptBase, evidence: { ...NO_EVIDENCE, testFixtures: [halfTouched], assignedTestFixtures: [halfAssigned] } });
+    expect(fittedAssigned.evidence.testFixtures.map((entry) => entry.text === null)).toEqual([false]);
+    expect(fittedAssigned.evidence.assignedTestFixtures.map((entry) => entry.text === null)).toEqual([true]);
+    expect(fittedAssigned.evidence.assignedTestFixtures[0]!.unavailable).toStartWith(`omitted for size: ${PROMPT_CAP * 0.6} characters`);
+    expect(buildPrompt(fittedAssigned).user.length).toBeLessThanOrEqual(PROMPT_CAP);
   },
   180_000,
 );
