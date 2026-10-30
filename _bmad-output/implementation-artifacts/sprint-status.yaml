@@ -169,7 +169,7 @@ development_status:
 
   epic-15: in-progress
   15-1-config-repository: done
-  15-2-phpdotenv-grammar-port: in-progress
+  15-2-phpdotenv-grammar-port: blocked  # contract Escalations ESC-15.2-1 (runtime builtins), -2 (superglobals and getenv/putenv), -3 (sync env-file read, AD-6) and -4 (PhpOption/ResultType ownership) need a second key (MAINT amendment 2026-10-30); they hold XT-config-3 and XT-config-4
   15-3-bun-s-env-autoload-neutralised: backlog
   epic-15-retrospective: optional
 
