@@ -2,7 +2,7 @@
 title: 'LazyCollection combine and zip close the iterators they open (epic-14-retro-item-1-lazy-combine-zip-cleanup)'
 type: 'bugfix'
 created: '2026-10-29'
-status: 'in-progress'
+status: 'in-review'
 baseline_revision: '3ab17b602bec9c62408b6eabb463d5d68265d221'
 review_loop_iteration: 0
 followup_review_recommended: false
