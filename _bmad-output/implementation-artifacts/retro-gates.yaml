@@ -109,3 +109,8 @@ epic-14:
   blocked: false
   checkpoint_approved: false
   waiting_on_maintainer: []
+epic-15:
+  # No retrospective yet: this entry routes the monitor-ruled action item that waits on a ruling (step D).
+  # Item 1's attempt makes the Protected XT-conformance-269 (builtin-scan fixture) stale; see its spec's Auto Run Result.
+  waiting_on_maintainer:
+    - epic-15-item-1-runtime-phpdotenv-builtins
