@@ -31,7 +31,12 @@ import { getDebugType, gettype } from "./phpType";
 import { range } from "./range";
 import { Ref } from "./Ref";
 import { sprintf } from "./sprintf";
-import { chunk_split, explode, implode, lcfirst, str_contains, str_starts_with, strlen, strtoupper, substr, trim } from "./stringFunctions";
+import { addcslashes, chunk_split, explode, implode, lcfirst, ltrim, ord, rtrim, str_contains, str_replace, str_starts_with, stripcslashes, strlen, strpos, strtok, strtoupper, substr, trim } from "./stringFunctions";
+import { class_exists } from "./classExistence";
+import { ctype_digit, ctype_space } from "./ctypeFunctions";
+import { filter_var } from "./filterFunctions";
+import { mb_convert_encoding, mb_encoding_aliases, mb_list_encodings, mb_strlen, mb_strpos, mb_substr } from "./mbstringFunctions";
+import { stringParameter } from "./phpArguments";
 import { is_a, is_array, is_bool, is_callable, is_int, is_iterable, is_null, is_object, is_string } from "./typeTests";
 
 /** A PHP callable as the runtime calls it. */
@@ -202,6 +207,25 @@ export const PHP_FUNCTIONS: Readonly<Record<string, PhpFunction>> = Object.freez
       entry("substr", substr, 2, 3),
       entry("trim", trim, 1, 2),
       entry("uasort", uasort, 2, 2, false, [0]),
+      entry("addcslashes", addcslashes, 2, 2),
+      entry("class_exists", class_exists, 1, 2),
+      entry("ctype_digit", ctype_digit, 1, 1),
+      entry("ctype_space", ctype_space, 1, 1),
+      entry("filter_var", filter_var, 1, 3),
+      entry("function_exists", function_exists, 1, 1),
+      entry("ltrim", ltrim, 1, 2),
+      entry("mb_convert_encoding", mb_convert_encoding, 2, 3),
+      entry("mb_encoding_aliases", mb_encoding_aliases, 1, 1),
+      entry("mb_list_encodings", mb_list_encodings, 0, 0),
+      entry("mb_strlen", mb_strlen, 1, 2),
+      entry("mb_strpos", mb_strpos, 2, 4),
+      entry("mb_substr", mb_substr, 2, 4),
+      entry("ord", ord, 1, 1),
+      entry("rtrim", rtrim, 1, 2),
+      entry("str_replace", str_replace, 3, 4, false, [3]),
+      entry("stripcslashes", stripcslashes, 1, 1),
+      entry("strpos", strpos, 2, 3),
+      entry("strtok", strtok, 1, 2),
     ].map((described) => [described.name, described] as const),
   ),
 );
@@ -225,4 +249,16 @@ export function phpFunction(name: unknown): ((...args: unknown[]) => unknown) | 
   const bare: string = name.startsWith("\\") ? name.slice(1) : name;
   const key = asciiLower(bare);
   return Object.hasOwn(PHP_FUNCTIONS, key) ? PHP_FUNCTIONS[key]!.call : null;
+}
+
+/**
+ * PHP's `function_exists($function)` over the registry: whether the runtime exports a PHP global function of that
+ * name (one leading `\` dropped, ASCII case-insensitive), as PHP reads its function table. A PHP function the
+ * runtime does not export gives false (`function_exists("apache_getenv")`), and so does a helper with no PHP name
+ * (`"minus"`). Coerced as PHP's `string` parameter (`5` is `"5"`); anything else throws PHP's `TypeError`.
+ */
+export function function_exists(function_: unknown): boolean {
+  const name = stringParameter("function_exists", 1, "function", function_);
+  const bare = name.startsWith("\\") ? name.slice(1) : name;
+  return Object.hasOwn(PHP_FUNCTIONS, asciiLower(bare));
 }

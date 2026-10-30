@@ -5,12 +5,19 @@
 // `str_contains`, `strlen` and `lcfirst`, and (action item epic-14-item-8-runtime-round-string-array-pointer,
 // ESC-14.3-1) `strtoupper`, `trim` (`php_trim_int` with `php_charmask`) and `chunk_split`. A PHP string is its bytes,
 // so `substr`, `trim` and `chunk_split` work on UTF-8 bytes.
+// And (action item epic-15-item-1-runtime-phpdotenv-builtins, ESC-15.2-1 part a) `strpos`, `str_replace`, `ltrim`,
+// `rtrim`, `ord`, `strtok`, `addcslashes` and `stripcslashes`, over UTF-8 bytes too; `strtok`'s remembered string and
+// position live in a Scope Frame slot (AD-5).
 // A result or input JS cannot hold (a result that splits a UTF-8 sequence, an input holding a lone surrogate) throws a
 // JS `TypeError` naming the limit, as the codecs do.
 import { LONE_SURROGATE, utf8 } from "./mangle";
 import { isContractToken } from "../registry/registry";
+import { currentFrame, frameSlot } from "../scope/scope";
+import { ScopeFrameException } from "../scope/ScopeFrameException";
 import { arrayEntries, toPhpString } from "./casts";
-import { intParameter, nullableIntParameter, stringParameter } from "./phpArguments";
+import { arrayFromEntries, type PhpArrayKey } from "./PhpArray";
+import { argumentTypeError, intParameter, nullableIntParameter, stringParameter } from "./phpArguments";
+import { Ref } from "./Ref";
 import { phpType, phpTypeName } from "./phpType";
 import { phpValueOf, toStringArgument } from "./throwableArguments";
 import { TypeError as PhpTypeError } from "./TypeError";
@@ -214,6 +221,36 @@ function charmask(list: Uint8Array): Uint8Array {
   return mask;
 }
 
+/** PHP's default trim list, `" \n\r\t\v\0"`. */
+const TRIM_DEFAULT = " \n\r\t\v\0";
+
+/**
+ * `php_trim_int`: `string` (argument 1 of `fn`) with its leading (mode 1), trailing (mode 2) or both (mode 3) bytes in
+ * `characters` removed, over UTF-8 bytes.
+ */
+function trimBytes(fn: string, string: unknown, characters: unknown, mode: 1 | 2 | 3): string {
+  const s = wellFormed(fn, stringParameter(fn, 1, "string", string));
+  const list = wellFormed(fn, stringParameter(fn, 2, "characters", characters));
+  const bytes = utf8.encode(s);
+  const mask = charmask(utf8.encode(list));
+  let start = 0;
+  let end = bytes.length;
+  if ((mode & 1) !== 0) {
+    while (start !== end && mask[bytes[start]!] === 1) {
+      start++;
+    }
+  }
+  if ((mode & 2) !== 0) {
+    while (start !== end && mask[bytes[end - 1]!] === 1) {
+      end--;
+    }
+  }
+  if (end - start === bytes.length) {
+    return s;
+  }
+  return decodeResult(fn, bytes.subarray(start, end));
+}
+
 /**
  * PHP's `trim($string, $characters = " \n\r\t\v\0")` (`php_trim_int`, mode 3): `string` with every leading and
  * trailing byte in `characters` removed, over UTF-8 bytes. `characters` is a byte list with PHP's `x..y` ranges
@@ -221,23 +258,24 @@ function charmask(list: Uint8Array): Uint8Array {
  * `string` parameters; anything else throws PHP's `TypeError`. A result that splits a UTF-8 sequence throws a JS
  * `TypeError`.
  */
-export function trim(string: unknown, characters: unknown = " \n\r\t\v\0"): string {
-  const s = wellFormed("trim", stringParameter("trim", 1, "string", string));
-  const list = wellFormed("trim", stringParameter("trim", 2, "characters", characters));
-  const bytes = utf8.encode(s);
-  const mask = charmask(utf8.encode(list));
-  let start = 0;
-  let end = bytes.length;
-  while (start !== end && mask[bytes[start]!] === 1) {
-    start++;
-  }
-  while (start !== end && mask[bytes[end - 1]!] === 1) {
-    end--;
-  }
-  if (end - start === bytes.length) {
-    return s;
-  }
-  return decodeResult("trim", bytes.subarray(start, end));
+export function trim(string: unknown, characters: unknown = TRIM_DEFAULT): string {
+  return trimBytes("trim", string, characters, 3);
+}
+
+/**
+ * PHP's `ltrim($string, $characters = " \n\r\t\v\0")` (`php_trim_int`, mode 1): `trim`'s rules for the leading
+ * bytes only.
+ */
+export function ltrim(string: unknown, characters: unknown = TRIM_DEFAULT): string {
+  return trimBytes("ltrim", string, characters, 1);
+}
+
+/**
+ * PHP's `rtrim($string, $characters = " \n\r\t\v\0")` (`php_trim_int`, mode 2): `trim`'s rules for the trailing
+ * bytes only.
+ */
+export function rtrim(string: unknown, characters: unknown = TRIM_DEFAULT): string {
+  return trimBytes("rtrim", string, characters, 2);
 }
 
 /**
@@ -282,4 +320,311 @@ export function strtolower(string: unknown): string {
 export function strrev(string: unknown): string {
   const input = wellFormed("strrev", stringParameter("strrev", 1, "string", string));
   return decodeResult("strrev", utf8.encode(input).reverse());
+}
+
+/** The first position of `needle` in `haystack` at or after `from`, by bytes, or -1 (`php_memnstr`). */
+function indexOfBytes(haystack: Uint8Array, needle: Uint8Array, from: number): number {
+  const last = haystack.length - needle.length;
+  outer: for (let i = from; i <= last; i++) {
+    for (let j = 0; j < needle.length; j++) {
+      if (haystack[i + j] !== needle[j]) {
+        continue outer;
+      }
+    }
+    return i;
+  }
+  return -1;
+}
+
+/**
+ * PHP's `strpos($haystack, $needle, $offset = 0)`: the byte position of the first `needle` in `haystack` at or after
+ * `offset` (a negative one counts from the end), or `false`; an empty `needle` is found at `offset`. An `offset`
+ * beyond either end throws PHP's `ValueError` `strpos(): Argument #3 ($offset) must be contained in argument #1
+ * ($haystack)`. Coerced as PHP's `string`, `string` and `int` parameters; anything else throws PHP's `TypeError`.
+ */
+export function strpos(haystack: unknown, needle: unknown, offset: unknown = 0): number | false {
+  const h = utf8.encode(wellFormed("strpos", stringParameter("strpos", 1, "haystack", haystack)));
+  const n = utf8.encode(wellFormed("strpos", stringParameter("strpos", 2, "needle", needle)));
+  let at = BigInt(intParameter("strpos", 3, "offset", offset));
+  if (at < 0n) {
+    at += BigInt(h.length);
+  }
+  if (at < 0n || at > BigInt(h.length)) {
+    throw new ValueError("strpos(): Argument #3 ($offset) must be contained in argument #1 ($haystack)");
+  }
+  const found = indexOfBytes(h, n, Number(at));
+  return found === -1 ? false : found;
+}
+
+/** A `str_replace` argument: a PHP array's entries, or a string. */
+type Replacement = { readonly entries: [PhpArrayKey, unknown][] } | { readonly string: string };
+
+/** An `array|string` parameter (`Z_PARAM_ARRAY_HT_OR_STR`): an array's entries, else its string. */
+function arrayOrString(fn: string, position: number, name: string, value: unknown): Replacement {
+  if (is_array(value)) {
+    return { entries: arrayEntries(value as object) };
+  }
+  const string = toStringArgument(value);
+  if (string === null) {
+    throw argumentTypeError(fn, position, name, "array|string", value);
+  }
+  return { string: wellFormed(fn, string) };
+}
+
+/**
+ * `php_str_replace_in_subject` for one subject string: each search string in turn (an array search's values as PHP's
+ * `(string)` gives them, an empty one skipped), replaced by the matching replacement (an array replace's values in
+ * order, `""` once they run out; a string replace for every search). Returns the result and the replacement count.
+ */
+function replaceInSubject(search: Replacement, replace: Replacement, subject: string): [string, number] {
+  if (subject === "") {
+    return ["", 0];
+  }
+  if ("string" in search) {
+    if (search.string === "") {
+      return [subject, 0];
+    }
+    const parts = subject.split(search.string);
+    return [parts.join((replace as { string: string }).string), parts.length - 1];
+  }
+  let result = subject;
+  let count = 0;
+  let next = 0;
+  for (const [, entry] of search.entries) {
+    const needle = wellFormed("str_replace", toPhpString(entry));
+    let replacement: string;
+    if ("entries" in replace) {
+      replacement = next < replace.entries.length ? wellFormed("str_replace", toPhpString(replace.entries[next]![1])) : "";
+      next++;
+    } else {
+      replacement = replace.string;
+    }
+    if (needle === "") {
+      continue;
+    }
+    const parts = result.split(needle);
+    count += parts.length - 1;
+    result = parts.join(replacement);
+    if (result === "") {
+      return ["", count];
+    }
+  }
+  return [result, count];
+}
+
+/**
+ * PHP's `str_replace($search, $replace, $subject, &$count = null)` (`php_str_replace_common`, case-sensitive), over the
+ * strings' bytes (a well-formed UTF-8 needle matches only whole characters, so this is the JS strings' match).
+ *
+ * - `search` and `replace` are strings or arrays: an array `search` replaces each of its values in turn by the
+ *   matching value of an array `replace` (`""` once it runs out) or by a string `replace`; an empty search string is
+ *   skipped. A string `search` with an array `replace` throws PHP's `TypeError` `str_replace(): Argument #2
+ *   ($replace) must be of type string when argument #1 ($search) is a string`.
+ * - An array `subject` gives an array with the same keys (through `arrayFromEntries`), each value replaced as its
+ *   `(string)` (PHP 8.5.11 converts every element, an array to `"Array"`; an object without a `__toString` port throws
+ *   PHP's `Error`, as do array values of `search` and `replace`).
+ * - `count`, a `Ref` (DIV-9.2), receives the number of replacements; null or omitted is no count. A `count` that is
+ *   no `Ref` throws a JS `TypeError`.
+ *
+ * Coerced as PHP's `array|string` parameters; anything else throws PHP's `TypeError`.
+ */
+export function str_replace(search: unknown, replace: unknown, subject: unknown, count: Ref<unknown> | null = null): unknown {
+  const fn = "str_replace";
+  if (count !== null && count !== undefined && !(count instanceof Ref)) {
+    throw new TypeError("str_replace(): Argument #4 ($count) is by reference; pass a Ref (DIV-9.2)");
+  }
+  const needles = arrayOrString(fn, 1, "search", search);
+  const replacements = arrayOrString(fn, 2, "replace", replace);
+  const subjects = arrayOrString(fn, 3, "subject", subject);
+  if ("string" in needles && "entries" in replacements) {
+    throw new PhpTypeError("str_replace(): Argument #2 ($replace) must be of type string when argument #1 ($search) is a string");
+  }
+  let total = 0;
+  let result: unknown;
+  if ("string" in subjects) {
+    const [replaced, n] = replaceInSubject(needles, replacements, subjects.string);
+    total = n;
+    result = replaced;
+  } else {
+    const out: [PhpArrayKey, unknown][] = [];
+    for (const [key, value] of subjects.entries) {
+      const [replaced, n] = replaceInSubject(needles, replacements, wellFormed(fn, toPhpString(value)));
+      total += n;
+      out.push([key, replaced]);
+    }
+    result = arrayFromEntries(out);
+  }
+  if (count instanceof Ref) {
+    count.value = total;
+  }
+  return result;
+}
+
+/**
+ * PHP's `ord($character)`: the first byte of `character`'s UTF-8 form (`ord("é")` is 195), 0 for `""`. Coerced as
+ * PHP's `string` parameter; anything else throws PHP's `TypeError`.
+ */
+export function ord(character: unknown): number {
+  const bytes = utf8.encode(wellFormed("ord", stringParameter("ord", 1, "character", character)));
+  return bytes.length === 0 ? 0 : bytes[0]!;
+}
+
+/** `strtok`'s state (`BG(strtok_string)`, `BG(strtok_last)`): the string's bytes and the next byte to read. */
+interface StrtokState {
+  readonly bytes: Uint8Array;
+  readonly last: number;
+}
+
+const STRTOK = frameSlot<StrtokState | null>(Symbol.for("xaravel.php.strtok"), () => null);
+
+/** Records `state` in the active frame; outside a frame (or in a narrow frame no unit encloses) nothing is recorded. */
+function recordStrtok(state: StrtokState | null): void {
+  if (currentFrame() === null) {
+    return;
+  }
+  try {
+    STRTOK.set(state);
+  } catch (error) {
+    if (!(error instanceof ScopeFrameException)) {
+      throw error;
+    }
+  }
+}
+
+/**
+ * PHP's `strtok($string, $token = null)`, over UTF-8 bytes. `strtok(string, token)` starts tokenizing `string` and
+ * `strtok(token)` (or `strtok(token, null)`) goes on with the string last started; each returns the next run of bytes
+ * not in `token`, skipping leading delimiters, or `false` once none is left (also when nothing was started; PHP's
+ * warning is not raised). The started string and position are held in a Scope Frame slot (AD-5), so each frame has its
+ * own; outside a frame a two-argument call returns its first token but records nothing, so a later one-argument call
+ * returns `false`. Coerced as PHP's `string` and `?string` parameters; anything else throws PHP's `TypeError`. A
+ * token that splits a UTF-8 sequence throws a JS `TypeError`.
+ */
+export function strtok(string: unknown, token: unknown = null): string | false {
+  const first = wellFormed("strtok", stringParameter("strtok", 1, "string", string));
+  let tok: string;
+  let state: StrtokState | null;
+  if (token === null || token === undefined) {
+    tok = first;
+    state = STRTOK.get();
+  } else {
+    const coerced = toStringArgument(token);
+    if (coerced === null) {
+      throw argumentTypeError("strtok", 2, "token", "?string", token);
+    }
+    tok = wellFormed("strtok", coerced);
+    state = { bytes: utf8.encode(first), last: 0 };
+  }
+  if (state === null) {
+    return false;
+  }
+  const { bytes } = state;
+  const end = bytes.length;
+  let p = state.last;
+  if (p >= end) {
+    recordStrtok(state);
+    return false;
+  }
+  const delimiters = new Uint8Array(256);
+  for (const byte of utf8.encode(tok)) {
+    delimiters[byte] = 1;
+  }
+  while (delimiters[bytes[p]!] === 1) {
+    if (++p >= end) {
+      recordStrtok(null);
+      return false;
+    }
+  }
+  const from = p;
+  while (++p < end && delimiters[bytes[p]!] !== 1) {
+    // Scan to the next delimiter or the end.
+  }
+  const result = decodeResult("strtok", bytes.subarray(from, p));
+  recordStrtok({ bytes, last: p + 1 });
+  return result;
+}
+
+/** `addcslashes`'s escapes for the C control characters it names by letter. */
+const C_ESCAPES: Readonly<Record<number, string>> = { 0x0a: "n", 0x09: "t", 0x0d: "r", 0x07: "a", 0x0b: "v", 0x08: "b", 0x0c: "f" };
+
+/**
+ * PHP's `addcslashes($string, $characters)` (`php_addcslashes_str`), over UTF-8 bytes: each byte of `string` in
+ * `characters` (a byte list with `php_charmask`'s `x..y` ranges, as `trim` reads it) gets a backslash; one below 32
+ * or above 126 is written as `\n`, `\t`, `\r`, `\a`, `\v`, `\b`, `\f`, or else as three octal digits (`"\0"` is
+ * `\000`). Coerced as PHP's `string` parameters; anything else throws PHP's `TypeError`. A result that leaves part of
+ * a UTF-8 sequence unescaped throws a JS `TypeError`.
+ */
+export function addcslashes(string: unknown, characters: unknown): string {
+  const bytes = utf8.encode(wellFormed("addcslashes", stringParameter("addcslashes", 1, "string", string)));
+  const mask = charmask(utf8.encode(wellFormed("addcslashes", stringParameter("addcslashes", 2, "characters", characters))));
+  const out: number[] = [];
+  for (const c of bytes) {
+    if (mask[c] === 1) {
+      out.push(0x5c);
+      if (c < 32 || c > 126) {
+        const letter = C_ESCAPES[c];
+        const text = letter ?? c.toString(8).padStart(3, "0");
+        for (const ch of text) {
+          out.push(ch.charCodeAt(0));
+        }
+        continue;
+      }
+    }
+    out.push(c);
+  }
+  return decodeResult("addcslashes", Uint8Array.from(out));
+}
+
+/** C's `isxdigit`. */
+function isHexDigit(byte: number | undefined): boolean {
+  return byte !== undefined && ((byte >= 0x30 && byte <= 0x39) || (byte >= 0x41 && byte <= 0x46) || (byte >= 0x61 && byte <= 0x66));
+}
+
+/** `stripcslashes`'s escapes by letter. */
+const C_UNESCAPES: Readonly<Record<number, number>> = { 0x6e: 0x0a, 0x72: 0x0d, 0x61: 0x07, 0x74: 0x09, 0x76: 0x0b, 0x62: 0x08, 0x66: 0x0c, 0x5c: 0x5c };
+
+/**
+ * PHP's `stripcslashes($string)` (`php_stripcslashes`), over UTF-8 bytes: `\n`, `\r`, `\a`, `\t`, `\v`, `\b`, `\f` and
+ * `\\` are their bytes, `\x` with one or two hex digits and `\` with one to three octal digits the byte they spell (an
+ * octal above `\377` wraps, as C's `char` does), and a backslash before any other byte is dropped; a trailing
+ * backslash is kept. Coerced as PHP's `string` parameter; anything else throws PHP's `TypeError`. A result that is no
+ * valid UTF-8 (`'\xff'`) throws a JS `TypeError`.
+ */
+export function stripcslashes(string: unknown): string {
+  const s = wellFormed("stripcslashes", stringParameter("stripcslashes", 1, "string", string));
+  const bytes = utf8.encode(s);
+  const end = bytes.length;
+  const out: number[] = [];
+  for (let i = 0; i < end; i++) {
+    if (bytes[i] !== 0x5c || i + 1 >= end) {
+      out.push(bytes[i]!);
+      continue;
+    }
+    i++;
+    const c = bytes[i]!;
+    const letter = C_UNESCAPES[c];
+    if (letter !== undefined) {
+      out.push(letter);
+      continue;
+    }
+    if (c === 0x78 && i + 1 < end && isHexDigit(bytes[i + 1])) {
+      let digits = String.fromCharCode(bytes[++i]!);
+      if (i + 1 < end && isHexDigit(bytes[i + 1])) {
+        digits += String.fromCharCode(bytes[++i]!);
+      }
+      out.push(Number.parseInt(digits, 16));
+      continue;
+    }
+    let octal = "";
+    while (i < end && bytes[i]! >= 0x30 && bytes[i]! <= 0x37 && octal.length < 3) {
+      octal += String.fromCharCode(bytes[i++]!);
+    }
+    if (octal !== "") {
+      out.push(Number.parseInt(octal, 8) & 0xff);
+      i--;
+    } else {
+      out.push(c);
+    }
+  }
+  return decodeResult("stripcslashes", Uint8Array.from(out));
 }

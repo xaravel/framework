@@ -7,12 +7,15 @@ core calls (ESC-14.1-5, ESC-14.1-6, action item `epic-14-item-2-runtime-generato
 14.2 calls (ESC-14.2-1, action item `epic-14-item-5-runtime-array-functions`), and `is_null`, `uasort` and the string
 comparisons `Collection::sortBy` calls (ESC-14.2-4, action item `epic-14-item-6-runtime-sort-string-functions`), and
 the set, merge and replace functions, `array_pad`, `is_int`, `arrayUnion` and the PHP function-name resolver Story
-14.4 calls (ESC-14.4-1, ESC-14.4-2, action item `epic-14-item-9-runtime-set-functions-callable-names`).
+14.4 calls (ESC-14.4-1, ESC-14.4-2, action item `epic-14-item-9-runtime-set-functions-callable-names`), and the
+string, ctype, mbstring, filter and existence functions vlucas/phpdotenv calls (ESC-15.2-1, action item
+`epic-15-item-1-runtime-phpdotenv-builtins`; see [phpdotenv builtins](#phpdotenv-builtins)).
 Everything here is exported from `@xaravel/runtime/php` and from the package root, under its PHP name, and is
 synchronous. Each function ports PHP 8.5.11's C source (`ext/standard/array.c`, `ext/standard/string.c`,
 `ext/spl/spl_iterators.c`, `Zend/zend_generators.c`, `Zend/zend_sort.c`, `ext/standard/formatted_print.c`,
 `ext/standard/math.c`, `ext/standard/type.c`, `ext/standard/strnatcmp.c`, `Zend/zend_builtin_functions.c`,
-`Zend/zend_API.c`, `Zend/zend_operators.c`) in coercive typing mode, PHP's mode for a file without `strict_types`, as
+`Zend/zend_API.c`, `Zend/zend_operators.c`, `ext/ctype/ctype.c`, `ext/mbstring/mbstring.c`, `ext/filter/filter.c`,
+`ext/filter/logical_filters.c`) in coercive typing mode, PHP's mode for a file without `strict_types`, as
 Laravel's are.
 
 Common rules:
@@ -524,6 +527,118 @@ with the flags `-`, `+`, ` `, `0` and `'<char>`, a `*` width or precision taken 
   `%.9999999999f`), `Precision must be an integer`, `Precision must be between -1 and 2147483647` and
   `Precision -1 is only supported for %g, %G, %h and %H`.
 
+## phpdotenv builtins
+
+The PHP builtins vlucas/phpdotenv v5.7.0 calls (ESC-15.2-1 parts a to e). Each is a [registry](#callables-php-function-names)
+entry with PHP 8.5.11's `ReflectionFunction` counts, so `function_exists`, `is_callable` and `phpFunction` find it.
+
+### Strings
+
+- `strpos(haystack, needle, offset = 0)`: the byte position of the first `needle` at or after `offset` (a negative one
+  counts from the end), or `false` (`strpos("héllo", "l")` is 3); an empty `needle` is found at `offset`. An `offset`
+  beyond either end throws PHP's `ValueError` `strpos(): Argument #3 ($offset) must be contained in argument #1
+  ($haystack)`.
+- `str_replace(search, replace, subject, count = null)`: `search`, `replace` and `subject` are strings or arrays, as
+  PHP's `array|string` parameters take them. An array `search` replaces each value in turn by the matching value of an
+  array `replace` (`""` once it runs out) or by a string `replace`; an empty search string is skipped (its replacement
+  still used up). A string `search` with an array `replace` throws PHP's `TypeError` `str_replace(): Argument #2
+  ($replace) must be of type string when argument #1 ($search) is a string`. An array `subject` gives an array with
+  its keys kept (through `arrayFromEntries`) and every value replaced as its `(string)`, as PHP 8.5.11 converts each
+  element (a nested array is `"Array"`, an object without a `__toString` port PHP's `Error`, as for an array value of
+  `search` or `replace`). `count` is a `Ref` (DIV-9.2) that receives the number of replacements; null or omitted
+  counts nothing, any other value throws a JS `TypeError`. A well-formed UTF-8 needle matches only whole characters,
+  so the byte match is the JS strings' match.
+- `ltrim(string, characters = " \n\r\t\v\0")` and `rtrim(…)`: `trim`'s rules (the same `php_charmask` with `..`
+  ranges and malformed ranges) for the leading or the trailing bytes only.
+- `ord(character)`: the first byte of `character`'s UTF-8 form (`ord("é")` is 195), 0 for `""`.
+- `strtok(string, token = null)`: `strtok(string, token)` starts tokenizing `string`, `strtok(token)` (or
+  `strtok(token, null)`) goes on; each returns the next run of bytes not in `token`, leading delimiters skipped, or
+  `false` once none is left or nothing was started (PHP's warning is not raised). The started string and position
+  live in a Scope Frame slot (AD-5), so concurrent frames tokenize apart; outside a frame, or in a narrow frame no
+  unit encloses, the two-argument form returns its first token but records nothing, so a later one-argument call
+  returns `false`.
+- `addcslashes(string, characters)`: a backslash before each byte in `characters` (`php_charmask`'s list and ranges,
+  `"\0..\37\177"`); such a byte below 32 or above 126 is written `\n`, `\t`, `\r`, `\a`, `\v`, `\b`, `\f`, or
+  three octal digits (`\000`).
+- `stripcslashes(string)`: `\n`, `\r`, `\a`, `\t`, `\v`, `\b`, `\f` and `\\` decoded, `\x` with one or two hex
+  digits and `\` with one to three octal digits the byte they spell (above `\377` wrapping, as C's `char` does), a
+  backslash before any other byte dropped (`\q` is `q`), a trailing backslash kept.
+
+Each works on UTF-8 bytes; a result that is no valid UTF-8 (`stripcslashes('\xff')`, `ltrim("éa", "Ã")`, an
+`addcslashes` that escapes one byte of a character) throws a JS `TypeError`, as the other string functions do.
+
+### ctype
+
+`ctype_space(text)` and `ctype_digit(text)` port `ctype_impl` in the C locale, the Oracle's: a string is tested byte
+by byte over its UTF-8 bytes and is true when it is not empty and every byte is a space (` `, `\t`, `\n`, `\v`,
+`\f`, `\r`) or a digit (`0`-`9`); a byte of 0x80 or more is neither, so no multi-byte character is. An int from -128
+to 255 is that character (a negative one plus 256: `ctype_digit(53)` is true, `ctype_digit(5)` false); any other int
+is its decimal string (`ctype_digit(1000)` true, `ctype_space(1000)` false). Anything else (null, a bool, a float, an
+array, an object, a `__toString` object too) is false. PHP's deprecation for a non-string is not raised (DIV-9.17). A
+host whose PHP runs in Darwin's `C.UTF-8` locale classifies byte 0xA0 as a space; the probe sets the C locale.
+
+### mbstring
+
+- `mb_strlen(string, encoding = null)`, `mb_substr(string, start, length = null, encoding = null)` and
+  `mb_strpos(haystack, needle, offset = 0, encoding = null)` count code points (`mb_strlen("héllo")` is 5,
+  `mb_substr("héllo", 1, 3)` is `"éll"`), with PHP's clamping of a negative `start` or `length`, an empty needle found
+  at `offset`, and PHP's `ValueError` `mb_strpos(): Argument #3 ($offset) must be contained in argument #1
+  ($haystack)`.
+- An `encoding` of null, `UTF-8` or any name mbstring resolves to UTF-8 (`utf8`, `UTF8`, `utf-8`) is UTF-8. A name is
+  resolved as `mbfl_name2encoding_ex` resolves it: an encoding's name, else its MIME name, else one of its aliases,
+  each ASCII case-insensitively. A name mbstring does not know throws PHP's `ValueError` `mb_strlen(): Argument #2
+  ($encoding) must be a valid encoding, "nope" given`; a known encoding other than UTF-8 (`ISO-8859-1`, `ASCII`,
+  `UTF-8-Mobile#DOCOMO`) throws a JS `TypeError` naming the limit, as no string in another encoding exists in the
+  runtime.
+- `mb_convert_encoding(string, to_encoding, from_encoding = null)` converts from UTF-8 to UTF-8 only, so it returns a
+  string unchanged and an array copied: keys kept, strings unchanged, nested arrays copied, null, bool, int and float
+  values kept, an object dropped (as PHP drops it, its warning not raised), a JS cycle an empty array. `to_encoding`
+  must name UTF-8 (`must be a valid encoding, "<name>" given` for an unknown one). `from_encoding` is null, a name, a
+  comma-separated list (each name trimmed of spaces and tabs, an empty one skipped) or an array of names, each naming
+  UTF-8: an unknown one throws PHP's `ValueError` `mb_convert_encoding(): Argument #3 ($from_encoding) contains invalid
+  encoding "<name>"`, an empty string or array `… must specify at least one encoding`, and `auto` (which depends on
+  `mbstring.language`) or a known non-UTF-8 name a JS `TypeError`.
+- `mb_list_encodings()` gives PHP 8.5.11's 79 encoding names in its order, and `mb_encoding_aliases(encoding)` the
+  aliases of any of them (`["utf8"]` for UTF-8, `[]` for none), each a new list. Both read a frozen table generated
+  from PHP 8.5.11 (each encoding's name, `mb_preferred_mime_name` and aliases), which the probe re-checks in full.
+
+### `function_exists` and `class_exists`
+
+- `function_exists(function)` is true when the [registry](#callables-php-function-names) holds the name (one leading
+  `\` dropped, ASCII case-insensitive), as PHP reads its function table: `function_exists("\\STRLEN")` is true, a
+  PHP function the runtime does not export (`apache_getenv`) and a helper with no PHP name (`minus`) false.
+- `class_exists(class, autoload = true)` is true for a registered class, an enum included as PHP counts one (looked
+  up as `lookUpName` reads the Class Registry: case-insensitive, one leading `\` ignored, a test class up the active
+  frame chain first), and false for a contract token (an interface: `Stringable`, `ArrayAccess`), a trait and a name
+  nothing holds. Nothing is autoloaded (AD-10.4); `autoload` is coerced as PHP's `bool` and ignored. A trait is a
+  registered class too (AD-26): it is told apart once `mixin` has composed it, which marks it with the
+  non-enumerable `Symbol.for('xaravel.traits.trait')`.
+- Both take PHP's `string` parameter: `5` is `"5"` (false), an array throws PHP's `TypeError`.
+
+### `filter_var`
+
+`filter_var(value, filter = FILTER_DEFAULT, options = 0)` ports `php_filter_call` and `php_zval_filter` for three
+filters, exported with their constants `FILTER_DEFAULT` (516), `FILTER_VALIDATE_BOOLEAN` and its alias
+`FILTER_VALIDATE_BOOL` (258), `FILTER_VALIDATE_INT` (257), and the flag `FILTER_NULL_ON_FAILURE` (134217728).
+
+- `options` is an int of flags, or an array with `flags` (read as PHP's `(int)`) and `options`: `default` for every
+  filter, and `min_range` and `max_range` for `FILTER_VALIDATE_INT` (each read as `(int)`). A non-array `options`
+  entry is ignored, as PHP ignores it.
+- An array value fails at once, and its `default` is not applied (PHP's implicit `FILTER_REQUIRE_SCALAR`); an object
+  without a `__toString` port fails. Any other value is filtered as its `(string)` (null `""`, `true` `"1"`, `1.0`
+  `"1"`).
+- `FILTER_DEFAULT` gives that string. `FILTER_VALIDATE_BOOLEAN`, after trimming space, `\t`, `\r`, `\v` and `\n`
+  (not `\f` or NUL), gives true for `1`, `true`, `on`, `yes` and false for `0`, `false`, `off`, `no` and `""` (ASCII
+  case-insensitive), so `filter_var(null, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)` is false.
+  `FILTER_VALIDATE_INT`, after the same trim, gives the int64 a decimal string spells (`"+5"`, `"-0"`; not `"012"`,
+  `"1e3"`, `"0x1A"` or a value beyond int64), inside `min_range` and `max_range`; an int beyond 2^53 is a `bigint`.
+- A failure is `false`, or `null` under `FILTER_NULL_ON_FAILURE`; then an `options` `default` replaces it, as PHP's
+  `handle_default` does, so it also replaces a validated `false` when the flag is off.
+- `filter` is an `int` parameter and `options` an `array|int` one, with PHP's `TypeError` for another type. Any other
+  filter (PHP's warning and `false` for an unknown id included), flag (`FILTER_FLAG_ALLOW_HEX`,
+  `FILTER_REQUIRE_SCALAR`, …), `$options` key (`filter`) or option (`decimal`) throws a JS `TypeError` naming the
+  limit, so none is silently ignored.
+
 ## Values JS cannot hold
 
 A PHP string is bytes; a JS string is UTF-16. A result or input JS cannot hold throws a JS `TypeError` that names the
@@ -532,7 +647,8 @@ sequence (`substr("héllo", 1, 1)`, `trim("ê", "é")`, `chunk_split("é", 1, "|
 more, a `sprintf` result that is no valid UTF-8 (a precision that splits a sequence, `%.1s` of `"é"`, or a `%c`
 byte of 0x80 or more on its own), and a string holding a lone surrogate passed to `substr`, `str_starts_with`,
 `str_contains`, `strlen`, `lcfirst`, `range`, `explode`, `sprintf`, `strcmp`, `strcasecmp`, `strnatcmp`,
-`strnatcasecmp`, `strcoll`, `unhandledMatch`, `strtoupper`, `trim` or `chunk_split`.
+`strnatcasecmp`, `strcoll`, `unhandledMatch`, `strtoupper`, `trim`, `chunk_split`, or any of the
+[phpdotenv builtins](#phpdotenv-builtins) that takes a string.
 
 ## Not ported
 
@@ -553,7 +669,13 @@ byte of 0x80 or more on its own), and a string holding a lone surrogate passed t
 - A Closure's PHP callable name (`{closure:<file>:<line>}`): `is_callable` gives `Closure::__invoke`.
 - `reset` and `end` on an object (PHP 8.1 deprecated them), and the pointer operations `next`, `prev` and `current`.
   `reset`, `end` and `key` share the array's internal pointer.
-- PHP's `php_charmask` warnings for a malformed `..` range in `trim`'s `characters`.
+- PHP's `php_charmask` warnings for a malformed `..` range in `trim`'s, `ltrim`'s, `rtrim`'s and `addcslashes`'
+  `characters`.
+- Every mbstring encoding but UTF-8, `mb_convert_encoding`'s `auto` list, `mb_internal_encoding`,
+  `mb_preferred_mime_name` and the other mbstring functions.
+- `filter_var`'s other filters, flags and options, `filter_var_array`, `filter_input` and `filter_list`.
+- A trait no `mixin` call has composed yet: `class_exists` cannot tell it from a class and gives `true`.
+- A ctype locale other than C, and the ctype functions other than `ctype_space` and `ctype_digit`.
 - `callMethod`'s visibility checks, and Closure's `bind`, `bindTo`, `call`, `fromCallable` and `getCurrent` through it
   (see [`callMethod`](#callmethod)).
 - `callMethod(object, "toString")` finds the `__toString` port under its JS name, where PHP has no `toString` method:

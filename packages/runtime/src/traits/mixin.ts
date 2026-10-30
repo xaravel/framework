@@ -26,7 +26,9 @@
 //   `initializeTraits` are Model's (`Database/Eloquent/Model.php` `bootTraits` / `initializeTraits`): boot methods in
 //   PHP's method-table order, once per class; initializers once per call, the host calling it once per instance.
 //
-// The booted record is a non-enumerable own symbol property of the class, never a module variable (AD-5).
+// The booted record is a non-enumerable own symbol property of the class, never a module variable (AD-5). Each class
+// `mixin` composes as a trait gets the non-enumerable own mark `Symbol.for('xaravel.traits.trait')`, so `class_exists`
+// is false for it, as PHP's is for a trait (ESC-15.2-1).
 import { propertyTable } from "../php/mangle";
 import { isFloat } from "../php/PhpFloat";
 import { valueCopy } from "../php/valueCopy";
@@ -39,6 +41,8 @@ type AnyClass = abstract new (...args: any) => any;
 const LAYER = Symbol.for("xaravel.traits.layer");
 /** The booted record of a class: its initializer names, in order. */
 const BOOTED = Symbol.for("xaravel.traits.booted");
+/** The mark of a class `mixin` has composed as a trait, which `class_exists` reads (`php/classExistence.ts`). */
+const TRAIT = Symbol.for("xaravel.traits.trait");
 /** Static keys every function owns, never copied from a trait. */
 const FUNCTION_KEYS: ReadonlySet<string> = new Set(["length", "name", "prototype"]);
 
@@ -263,6 +267,11 @@ export function mixin<B extends AnyClass | null, const Ts extends readonly AnyCl
   for (const trait of traits) {
     if (typeof trait !== "function") {
       throw new TypeError("mixin(): every trait must be a class");
+    }
+  }
+  for (const trait of traits) {
+    if (!Object.hasOwn(trait, TRAIT) && Object.isExtensible(trait)) {
+      Object.defineProperty(trait, TRAIT, { value: true, enumerable: false, writable: false, configurable: false });
     }
   }
   const defaults = instanceDefaults(traits);
