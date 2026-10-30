@@ -37,6 +37,7 @@ import { ctype_digit, ctype_space } from "./ctypeFunctions";
 import { filter_var } from "./filterFunctions";
 import { mb_convert_encoding, mb_encoding_aliases, mb_list_encodings, mb_strlen, mb_strpos, mb_substr } from "./mbstringFunctions";
 import { stringParameter } from "./phpArguments";
+import { preg_last_error, preg_last_error_msg, preg_match, preg_match_all, preg_replace_callback, preg_split } from "./pcreFunctions";
 import { is_a, is_array, is_bool, is_callable, is_int, is_iterable, is_null, is_object, is_string } from "./typeTests";
 
 /** A PHP callable as the runtime calls it. */
@@ -226,6 +227,12 @@ export const PHP_FUNCTIONS: Readonly<Record<string, PhpFunction>> = Object.freez
       entry("stripcslashes", stripcslashes, 1, 1),
       entry("strpos", strpos, 2, 3),
       entry("strtok", strtok, 1, 2),
+      entry("preg_last_error", preg_last_error, 0, 0),
+      entry("preg_last_error_msg", preg_last_error_msg, 0, 0),
+      entry("preg_match", preg_match, 2, 5, false, [2]),
+      entry("preg_match_all", preg_match_all, 2, 5, false, [2]),
+      entry("preg_replace_callback", preg_replace_callback, 3, 6, false, [4]),
+      entry("preg_split", preg_split, 2, 4),
     ].map((described) => [described.name, described] as const),
   ),
 );
