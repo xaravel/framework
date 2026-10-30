@@ -170,7 +170,7 @@ development_status:
   epic-15: in-progress
   15-1-config-repository: done
   15-2-phpdotenv-grammar-port: done  # ESC-15.2-6 landed (#569); three runtime throws became Upstream code; two current Fidelity passes at tree 6095fb1a; XT-config-3 and XT-config-4 pass against the signed fixtures.
-  15-3-bun-s-env-autoload-neutralised: blocked  # ESC-15.3-1 and -2 approved by the Maintainer; -2's 48 additions are in; the monitor builds -1's entry-scripts check, and that PR sets the Story in-progress
+  15-3-bun-s-env-autoload-neutralised: in-progress  # ESC-15.3-1 (entry-scripts check, this PR) and ESC-15.3-2 (48 config additions, #572) approved by the Maintainer; write XT-config-6 over the tool and XT-config-7 (Epic-close checks)
   epic-15-retrospective: optional
 
   epic-16: backlog

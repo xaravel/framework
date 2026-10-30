@@ -234,7 +234,7 @@ xaravelTest("XT-conformance-243", "the committed repository verifies, and ci.yml
   expect(run.stdout).toMatch(/^Oracle fixtures OK: \d+ fixtures verify against conformance\/oracle\/oracle\.pub\.\n$/);
 
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> };
-  expect(pkg.scripts["oracle:verify-fixtures"]).toBe("bun tools/oracle/verify.ts");
+  expect(pkg.scripts["oracle:verify-fixtures"]).toBe("bun --no-env-file tools/oracle/verify.ts");
 
   const workflow = Bun.YAML.parse(readFileSync(join(root, ".github", "workflows", "ci.yml"), "utf8")) as {
     on: Record<string, unknown>;

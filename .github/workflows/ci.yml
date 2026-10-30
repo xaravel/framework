@@ -15,7 +15,9 @@
 # from conformance/upstream/ fails there instead of skipping when it is missing
 # (decisions/ESC-10.2-8.md). It runs the other repository gates: `bun test`,
 # the typecheck, the lint, `scaffold:check` and `graph:check` (Epic 1 retro
-# R1), plus the assert and Mockery coverage reports. After the Skip Reasons it
+# R1), plus the assert and Mockery coverage reports. Next to the lint it runs
+# `entry-scripts:check` (ESC-15.3-1, FR-20.2): a `bun` command in a
+# package.json script without `--no-env-file` fails. After the Skip Reasons it
 # runs `divergence:check` (Story 8.1, FR-8, AD-15): a malformed Divergence
 # Record DIV-1..12, or an `adapted` marker in the Expectations File or a Ported
 # Test that names no existing clause, fails. Then it runs `porting:check`
@@ -201,6 +203,8 @@ jobs:
         run: bun run async-surface --all --check
       - name: Lint
         run: bun run lint
+      - name: Check the entry scripts
+        run: bun run entry-scripts:check
       - name: Check the scaffold
         run: bun run scaffold:check
       - name: Check class registration

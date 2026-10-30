@@ -246,7 +246,7 @@ A fixture's signature binds neither the Baseline Pin nor the image, so a fixture
 bun run oracle:recheck [--root <dir>] [--image <ref> | --local <dir> [--php <bin>]]
 ```
 
-The script is `bun tools/oracle/recheck.ts`. It covers every batch request under its Component, except those listed in `conformance/oracle/nondeterminism.jsonl` (they get no fixture) and those an accepted merged per-Story file holds (that Story's fixture covers them), plus every per-Story request, accepted or shadowed, under its manifest's Component. Each request whose committed fixture `conformance/fixtures/<component>/<sha256>.json` exists is evaluated once by evaluate.php, in the image (default `xaravel-oracle:<oracle tag>`, the image `oracle:build` built locally at the current tag) or with `--local` against a locked local install, and its canonical JSON is compared with the fixture's `output`. Each differing fixture prints
+The script is `bun --no-env-file tools/oracle/recheck.ts`. It covers every batch request under its Component, except those listed in `conformance/oracle/nondeterminism.jsonl` (they get no fixture) and those an accepted merged per-Story file holds (that Story's fixture covers them), plus every per-Story request, accepted or shadowed, under its manifest's Component. Each request whose committed fixture `conformance/fixtures/<component>/<sha256>.json` exists is evaluated once by evaluate.php, in the image (default `xaravel-oracle:<oracle tag>`, the image `oracle:build` built locally at the current tag) or with `--local` against a locked local install, and its canonical JSON is compared with the fixture's `output`. Each differing fixture prints
 
 ```
 stale fixture: conformance/fixtures/<c>/<sha256>.json (<id>): committed <digest> vs evaluated <digest>

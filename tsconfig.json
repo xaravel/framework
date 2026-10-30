@@ -35,7 +35,8 @@
     "tools/async-surface/*.ts",
     "tools/api-surface/*.ts",
     "tools/registration/*.ts",
-    "tools/conformance-report/*.ts"
+    "tools/conformance-report/*.ts",
+    "tools/entry-scripts/*.ts"
   ],
   "exclude": [
     "conformance/upstream"

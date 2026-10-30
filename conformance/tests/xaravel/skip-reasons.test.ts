@@ -178,7 +178,7 @@ xaravelTest("XT-conformance-250", "bun run expectations:reasons exits 0 on valid
   const empty = Bun.spawnSync(["bun", CLI, "check", "--root", ""], { stdout: "pipe", stderr: "pipe" });
   expect(empty.exitCode).toBe(2);
   const script = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts["expectations:reasons"];
-  expect(script).toBe("bun tools/expectations/reasons.ts check");
+  expect(script).toBe("bun --no-env-file tools/expectations/reasons.ts check");
 });
 
 // ---------------------------------------------------------------------------

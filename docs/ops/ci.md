@@ -6,7 +6,7 @@ The CI pipeline is AD-28's three tiers: checks on every PR, the merge queue, and
 
 | Check | Workflow and job | What it runs |
 | --- | --- | --- |
-| lint, typecheck, dependency graph | `ci.yml#check` (required) | `upstream:sync` and `upstream:check`, then `harness --xaravel` (every test file, once, under the harness; XT-conformance-119 fails on a test file the harness does not run; with `XARAVEL_UPSTREAM=require`, so a test that reads the Upstream snapshot fails rather than skips without it, [ESC-10.2-8](../../decisions/ESC-10.2-8.md)), `expectations:check`, `expectations:reasons`, `divergence:check` ([divergence.md](divergence.md)), `porting:check` ([porting.md](porting.md)), `probes:check --require-backends` against the job's Postgres, MySQL, Redis and S3Mock services ([probes.md](probes.md)), `typecheck`, `async-surface --all --check`, `lint`, `scaffold:check`, `registration:check`, `graph:check`, the coverage reports |
+| lint, typecheck, dependency graph | `ci.yml#check` (required) | `upstream:sync` and `upstream:check`, then `harness --xaravel` (every test file, once, under the harness; XT-conformance-119 fails on a test file the harness does not run; with `XARAVEL_UPSTREAM=require`, so a test that reads the Upstream snapshot fails rather than skips without it, [ESC-10.2-8](../../decisions/ESC-10.2-8.md)), `expectations:check`, `expectations:reasons`, `divergence:check` ([divergence.md](divergence.md)), `porting:check` ([porting.md](porting.md)), `probes:check --require-backends` against the job's Postgres, MySQL, Redis and S3Mock services ([probes.md](probes.md)), `typecheck`, `async-surface --all --check`, `lint`, `entry-scripts:check`, `scaffold:check`, `registration:check`, `graph:check`, the coverage reports |
 | `bun audit` | `ci.yml#audit` (required) | `bun install --frozen-lockfile --ignore-scripts`, then `bun audit --audit-level=high` |
 | fixture signatures | `ci.yml#fixtures` (required) | `oracle:verify-fixtures` ([oracle.md](oracle.md)) |
 | Protected Paths | `protected-paths.yml` (required, `pull_request_target`) | `tools/protected-paths/` against the base's list |
@@ -14,9 +14,11 @@ The CI pipeline is AD-28's three tiers: checks on every PR, the merge queue, and
 | Ratchet | `ratchet.yml#ratchet` (required, `pull_request_target`) | `scope`, `overlay`, `run --scope`, `story`, same-repository PRs only; a fork PR fails ([ratchet.md](ratchet.md)) |
 | API-surface report | `api-surface.yml#report` (not required; never fails) | `api-surface --all --markdown`, the per-Component table in the job summary ([api-surface.md](api-surface.md)) |
 
-`lint` is `bun --bun oxlint --type-aware && bun run lint:disables`: the type-aware async-safety rules, and a check that no comment or config switches a spine rule off (AD-16.4; [lint.md](lint.md)).
+`lint` is `bun --no-env-file --bun oxlint --type-aware && bun --no-env-file run lint:disables`: the type-aware async-safety rules, and a check that no comment or config switches a spine rule off (AD-16.4; [lint.md](lint.md)).
 
 `registration:check` is the duplicate-FQCN and registration scan: each FQCN registered once, every framework class file ending with `registerClass('<FQCN>', X)`, and no package `package.json` setting `"sideEffects": false` (Story 6.6, AD-10, AD-22; [registration.md](registration.md)).
+
+`entry-scripts:check` (`tools/entry-scripts/entry-scripts.ts`) fails any `bun` command in a `scripts` value of the root, `skeleton/` or a `packages/*` `package.json` that lacks `--no-env-file` before its subcommand or entry file; only the package-manager subcommands (`install`, `add`, `remove`, `update`, `pm`, `link`, `unlink`, `outdated`, `patch`, `publish`) are exempt (ESC-15.3-1, FR-20.2; XT-conformance-272).
 
 `ci.yml` also runs `workflow-permissions`, `upstream` and `php-fixtures`, which are advisory.
 
@@ -58,7 +60,7 @@ It is advisory, not a required check, and does not duplicate the nightly matrix.
 bun run bench [--root <dir>] [--iterations <n>]
 ```
 
-The script is `bun tools/bench/bench.ts`. It discovers `packages/*/bench/**/*.bench.ts` and `conformance/bench/**/*.bench.ts`, in sorted order. Each file default-exports `{ name: string, fn: () => unknown }[]`. Each benchmark gets one warm-up call, then timed calls: `--iterations <n>` of them, or by default as many as fit in about 250 ms (at least 5, at most 10,000). It prints:
+The script is `bun --no-env-file tools/bench/bench.ts`. It discovers `packages/*/bench/**/*.bench.ts` and `conformance/bench/**/*.bench.ts`, in sorted order. Each file default-exports `{ name: string, fn: () => unknown }[]`. Each benchmark gets one warm-up call, then timed calls: `--iterations <n>` of them, or by default as many as fit in about 250 ms (at least 5, at most 10,000). It prints:
 
 ```
 BENCH <file> <name> median_ns=<n> iterations=<k>

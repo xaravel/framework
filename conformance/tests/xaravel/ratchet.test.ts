@@ -217,7 +217,7 @@ xaravelTest("XT-conformance-115", "a PR run lists every unexpected failure and e
     expect([args.join(" "), usage.exitCode]).toEqual([args.join(" "), 2]);
   }
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
-  expect(scripts["ratchet"]).toBe("bun tools/ratchet/ratchet.ts");
+  expect(scripts["ratchet"]).toBe("bun --no-env-file tools/ratchet/ratchet.ts");
 }, 120_000);
 
 xaravelTest("XT-conformance-246", "the ratchet workflow runs the PR's code under pull_request_target with the base's grader, read-only, with no secrets, on every alpha Variant's service (FR-3, FR-9.4, AD-16.2, AD-16.3, AD-28.1, AD-28.2)", () => {

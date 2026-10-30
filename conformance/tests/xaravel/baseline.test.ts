@@ -427,7 +427,7 @@ xaravelTest("XT-conformance-56", "the baseline workflow runs every leg in the Or
   expect(text).toContain("run: bun run inventory\n");
   expect(text.match(/name: inventory-listing\n/g)?.length).toBe(3);
   expect(text).toContain("git add --intent-to-add conformance/inventory\n          git diff --exit-code --stat conformance/inventory");
-  expect(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts.baseline).toBe("bun tools/baseline/baseline.ts");
+  expect(JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts.baseline).toBe("bun --no-env-file tools/baseline/baseline.ts");
 
   // The committed Inventory: every entry has both fields, oracle keyed by exactly its alpha variants, and every
   // pgsql, redis and queue-redis@redis entry has an outcome there.

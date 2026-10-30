@@ -293,9 +293,9 @@ xaravelTest("XT-conformance-34", "`bun run release:stamp` copies the root versio
   expect(dirs).toContain("tools/boost-framework");
   expect(dirs).toContain("packages/support");
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
-  expect(scripts["release:stamp"]).toBe("bun tools/release/release.ts stamp");
-  expect(scripts["release:check"]).toBe("bun tools/release/release.ts check");
-  expect(scripts["release:authority"]).toBe("bun tools/release/release.ts authority");
+  expect(scripts["release:stamp"]).toBe("bun --no-env-file tools/release/release.ts stamp");
+  expect(scripts["release:check"]).toBe("bun --no-env-file tools/release/release.ts check");
+  expect(scripts["release:authority"]).toBe("bun --no-env-file tools/release/release.ts authority");
   const checks = workflow("release-checks.yml").data;
   expect(checks.jobs["versions"]!.steps.map((step) => step.run).filter(Boolean)).toEqual(["bun tools/release/release.ts check"]);
 });

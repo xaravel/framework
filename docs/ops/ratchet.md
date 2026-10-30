@@ -14,7 +14,7 @@ bun run ratchet story [--root <dir>] --ref <head-ref>
 bun run ratchet overlay --base <dir> --head <dir>
 ```
 
-The script is `bun tools/ratchet/ratchet.ts`. Exit codes: 0 when nothing fails (warnings never do); 1 when there is an unexpected failure or an owned unexpected pass, when the harness fails a precondition, when the Story manifests or the scope file cannot be read, or on any other failure; 2 on a usage error (an unknown or repeated flag, a missing value, `run` or `story` without `--ref`, `scope` without all three flags).
+The script is `bun --no-env-file tools/ratchet/ratchet.ts`. Exit codes: 0 when nothing fails (warnings never do); 1 when there is an unexpected failure or an owned unexpected pass, when the harness fails a precondition, when the Story manifests or the scope file cannot be read, or on any other failure; 2 on a usage error (an unknown or repeated flag, a missing value, `run` or `story` without `--ref`, `scope` without all three flags).
 
 `run` runs the harness over the root in full mode (no filter, no sample), or over a scope (below), and classifies each difference it counted:
 

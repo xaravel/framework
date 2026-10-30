@@ -188,8 +188,8 @@ xaravelTest("XT-conformance-119", "every PR runs lint, typecheck, the protected-
   }
   // The scripts the jobs call exist.
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
-  expect(scripts["graph:check"]).toBe("bun tools/graph/graph.ts");
-  expect(scripts["bench"]).toBe("bun tools/bench/bench.ts");
+  expect(scripts["graph:check"]).toBe("bun --no-env-file tools/graph/graph.ts");
+  expect(scripts["bench"]).toBe("bun --no-env-file tools/bench/bench.ts");
 });
 
 xaravelTest("XT-conformance-201", "scope is the AD-2 reverse-dependency closure of the changed packages that has Expectations; data-only paths add nothing, any other path makes it full (AD-2, AD-28.1)", async () => {

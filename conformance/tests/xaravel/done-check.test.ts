@@ -69,7 +69,7 @@ xaravelTest(
   async () => {
     // The committed file is the generator's output (the drift check), and the scripts exist.
     const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
-    expect(scripts["xt:consequences"]).toBe("bun tools/xt-coverage/consequences.ts");
+    expect(scripts["xt:consequences"]).toBe("bun --no-env-file tools/xt-coverage/consequences.ts");
     expect(scripts["xt:coverage"]).toBe("bun --no-env-file tools/xt-coverage/coverage.ts");
     const check = Bun.spawnSync([process.execPath, join(root, "tools", "xt-coverage", "consequences.ts"), "--check"], { cwd: root, stdout: "pipe", stderr: "pipe" });
     expect([check.exitCode, check.stderr.toString()]).toEqual([0, ""]);

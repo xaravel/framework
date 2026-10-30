@@ -202,7 +202,7 @@ xaravelTest("XT-conformance-191", "inside the container the harness runs every a
   expect(harness.trimEnd().split("\n").at(-1)).toMatch(/ bun run devcontainer:alpha < /);
   const scripts = (JSON.parse(read("package.json")) as { scripts: Record<string, string> }).scripts;
   expect(scripts["devcontainer:alpha"]).toBe("bun --no-env-file tools/devcontainer/alpha.ts");
-  expect(scripts["ratchet"]).toBe("bun tools/ratchet/ratchet.ts");
+  expect(scripts["ratchet"]).toBe("bun --no-env-file tools/ratchet/ratchet.ts");
 
   // The alpha gate: non-alpha NOT-RUN passes; an alpha NOT-RUN, or no SUMMARY, fails naming it.
   expect(ALPHA_VARIANTS).toContain("redis");

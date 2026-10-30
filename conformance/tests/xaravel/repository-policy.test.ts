@@ -737,10 +737,10 @@ xaravelTest("XT-conformance-32", "the agent push identity is limited to story/* 
   expect(doc).toContain("bun run ruleset:apply");
   expect(doc).toMatch(/\bwrite\b/);
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
-  expect(scripts["ruleset:identity"]).toBe("bun tools/ruleset/ruleset.ts identity");
-  expect(scripts["ruleset:verify"]).toBe("bun tools/ruleset/ruleset.ts verify");
-  expect(scripts["ruleset:apply"]).toBe("bun tools/ruleset/ruleset.ts apply");
-  expect(scripts["workflows:check"]).toBe("bun tools/workflow-permissions/workflow-permissions.ts check");
+  expect(scripts["ruleset:identity"]).toBe("bun --no-env-file tools/ruleset/ruleset.ts identity");
+  expect(scripts["ruleset:verify"]).toBe("bun --no-env-file tools/ruleset/ruleset.ts verify");
+  expect(scripts["ruleset:apply"]).toBe("bun --no-env-file tools/ruleset/ruleset.ts apply");
+  expect(scripts["workflows:check"]).toBe("bun --no-env-file tools/workflow-permissions/workflow-permissions.ts check");
 });
 
 /**
@@ -838,6 +838,8 @@ xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun
     // Story 6.4: the async-surface drift check (AD-6, AD-28, XT-conformance-136).
     "bun run async-surface --all --check",
     "bun run lint",
+    // ESC-15.3-1: every bun entry script carries --no-env-file (FR-20.2, XT-conformance-272).
+    "bun run entry-scripts:check",
     "bun run scaffold:check",
     // Story 6.6: the duplicate-FQCN and registration scan (AD-10, AD-22, XT-conformance-142).
     "bun run registration:check",
@@ -866,12 +868,12 @@ xaravelTest("XT-conformance-33", "on any PR the required `audit` check runs `bun
   expect(fixtures["timeout-minutes"]).toBe(10);
   // The gates run through package.json scripts, so pin what each script runs.
   const checkScripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
-  expect(checkScripts["test"]).toBe("bun test");
-  expect(checkScripts["typecheck"]).toBe("bun --bun tsc -b");
-  expect(checkScripts["lint"]).toBe("bun --bun oxlint --type-aware && bun run lint:disables");
-  expect(checkScripts["scaffold:check"]).toBe("bun tools/scaffold/scaffold.ts --check");
-  expect(checkScripts["graph:check"]).toBe("bun tools/graph/graph.ts");
-  expect(checkScripts["oracle:verify-fixtures"]).toBe("bun tools/oracle/verify.ts");
+  expect(checkScripts["test"]).toBe("bun --no-env-file test");
+  expect(checkScripts["typecheck"]).toBe("bun --no-env-file --bun tsc -b");
+  expect(checkScripts["lint"]).toBe("bun --no-env-file --bun oxlint --type-aware && bun --no-env-file run lint:disables");
+  expect(checkScripts["scaffold:check"]).toBe("bun --no-env-file tools/scaffold/scaffold.ts --check");
+  expect(checkScripts["graph:check"]).toBe("bun --no-env-file tools/graph/graph.ts");
+  expect(checkScripts["oracle:verify-fixtures"]).toBe("bun --no-env-file tools/oracle/verify.ts");
 
   // `php-fixtures` runs the PHP scripts for real against the fixtures, with a missing PHP or vendor/ failing (Epic 2 retro R5).
   const phpFixtures = ci.jobs["php-fixtures"]!;

@@ -790,11 +790,11 @@ xaravelTest("XT-conformance-43", "CI publishes the image to GHCR tagged <Pin>-<i
   expect(imageTag(root)).toMatch(/^v13\.37\.0-[0-9a-f]{12}$/);
   expect(imageTag(root)).toBe(`${PIN[0]!.tag}-${imageHash(root)}`);
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
-  expect(scripts["oracle:check"]).toBe("bun tools/oracle/oracle.ts check");
-  expect(scripts["oracle:tag"]).toBe("bun tools/oracle/oracle.ts tag");
-  expect(scripts["oracle:lock"]).toBe("bun tools/oracle/oracle.ts lock");
-  expect(scripts["oracle:verify-image"]).toBe("bun tools/oracle/oracle.ts verify-image");
-  expect(scripts["oracle:build"]).toBe("bun tools/oracle/oracle.ts build");
+  expect(scripts["oracle:check"]).toBe("bun --no-env-file tools/oracle/oracle.ts check");
+  expect(scripts["oracle:tag"]).toBe("bun --no-env-file tools/oracle/oracle.ts tag");
+  expect(scripts["oracle:lock"]).toBe("bun --no-env-file tools/oracle/oracle.ts lock");
+  expect(scripts["oracle:verify-image"]).toBe("bun --no-env-file tools/oracle/oracle.ts verify-image");
+  expect(scripts["oracle:build"]).toBe("bun --no-env-file tools/oracle/oracle.ts build");
   const tsconfig = JSON.parse(readFileSync(join(root, "tsconfig.json"), "utf8")) as { include: string[] };
   expect(tsconfig.include).toContain("tools/oracle/**/*.ts");
 });
