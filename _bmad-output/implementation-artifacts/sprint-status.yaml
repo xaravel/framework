@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-30-2026 10:00
+last_updated: 10-30-2026 11:39
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -169,7 +169,7 @@ development_status:
 
   epic-15: in-progress
   15-1-config-repository: done
-  15-2-phpdotenv-grammar-port: blocked  # ESC-15.2-6 (contract, second key: DIRECTORY_SEPARATOR, array_reduce, EmptyIterator for the runtime); XT-config-3/4 pass on their signed fixtures; phpdotenv, PhpOption and ResultType ported in packages/config
+  15-2-phpdotenv-grammar-port: in-progress  # ESC-15.2-6 approved by the monitor (decisions/ESC-15.2-6.md); action item epic-15-item-4 (DIRECTORY_SEPARATOR, array_reduce, EmptyIterator) lands first, then the three BlockedByComponentError(runtime) throws become Upstream code
   15-3-bun-s-env-autoload-neutralised: backlog
   epic-15-retrospective: optional
 
@@ -2370,3 +2370,18 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-30-story-15-2.md"
+  - id: "epic-15-item-4-runtime-directory-separator-array-reduce-empty-iterator"
+    epic: 15
+    action: "One Maintainer-approved Infrastructure change (decisions/ESC-15.2-6.md),
+      in scope packages/runtime: @xaravel/runtime/php exports, under their PHP names
+      with PHP 8.5.11 behaviour (ESC-15.2-6): the constant DIRECTORY_SEPARATOR (a
+      slash on Linux and macOS); array_reduce with an optional initial value null,
+      taking every PHP callable form through the shared resolver (DIV-9.13); and the
+      class EmptyIterator registered under its PHP name, an Iterator with no elements
+      whose valid() is false and whose current() and key() throw PHP BadMethodCallException
+      with Accessing the value of an EmptyIterator and Accessing the key of an EmptyIterator.
+      XT-runtime cases against PHP; existing exports stay; no other runtime behaviour
+      changes; lands before Story 15.2 resumes"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/ESC-15.2-6.md"
