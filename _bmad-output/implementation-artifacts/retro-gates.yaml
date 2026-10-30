@@ -113,6 +113,7 @@ epic-15:
   # Items 1 and 2 (epic-15-item-*) were ruled in decisions/MAINT-2026-10-30-story-15-2.md: XT-conformance-269's fixture
   # no longer names builtins item 1 adds, and ESC-15.2-5 extends PORTING.md's PCRE rule for item 2.
   # Retro items 1 (epics.md AC) and 6 (AD-5 ruling) are owned by the Maintainer.
+  # Item 2 waits on the Maintainer: every part needs a DIV clause or a runtime contract (finding S2 in the retro doc).
   verdict: accepted-with-open-items
   attempts: 1
   doc: _bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md
@@ -121,3 +122,4 @@ epic-15:
   waiting_on_maintainer:
     - epic-15-retro-item-1-config-presealed-base-write-target
     - epic-15-retro-item-6-pcre-compiled-pattern-cache
+    - epic-15-retro-item-2-untargeted-deferrals
