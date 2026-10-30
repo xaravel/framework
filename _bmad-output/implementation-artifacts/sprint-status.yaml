@@ -169,7 +169,7 @@ development_status:
 
   epic-15: in-progress
   15-1-config-repository: done
-  15-2-phpdotenv-grammar-port: in-progress  # ESC-15.2-1 (monitor) and ESC-15.2-2..5 (Maintainer) ruled (decisions/MAINT-2026-10-30-story-15-2.md); runtime items epic-15-item-1, -2 and -3 land first, then the phpdotenv, PhpOption and ResultType port in packages/config
+  15-2-phpdotenv-grammar-port: blocked  # ESC-15.2-6 (contract, second key: DIRECTORY_SEPARATOR, array_reduce, EmptyIterator for the runtime); XT-config-3/4 pass on their signed fixtures; phpdotenv, PhpOption and ResultType ported in packages/config
   15-3-bun-s-env-autoload-neutralised: backlog
   epic-15-retrospective: optional
 

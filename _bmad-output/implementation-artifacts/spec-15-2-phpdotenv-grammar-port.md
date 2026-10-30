@@ -3,7 +3,7 @@ title: 'Story 15.2: phpdotenv grammar port'
 type: 'feature'
 created: '2026-10-30'
 status: 'blocked'
-baseline_revision: '7985637e229a149e6c3cce464395273d6c9bade2'
+baseline_revision: 'e048743dae12c5f3c79c3cc4701e444e9fbcce2b'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -103,6 +103,8 @@ Planning found four contract questions. They were raised in one round before bui
 - **ESC-15.2-3**: `FileStore` reads files with a sync `file_get_contents`, and AD-6 does not settle whether that is allowed.
 - **ESC-15.2-4**: AD-22 has no row for PhpOption or ResultType, and Support's `Env` needs them without a composer edge to config.
 
+All five are ruled (`decisions/MAINT-2026-10-30-story-15-2.md`): the runtime owns the builtins, PCRE functions (with ESC-15.2-5's four PORTING.md forms), `getenv`/`putenv`, boot-time `$_SERVER`/`$_ENV` and a sync `file_get_contents`, landed by action items epic-15-item-1..3; `@xaravel/config` owns PhpOption (`src/PhpOption/**`) and ResultType (`src/GrahamCampbell/ResultType/**`). The Story resumes on `story/15.2` over them.
+
 ## Verification
 
 **Commands:**
@@ -113,3 +115,15 @@ Planning found four contract questions. They were raised in one round before bui
 
 Status: blocked
 Blocking condition: contract Escalations ESC-15.2-1 (missing runtime builtins), ESC-15.2-2 (superglobals and env functions), ESC-15.2-3 (sync env-file read under AD-6) and ESC-15.2-4 (PhpOption/ResultType ownership) need a second key (MAINT-2026-10-16, amendment 2026-10-30). Between them they stop XT-config-3 and XT-config-4, the Story's only Test IDs.
+
+### 2026-10-30 — Resumed after ESC-15.2-1..5 and epic-15-item-1..3
+
+Status: blocked
+Blocking condition: ESC-15.2-6 (contract: `DIRECTORY_SEPARATOR`, `array_reduce` and `EmptyIterator` missing from `@xaravel/runtime`; under the 2026-10-30 amendment it needs a second key) names XT-config-3 and XT-config-4. Their fixtures are signed (`oracle.yml#story`, commit 1f19d2ed on #567) and both pass against them.
+
+- **Implemented:** phpdotenv v5.7.0 (`packages/config/src/Dotenv/**`), PhpOption 1.10.0 (`src/PhpOption/**`) and Result Type 1.2.0 (`src/GrahamCampbell/ResultType/**`), one class per file, each registered under its FQCN, interfaces as contract tokens, named exports from `src/index.ts`. Upstream's private constructors refuse an outside `new` with PHP's `Error` (`Call to private <FQCN>::__construct() from global scope`), on `InternalIterator`'s module-private key pattern. `Paths::filePaths`, `Option::lift` and `None::getIterator` throw `BlockedByComponentError(runtime)` until ESC-15.2-6 is ruled, so a file-backed `Dotenv::create*` cannot load yet. `packages/config/NOTICE` carries the three libraries' licences; `README.md` gains a "Ported libraries" section.
+- **Tests:** `packages/config/tests/xaravel/dotenv.test.ts` (XT-config-3: 25 parse contents and 14 Validator cases, plus the private-constructor checks; XT-config-4: 19 immutable / mutable / putenv / allow-list repository cases, reading `$_SERVER`, `$_ENV` and `getenv` back) over `dotenv-cases.ts`; `conformance/oracle-requests/15.2.jsonl` (one `php-expr` request per XT, built from the same cases). The first deferred item (an invalid `allowedRegexValues` pattern) is now one of XT-config-3's Validator cases.
+- **Matrix note:** the port returns `[]` for the unterminated `A="x` (phpdotenv's `Lines::process` drops an unclosed multiline buffer), where the matrix row expects `InvalidFileException`. The XT compares to the Oracle, not to the matrix, so the signed fixture settles it; if PHP agrees with the port, the matrix row is wrong, not the code.
+- **Verification (2026-10-30):** `typecheck`, `lint`, `registration:check` (117 registrations), `escalations:check` (153 records), `oracle:story check 15.2` (2 accepted) clean; `harness --component config` 33 checked, 0 differ; `harness --xaravel --id 'XT-config-*'` 2 of 4 pass, XT-config-3 and XT-config-4 fail on `missing signed fixture` only. After the signed fixtures landed: 4 of 4 pass, so the Oracle agrees with the port on every case, `A="x` giving `[]` included (the matrix row's `InvalidFileException` is wrong for phpdotenv v5.7.0). Not run against local PHP (the classifier refused running downloaded phpdotenv code).
+- **Review:** not run in this iteration. The reviewed tree changes again when ESC-15.2-6 lands and the signed fixtures arrive, and the Fidelity Review rejects a missing fixture under F-7 (Story 14.4), so all five layers run when the Story resumes.
+- **Residual risks:** an unquoted value over 1000 bytes whose cap falls inside a multibyte character throws the runtime's UTF-8 limit where PHP does not; a non-UTF-8 env file still cannot load (second deferred item).
