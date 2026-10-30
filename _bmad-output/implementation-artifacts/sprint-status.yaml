@@ -2405,7 +2405,7 @@ action_items:
       docs. A fix needing a divergence, another component or an Expectations change
       waits on the Maintainer. No assertion removed or weakened."
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "_bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md"
   - id: "epic-15-retro-item-3-fidelity-evidence-porting-and-tools"
     epic: 15
