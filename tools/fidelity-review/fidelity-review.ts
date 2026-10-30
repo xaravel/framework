@@ -75,7 +75,9 @@
 // (MAINT-2026-10-22-fidelity-whole-files): every file the change adds or
 // modifies, in full, then every decision and DIV record those files cite
 // anywhere, then the repository files they import (relative and dynamic-idiom
-// imports, `WHOLE_FILE_DEPTH` levels), and the repository files changed test
+// imports, `WHOLE_FILE_DEPTH` levels), the file that declares each name a
+// changed line imports from another workspace package, resolved through its
+// `exports` map and re-exports (`packageImports`; ESC-14.8-3), and the repository files changed test
 // files read as data (`dataFileReads`, `copyFileSync` sources included; one over `WHOLE_FILE_CAP` as the lines
 // the test's string literals select, `dataFileExcerpt`; ESC-10.1-5, ESC-10.2-7), and the Upstream sources they read
 // through a computed path under the snapshot (`upstreamReadDirs`): each one of a class a changed file names
@@ -754,7 +756,8 @@ function wholeFileLang(path: string): string {
 /**
  * The repository files a TypeScript file imports: each relative specifier of a static import, re-export, side-effect
  * import or literal dynamic `import(…)`, and each module the dynamic-import idiom binds names from (`moduleBindings`,
- * ESC-9.10-1). `exists` says whether a repository path can be read. Package imports (`@xaravel/…`) are left out.
+ * ESC-9.10-1). `exists` says whether a repository path can be read. Package imports (`@xaravel/…`) are left out here;
+ * `packageImports` resolves those a changed line adds (ESC-14.8-3).
  */
 export function fileImports(path: string, text: string, exists: (path: string) => boolean): string[] {
   const out = new Set<string>();
@@ -771,6 +774,164 @@ export function fileImports(path: string, text: string, exists: (path: string) =
   }
   out.delete(path);
   return [...out].sort(compareUnits);
+}
+
+/** An import or re-export of named bindings from a workspace package: `import { a, b as c } from "@xaravel/<c>[/<sub>]"`. */
+const PACKAGE_IMPORT = /^[ \t]*(?:import|export)\s+(?:type\s+)?(?:[A-Za-z_$][\w$]*\s*,\s*)?\{([^}]*)\}\s*from\s*["'](@xaravel\/[^"']+)["']/gm;
+
+/** One `{ a, b as c }` clause's bindings: [exported name, local name]. */
+function clauseBindings(clause: string): [string, string][] {
+  const out: [string, string][] = [];
+  for (const part of clause.replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*/g, "").split(",")) {
+    const binding = /^\s*(?:type\s+)?([A-Za-z_$][\w$]*)(?:\s+as\s+([A-Za-z_$][\w$]*))?\s*$/.exec(part);
+    if (binding !== null) {
+      out.push([binding[1]!, binding[2] ?? binding[1]!]);
+    }
+  }
+  return out;
+}
+
+/** Each workspace package under `root`'s `packages/` by its `package.json` name: its directory and its `exports` map. */
+export function workspacePackages(root: string): Map<string, { dir: string; exports: unknown }> {
+  const out = new Map<string, { dir: string; exports: unknown }>();
+  const base = join(root, "packages");
+  if (!existsSync(base)) {
+    return out;
+  }
+  for (const name of readdirSync(base).sort(compareUnits)) {
+    try {
+      const manifest = JSON.parse(readFileSync(join(base, name, "package.json"), "utf8")) as { name?: unknown; exports?: unknown };
+      if (typeof manifest.name === "string") {
+        out.set(manifest.name, { dir: `packages/${name}`, exports: manifest.exports ?? null });
+      }
+    } catch {
+      continue;
+    }
+  }
+  return out;
+}
+
+/** The repository file a package specifier names through its package's `exports` map, or why it names none. */
+function packageEntry(specifier: string, packages: ReadonlyMap<string, { dir: string; exports: unknown }>, exists: (path: string) => boolean): { path: string } | { why: string } {
+  const parts = /^(@xaravel\/[^/]+)(?:\/(.+))?$/.exec(specifier);
+  const found = parts === null ? undefined : packages.get(parts[1]!);
+  if (parts === null || found === undefined) {
+    return { why: `no workspace package under packages/ is named ${parts?.[1] ?? specifier}` };
+  }
+  const key = parts[2] === undefined ? "." : `./${parts[2]}`;
+  const exportsMap = found.exports;
+  let value: unknown = typeof exportsMap === "string" && key === "." ? exportsMap : exportsMap !== null && typeof exportsMap === "object" ? (exportsMap as Record<string, unknown>)[key] : undefined;
+  if (value !== null && typeof value === "object") {
+    const conditions = value as Record<string, unknown>;
+    value = conditions["bun"] ?? conditions["import"] ?? conditions["default"];
+  }
+  if (typeof value !== "string") {
+    return { why: `${found.dir}/package.json's exports map has no "${key}" entry` };
+  }
+  const path = posix.normalize(`${found.dir}/${value}`);
+  return exists(path) ? { path } : { why: `${found.dir}/package.json exports "${key}" as ${value}, which does not exist` };
+}
+
+/**
+ * The file that declares `name` as `file` exports it: `file` itself when it declares the name or exports a local
+ * binding under it (followed to the module it imports that binding from), else the file a named re-export (`export { x as name } from …`), a namespace re-export
+ * (`export * as name from …`) or a star re-export (`export * from …`) leads to, followed through relative and
+ * package specifiers. Null when no such declaration is found.
+ */
+function declaringFile(file: string, name: string, read: (path: string) => string | null, exists: (path: string) => boolean, packages: ReadonlyMap<string, { dir: string; exports: unknown }>, seen: Set<string> = new Set()): string | null {
+  const key = `${file}\u0000${name}`;
+  const text = seen.has(key) ? null : read(file);
+  seen.add(key);
+  if (text === null) {
+    return null;
+  }
+  const code = text.replace(/\/\*[\s\S]*?\*\/|(?<![:"'`\w])\/\/[^\n]*/g, "");
+  const module = (specifier: string): string | null => {
+    if (specifier.startsWith("@xaravel/")) {
+      const entry = packageEntry(specifier, packages, exists);
+      return "path" in entry ? entry.path : null;
+    }
+    return resolveCandidates(file, specifier).find(exists) ?? null;
+  };
+  if (new RegExp(`^\\s*export\\s+(?:declare\\s+)?(?:default\\s+)?(?:abstract\\s+)?(?:async\\s+)?(?:function\\s*\\*?|class|const|let|var|interface|type|enum|namespace)\\s+${escapeRegExp(name)}(?![\\w$])`, "m").test(code)) {
+    return file;
+  }
+  for (const match of code.matchAll(/\bexport\s+(?:type\s+)?\{([^}]*)\}(?:\s*from\s*["']([^"']+)["'])?/g)) {
+    for (const [exported, local] of clauseBindings(match[1]!)) {
+      if (local !== name) {
+        continue;
+      }
+      if (match[2] === undefined) {
+        // `import { x } from "./x"; export { x };`: the binding is declared where it is imported from.
+        for (const imported of code.matchAll(/\bimport\s+(?:type\s+)?(?:[A-Za-z_$][\w$]*\s*,\s*)?\{([^}]*)\}\s*from\s*["']([^"']+)["']/g)) {
+          const binding = clauseBindings(imported[1]!).find(([, as]) => as === exported);
+          if (binding !== undefined) {
+            const target = module(imported[2]!);
+            return target === null ? null : declaringFile(target, binding[0], read, exists, packages, seen);
+          }
+        }
+        return file;
+      }
+      const target = module(match[2]);
+      return target === null ? null : declaringFile(target, exported, read, exists, packages, seen);
+    }
+  }
+  for (const match of code.matchAll(/\bexport\s+\*\s+as\s+([A-Za-z_$][\w$]*)\s+from\s*["']([^"']+)["']/g)) {
+    if (match[1] === name) {
+      return module(match[2]!);
+    }
+  }
+  for (const match of code.matchAll(/\bexport\s+\*\s+from\s*["']([^"']+)["']/g)) {
+    const target = module(match[1]!);
+    const found = target === null ? null : declaringFile(target, name, read, exists, packages, seen);
+    if (found !== null) {
+      return found;
+    }
+  }
+  return null;
+}
+
+/** A name a file imports from another workspace package, grouped by the file that declares it (ESC-14.8-3). */
+export interface PackageImport {
+  readonly specifier: string;
+  readonly names: readonly string[];
+  /** The repository file that declares the names, or null when none is found (`note` says why). */
+  readonly target: string | null;
+  readonly note: string | null;
+}
+
+/**
+ * The named bindings `path` imports, or re-exports, from another workspace package (`@xaravel/<c>` or one of its
+ * `exports` subpaths) in a statement that touches one of `lines` (every statement when `lines` is null), each with
+ * the repository file that declares it: resolved through that package's `exports` map and its re-exports
+ * (ESC-14.8-3). A package's own imports of itself are left out. A name not so found is kept, with why.
+ */
+export function packageImports(path: string, text: string, lines: ReadonlySet<number> | null, packages: ReadonlyMap<string, { dir: string; exports: unknown }>, exists: (path: string) => boolean, read: (path: string) => string | null): PackageImport[] {
+  const groups = new Map<string, { specifier: string; names: string[]; target: string | null; note: string | null }>();
+  for (const match of text.matchAll(PACKAGE_IMPORT)) {
+    const first = text.slice(0, match.index).split("\n").length;
+    const last = first + match[0].split("\n").length - 1;
+    if (lines !== null && ![...lines].some((line) => line >= first && line <= last)) {
+      continue;
+    }
+    const specifier = match[2]!;
+    const own = packages.get(/^@xaravel\/[^/]+/.exec(specifier)![0])?.dir;
+    if (own !== undefined && path.startsWith(`${own}/`)) {
+      continue;
+    }
+    const entry = packageEntry(specifier, packages, exists);
+    for (const [name] of clauseBindings(match[1]!)) {
+      const target = "path" in entry ? declaringFile(entry.path, name, read, exists, packages) : null;
+      const note = target !== null ? null : "why" in entry ? `unavailable: ${entry.why}` : `unavailable: ${specifier} (${entry.path}) exports no ${name}, directly or through its re-exports`;
+      const key = target ?? `${specifier}\u0000${note}`;
+      const group = groups.get(key) ?? { specifier, names: [], target, note };
+      if (!group.names.includes(name)) {
+        group.names.push(name);
+      }
+      groups.set(key, group);
+    }
+  }
+  return [...groups.values()];
 }
 
 /** Local PHP trait dependencies, resolved from the declaring file's namespace/path (ESC-14.6-4). */
@@ -858,12 +1019,12 @@ export function upstreamTraitPaths(path: string, text: string, exists: (path: st
 /**
  * Evidence (h), whole files: every file the change adds or modifies, in full; the decision and DIV records those files
  * cite anywhere, not only on changed lines; then the repository files they import, followed `WHOLE_FILE_DEPTH` levels
- * deep; the repository files changed test files read as data or copy into a fixture (ESC-10.1-5, ESC-10.2-7); and the
+ * deep, and the file that declares each name a changed line imports from another workspace package (ESC-14.8-3); the repository files changed test files read as data or copy into a fixture (ESC-10.1-5, ESC-10.2-7); and the
  * Upstream sources they read through a computed path, of the classes a changed file names (ESC-10.2-7). A file another
  * section already shows in full (`shown`, path → section) is named, not repeated. The entries fill `budget` characters
  * in this order: the cited records, and the files changed test files read or import (their data, Upstream sources,
  * helpers and fixtures), which no other section shows; then the changed TypeScript and Markdown, whose diff is above;
- * then the other imports by level; then the other changed files, those outside the Story's scope (`inScope`,
+ * then the other imports by level, then the package imports' declaring files; then the other changed files, those outside the Story's scope (`inScope`,
  * ESC-9.10-3) among them. A file longer than `WHOLE_FILE_CAP`, or one that does not fit, is named as omitted for size,
  * never dropped silently; an Upstream source so omitted shows its declaration lines when they fit.
  */
@@ -1012,6 +1173,28 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
   }
   for (const file of other) {
     add(4, file.filename, inScope(file.filename) ? "changed" : "changed, outside the Story's scope");
+  }
+  // The source of each name a changed line imports from another workspace package (ESC-14.8-3): after the relative
+  // imports, before the other changed files, whose diff is above.
+  const packages = workspacePackages(root);
+  for (const [path, text] of changedTexts) {
+    if (!TS_FILE.test(path)) {
+      continue;
+    }
+    const file = changed.find((entry) => entry.filename === path)!;
+    const lines = file.status.startsWith("added") ? null : changedLines(file.patch ?? "");
+    for (const imported of packageImports(path, text, lines, packages, exists, read)) {
+      const names = imported.names.join(", ");
+      if (imported.target === null) {
+        const label = `${imported.specifier} { ${names} }`;
+        if (!listed.has(label)) {
+          listed.add(label);
+          tiers[3]!.push({ path: label, reason: `imported by ${path}`, text: null, note: imported.note });
+        }
+      } else if (!changed.some((entry) => entry.filename === imported.target)) {
+        add(3, imported.target, `declares ${names}, which ${path} imports from ${imported.specifier}`);
+      }
+    }
   }
   // Inventory shows method fragments, so resolve traits from the complete declaring test file (ESC-14.6-4).
   const pending = [...upstreamTests, ...tiers.flat().map((entry) => entry.path)];
