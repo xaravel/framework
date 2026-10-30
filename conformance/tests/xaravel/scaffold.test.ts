@@ -4,8 +4,8 @@ import { expect } from "bun:test";
 import { copyFileSync, existsSync, mkdirSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync, symlinkSync, unlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
-import { checkTsconfigs, generateTsconfig, scaffold } from "../../../tools/scaffold/scaffold";
-import { buildTable, kebab, UPSTREAM_PHASES, type PackageRow } from "../../../tools/scaffold/table";
+import { checkTsconfigs, expectedDependencies, generatePackageJson, generateTsconfig, scaffold } from "../../../tools/scaffold/scaffold";
+import { assertUses, buildTable, kebab, readTable, UPSTREAM_PHASES, UPSTREAM_USES, usesProblems, type PackageRow } from "../../../tools/scaffold/table";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
 const root = resolve(import.meta.dir, "..", "..", "..");
@@ -21,6 +21,7 @@ interface Row {
   private: boolean;
   require: string[];
   suggest: string[];
+  uses?: { package: string; reason: string }[];
 }
 
 type Manifest = Record<string, unknown> & {
@@ -97,7 +98,11 @@ xaravelTest("XT-conformance-6", "packages.jsonl has the 53 package rows, sorted,
 
   const upstreams = new Set(rows.map((row) => row.upstream));
   for (const row of rows) {
-    expect(Object.keys(row)).toEqual(FIELDS);
+    // `uses` is present only on a row with UPSTREAM_USES entries (ESC-15.1-1; XT-conformance-271).
+    expect(Object.keys(row)).toEqual(row.uses === undefined ? FIELDS : [...FIELDS, "uses"]);
+    for (const use of row.uses ?? []) {
+      expect(upstreams.has(use.package)).toBe(true);
+    }
     expect(Number.isInteger(row.phase) && row.phase >= 0 && row.phase <= 9).toBe(true);
     expect(["upstream", "xaravel", "grader", "distribution"]).toContain(row.kind);
     expect(row.upstream === null || typeof row.upstream === "string").toBe(true);
@@ -180,6 +185,13 @@ xaravelTest("XT-conformance-6", "packages.jsonl has the 53 package rows, sorted,
         composer.require = { php: "^8.3", "illuminate/contracts": "^13.0", "illuminate/collections": "^13.0", "symfony/polyfill-php85": "^1.33" };
         composer.suggest = { "illuminate/filesystem": "Required for X.", "league/uri": "Required for Y." };
       }
+      // Config's `uses` edge (UPSTREAM_USES) must stay reachable through its require graph.
+      if (dir === "Config") {
+        composer.require = { "illuminate/collections": "^13.0", "illuminate/contracts": "^13.0" };
+      }
+      if (dir === "Collections") {
+        composer.require = { "illuminate/macroable": "^13.0" };
+      }
       writeFileSync(join(illuminate, dir, "composer.json"), JSON.stringify(composer));
     }
     writeFileSync(join(illuminate, "Routing", "Router.php"), "<?php\nnamespace Illuminate\\Routing;\nclass Router {}\n");
@@ -197,6 +209,7 @@ xaravelTest("XT-conformance-6", "packages.jsonl has the 53 package rows, sorted,
     expect(fixtureRow("support").suggest).toEqual(["illuminate/filesystem"]);
     expect(fixtureRow("foundation").require).toEqual(["illuminate/collections", "illuminate/routing"]);
     expect(fixtureRow("foundation").suggest).toEqual(["illuminate/console"]);
+    expect(fixtureRow("config").uses).toEqual([...UPSTREAM_USES["config"]!]);
 
     const proc = Bun.spawn([process.execPath, join(root, "tools", "scaffold", "table.ts"), "--root", fixtureRoot, "--check"], {
       cwd: root,
@@ -303,7 +316,7 @@ function assertDependencies(base: string): void {
     const meta = manifest.peerDependenciesMeta ?? {};
     expect(row.npm in deps).toBe(false);
     expect(`${row.name}: ${Object.keys(peers).filter((peer) => peer in deps).join(",")}`).toBe(`${row.name}: `);
-    for (const edge of row.require) {
+    for (const edge of [...row.require, ...(row.uses ?? []).map((use) => use.package)]) {
       expect(`${row.name} -> ${npmOf(rows, edge)}: ${deps[npmOf(rows, edge)]}`).toBe(`${row.name} -> ${npmOf(rows, edge)}: workspace:*`);
     }
     for (const edge of row.suggest) {
@@ -471,6 +484,100 @@ xaravelTest(
       expect(result.stderr).toContain("  mail\n");
       expect(result.stderr).not.toContain("  pagination\n");
       expect(checkTsconfigs(tmp)).toEqual(["cache", "mail"]);
+    } finally {
+      rmSync(tmp, { recursive: true, force: true });
+    }
+  },
+  60_000,
+);
+
+xaravelTest(
+  "XT-conformance-271", "a uses edge (Upstream source uses a package it reaches only through its require graph) becomes a workspace dependency and tsconfig reference; one naming an unreachable or unknown package, a direct require, a cycle or an empty reason is rejected (ESC-15.1-1, AD-2)",
+  async () => {
+    // The real table: config uses illuminate/macroable, and its package.json and tsconfig carry the edge.
+    const rows = readTable(tablePath);
+    expect(() => assertUses(rows)).not.toThrow();
+    const config = rows.find((row) => row.name === "config")!;
+    expect(config.uses).toEqual([...UPSTREAM_USES["config"]!]);
+    expect(config.uses!.map((use) => use.package)).toEqual(["illuminate/macroable"]);
+    expect(rows.filter((row) => row.uses !== undefined).map((row) => row.name)).toEqual(Object.keys(UPSTREAM_USES).sort());
+    expect(readJson<Manifest>(join(root, "packages", "config", "package.json")).dependencies).toEqual(
+      generatePackageJson(rows, config).dependencies as Record<string, string>,
+    );
+    expect(readJson<{ references: { path: string }[] }>(join(root, "packages", "config", "tsconfig.json")).references).toContainEqual({ path: "../macroable" });
+
+    // A hermetic table: config -> collections -> macroable, with pipeline known but unreachable.
+    const row = (name: string, require: string[], extra: Partial<PackageRow> = {}): PackageRow => ({
+      name,
+      dir: `packages/${name}`,
+      npm: `@xaravel/${name}`,
+      phase: 1,
+      kind: "upstream",
+      upstream: `illuminate/${name}`,
+      private: false,
+      require,
+      suggest: [],
+      ...extra,
+    });
+    const reason = "Illuminate\\Config\\Repository uses Illuminate\\Support\\Traits\\Macroable";
+    const table = (uses: unknown): PackageRow[] => [
+      row("collections", ["illuminate/contracts", "illuminate/macroable"]),
+      row("config", ["illuminate/collections", "illuminate/contracts"], { uses: uses as PackageRow["uses"] }),
+      row("contracts", [], { kind: "xaravel" }),
+      row("macroable", []),
+      row("pipeline", []),
+      row("runtime", [], { kind: "xaravel", upstream: null }),
+    ];
+    const tmp = mkdtempSync(join(tmpdir(), "xaravel-scaffold-uses-"));
+    try {
+      for (const path of ["LICENSE", "tsconfig.json"]) {
+        copyFileSync(join(root, path), join(tmp, path));
+      }
+      mkdirSync(join(tmp, "tools", "scaffold"), { recursive: true });
+      const write = (rowsToWrite: readonly PackageRow[]) =>
+        writeFileSync(join(tmp, "tools", "scaffold", "packages.jsonl"), rowsToWrite.map((r) => JSON.stringify(r)).join("\n") + "\n");
+
+      // Accepted: the edge is a dependency, a tsconfig reference and a README line with its reason.
+      const good = table([{ package: "illuminate/macroable", reason }]);
+      write(good);
+      scaffold(tmp);
+      expect(expectedDependencies(good, good[1]!)).toEqual(["@xaravel/collections", "@xaravel/contracts", "@xaravel/macroable", "@xaravel/runtime"]);
+      const manifest = readJson<Manifest>(join(tmp, "packages", "config", "package.json"));
+      expect(manifest.dependencies?.["@xaravel/macroable"]).toBe("workspace:*");
+      expect(manifest.peerDependencies).toBeUndefined();
+      const refs = readJson<{ references: { path: string }[] }>(join(tmp, "packages", "config", "tsconfig.json")).references;
+      expect(refs.map((ref) => ref.path)).toEqual(["../collections", "../contracts", "../macroable", "../runtime"]);
+      expect(readFileSync(join(tmp, "packages", "config", "README.md"), "utf8")).toContain(`- \`@xaravel/macroable\` (workspace): used directly by Upstream source and reached through its \`composer.json\` \`require\` graph (AD-2): ${reason}.\n`);
+      expect(checkTsconfigs(tmp)).toEqual([]);
+      expect(await runCheck(tmp)).toMatchObject({ code: 0 });
+
+      // Rejected, each with a message naming the edge; scaffold, --check and expectedDependencies all fail.
+      const rejected: [unknown, string][] = [
+        [[{ package: "illuminate/pipeline", reason }], "config: uses illuminate/pipeline is not reachable through config's require graph"],
+        [[{ package: "illuminate/collections", reason }], "config: uses illuminate/collections is already a direct require"],
+        [[{ package: "illuminate/macroable", reason: "" }], "config: uses illuminate/macroable has an empty reason"],
+        [[{ package: "illuminate/macroable", reason: "  " }], "config: uses illuminate/macroable has an empty reason"],
+        [[{ package: "illuminate/nope", reason }], "config: uses illuminate/nope names no package row"],
+        [[{ package: "illuminate/config", reason }], "config: uses illuminate/config names the row itself"],
+        [[{ package: "illuminate/macroable", reason }, { package: "illuminate/macroable", reason }], "config: uses illuminate/macroable is listed twice"],
+        [[{ package: "illuminate/macroable" }], "must have exactly the fields package and reason"],
+        [[], "config: uses must be a non-empty array"],
+      ];
+      for (const [uses, message] of rejected) {
+        const bad = table(uses);
+        expect(usesProblems(bad, bad[1]!).join("\n")).toContain(message);
+        expect(() => expectedDependencies(bad, bad[1]!)).toThrow(message);
+        write(bad);
+        expect(() => scaffold(tmp)).toThrow(message);
+        expect(() => checkTsconfigs(tmp)).toThrow(message);
+      }
+      const cli = await runCheck(tmp);
+      expect(cli.code).toBe(1);
+      expect(cli.stderr).toContain("Invalid uses in the package table:\n  config: uses must be a non-empty array");
+
+      // A cycle over require and uses is rejected (only a cyclic require graph can produce one).
+      const cyclic = [row("x", ["illuminate/y"], { uses: [{ package: "illuminate/z", reason }] }), row("y", ["illuminate/z"]), row("z", ["illuminate/x"])];
+      expect(usesProblems(cyclic, cyclic[0]!)).toEqual(["x: uses illuminate/z would create a cycle: illuminate/z reaches illuminate/x through require and uses"]);
     } finally {
       rmSync(tmp, { recursive: true, force: true });
     }

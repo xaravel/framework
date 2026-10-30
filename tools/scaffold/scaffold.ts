@@ -8,10 +8,16 @@
 // the `.gitkeep` placeholders) are created only when missing. Every package
 // `tsconfig.json` and the root `tsconfig.json` `references` are always
 // regenerated, from each package's current `package.json`.
+//
+// A row's workspace `dependencies` are its `require` and `uses` edges plus
+// `@xaravel/runtime` and `@xaravel/contracts` (`expectedDependencies`). Both
+// commands fail, naming each problem, on a `uses` edge that `usesProblems` in
+// `table.ts` rejects. A `uses` edge added to an existing package is added to
+// its `package.json` by hand, in the same change (XT-conformance-8 checks it).
 import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, relative, resolve } from "node:path";
 import { frameworkTag, UPSTREAM_PIN_FILE } from "../upstream/upstream";
-import { readTable, type PackageRow } from "./table";
+import { assertUses, readTable, usesProblems, type PackageRow } from "./table";
 
 export const TABLE_PATH = "tools/scaffold/packages.jsonl";
 const DEFAULT_PIN = "v13.37.0";
@@ -64,15 +70,23 @@ function npmOfUpstream(rows: readonly PackageRow[], upstream: string): string {
   return target.npm;
 }
 
-/** The workspace dependencies a row gets: its `require` list plus runtime/contracts (never a self-edge; runtime gets none). */
+/**
+ * The workspace dependencies a row gets: its `require` and `uses` lists plus
+ * runtime/contracts (never a self-edge; runtime gets none). Throws on an
+ * unsound `uses` edge.
+ */
 export function expectedDependencies(rows: readonly PackageRow[], row: PackageRow): string[] {
+  const problems = usesProblems(rows, row);
+  if (problems.length > 0) {
+    throw new Error(`Invalid uses in the package table:\n${problems.map((problem) => `  ${problem}`).join("\n")}`);
+  }
   const deps = new Set<string>();
   // runtime depends on nothing; contracts only on runtime (spine layer table).
   if ((row.kind === "upstream" || row.kind === "xaravel") && row.name !== "runtime") {
     deps.add("@xaravel/runtime");
     deps.add("@xaravel/contracts");
   }
-  for (const upstream of row.require) {
+  for (const upstream of [...row.require, ...(row.uses ?? []).map((use) => use.package)]) {
     deps.add(npmOfUpstream(rows, upstream));
   }
   deps.delete(row.npm);
@@ -149,12 +163,15 @@ function readme(root: string, rows: readonly PackageRow[], row: PackageRow): str
     lines.push("None.");
   }
   for (const dep of deps) {
+    const use = (row.uses ?? []).find((candidate) => npmOfUpstream(rows, candidate.package) === dep);
     const reason =
       dep === "@xaravel/runtime" || dep === "@xaravel/contracts"
         ? "allowed for every package (AD-2)"
-        : row.name === "foundation"
-          ? "imported by Upstream Foundation from a Component of its own or an earlier Phase (AD-2)"
-          : "Upstream `composer.json` `require` (AD-2)";
+        : use !== undefined
+          ? `used directly by Upstream source and reached through its \`composer.json\` \`require\` graph (AD-2): ${use.reason}`
+          : row.name === "foundation"
+            ? "imported by Upstream Foundation from a Component of its own or an earlier Phase (AD-2)"
+            : "Upstream `composer.json` `require` (AD-2)";
     lines.push(`- \`${dep}\` (workspace): ${reason}.`);
   }
   for (const peer of peers) {
@@ -231,6 +248,7 @@ function writeIfMissing(path: string, content: string): void {
 /** Scaffolds every package in `<root>/tools/scaffold/packages.jsonl`. Idempotent. */
 export function scaffold(root: string): void {
   const rows = readTable(join(root, TABLE_PATH));
+  assertUses(rows);
   const license = readFileSync(join(root, "LICENSE"), "utf8");
   for (const row of rows) {
     const pkgDir = join(root, row.dir);
@@ -261,10 +279,12 @@ export function scaffold(root: string): void {
 /**
  * Names every package whose `tsconfig.json` is missing or differs from its
  * generated form, plus `(root tsconfig.json references)` if the root
- * references are stale. Empty when everything matches.
+ * references are stale. Empty when everything matches. Throws on an unsound
+ * `uses` edge in the table.
  */
 export function checkTsconfigs(root: string): string[] {
   const rows = readTable(join(root, TABLE_PATH));
+  assertUses(rows);
   const drifted: string[] = [];
   for (const row of rows) {
     const path = join(root, row.dir, "tsconfig.json");
@@ -314,11 +334,17 @@ function main(argv: readonly string[]): number {
       return 2;
     }
   }
-  if (!check) {
-    scaffold(root);
-    return 0;
+  let drifted: string[];
+  try {
+    if (!check) {
+      scaffold(root);
+      return 0;
+    }
+    drifted = checkTsconfigs(root);
+  } catch (error) {
+    process.stderr.write(`${error instanceof Error ? error.message : String(error)}\n`);
+    return 1;
   }
-  const drifted = checkTsconfigs(root);
   if (drifted.length === 0) {
     process.stdout.write("Every package tsconfig.json matches its generated form.\n");
     return 0;

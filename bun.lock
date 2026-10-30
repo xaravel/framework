@@ -190,6 +190,7 @@
       "dependencies": {
         "@xaravel/collections": "workspace:*",
         "@xaravel/contracts": "workspace:*",
+        "@xaravel/macroable": "workspace:*",
         "@xaravel/runtime": "workspace:*",
       },
       "devDependencies": {

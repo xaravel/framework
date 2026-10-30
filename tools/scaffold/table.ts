@@ -8,11 +8,25 @@
 // It reads `laravel/framework` only from the Upstream snapshot,
 // `<root>/conformance/upstream/framework` (Story 2.1, FR-1), and never
 // fetches; run `bun run upstream:sync` first.
+//
+// A row's `require` and `suggest` are its Upstream `composer.json` lists
+// (Foundation's come from its imports). A row may also carry `uses`: packages
+// its Upstream source uses directly but reaches only through its `require`
+// graph, each with its reason (`UPSTREAM_USES`, ESC-15.1-1). The scaffold makes
+// each a workspace dependency; `usesProblems` rejects one that names no package
+// row, is not reachable through `require`, is already a dependency, would close
+// a cycle, or has an empty reason.
 import { existsSync, readdirSync, readFileSync, statSync } from "node:fs";
 import { join, relative, resolve } from "node:path";
 import { upstreamPath } from "../upstream/upstream";
 
 export type Kind = "upstream" | "xaravel" | "grader" | "distribution";
+
+/** A package a row's Upstream source uses directly but reaches only through its `require` graph. */
+export interface UpstreamUse {
+  package: string;
+  reason: string;
+}
 
 export interface PackageRow {
   name: string;
@@ -24,6 +38,8 @@ export interface PackageRow {
   private: boolean;
   require: string[];
   suggest: string[];
+  /** Present only on a row with `UPSTREAM_USES` entries. */
+  uses?: UpstreamUse[];
 }
 
 /** Phase (PRD §7.3, AD-27) of every Upstream component at the Pin, keyed by its directory under `src/Illuminate/`. */
@@ -66,6 +82,22 @@ export const UPSTREAM_PHASES: Readonly<Record<string, number>> = {
   Translation: 3,
   Validation: 5,
   View: 6,
+};
+
+/**
+ * Packages a row's Upstream source uses directly but reaches only through its
+ * `require` graph, keyed by row name. Each becomes a workspace dependency, so
+ * the port can import what Upstream's source does; `usesProblems` keeps every
+ * such edge on Upstream's composer graph.
+ */
+export const UPSTREAM_USES: Readonly<Record<string, readonly UpstreamUse[]>> = {
+  // ESC-15.1-1.
+  config: [
+    {
+      package: "illuminate/macroable",
+      reason: "Illuminate\\Config\\Repository uses Illuminate\\Support\\Traits\\Macroable, reached through illuminate/collections' require",
+    },
+  ],
 };
 
 /** Rows with no Upstream `composer.json` at the Pin. Their `require`/`suggest` lists are empty. */
@@ -201,6 +233,104 @@ function foundationEdges(illuminate: string, components: readonly string[]): str
   return [...edges].sort();
 }
 
+/** Every composer name reached from `start`, itself included, following `edges` of each row (by Upstream name). */
+function reachable(rows: readonly PackageRow[], start: readonly string[], edges: (row: PackageRow) => readonly string[]): Set<string> {
+  const byUpstream = new Map<string, PackageRow>();
+  for (const row of rows) {
+    if (row.upstream !== null) {
+      byUpstream.set(row.upstream, row);
+    }
+  }
+  const seen = new Set<string>();
+  const queue = [...start];
+  while (queue.length > 0) {
+    const next = queue.pop()!;
+    if (seen.has(next)) {
+      continue;
+    }
+    seen.add(next);
+    const row = byUpstream.get(next);
+    if (row !== undefined) {
+      queue.push(...edges(row));
+    }
+  }
+  return seen;
+}
+
+/** The well-formed `package` names of a row's `uses`. */
+function usePackages(row: PackageRow): string[] {
+  if (!Array.isArray(row.uses)) {
+    return [];
+  }
+  return row.uses.flatMap((use: unknown) => {
+    const name = typeof use === "object" && use !== null ? (use as Record<string, unknown>)["package"] : null;
+    return typeof name === "string" ? [name] : [];
+  });
+}
+
+/**
+ * Every problem with `row`'s `uses` edges, one line each; empty when sound. Each
+ * edge must name a package row, not the row itself, be reachable through the
+ * `require` graph, not already be a dependency (a direct `require`, or
+ * `illuminate/contracts`, which every upstream and xaravel package has), not
+ * repeat, not close a cycle over `require` and `uses`, and give a non-empty
+ * reason.
+ */
+export function usesProblems(rows: readonly PackageRow[], row: PackageRow): string[] {
+  if (row.uses === undefined) {
+    return [];
+  }
+  const where = `${row.name}: uses`;
+  if (!Array.isArray(row.uses) || row.uses.length === 0) {
+    return [`${where} must be a non-empty array of { package, reason } (omit it when there is none)`];
+  }
+  const problems: string[] = [];
+  const viaRequire = reachable(rows, row.require, (other) => other.require);
+  const seen = new Set<string>();
+  for (const use of row.uses as unknown[]) {
+    if (typeof use !== "object" || use === null || Array.isArray(use) || Object.keys(use).sort().join(",") !== "package,reason") {
+      problems.push(`${where} entry ${JSON.stringify(use)} must have exactly the fields package and reason`);
+      continue;
+    }
+    const { package: name, reason } = use as Record<string, unknown>;
+    if (typeof name !== "string" || typeof reason !== "string") {
+      problems.push(`${where} entry ${JSON.stringify(use)} must have a string package and a string reason`);
+      continue;
+    }
+    const label = `${where} ${name}`;
+    if (reason.trim() === "") {
+      problems.push(`${label} has an empty reason`);
+    }
+    if (seen.has(name)) {
+      problems.push(`${label} is listed twice`);
+      continue;
+    }
+    seen.add(name);
+    if (!rows.some((other) => other.upstream === name)) {
+      problems.push(`${label} names no package row (no row ports ${name})`);
+    } else if (name === row.upstream) {
+      problems.push(`${label} names the row itself`);
+    } else if (row.require.includes(name)) {
+      problems.push(`${label} is already a direct require`);
+    } else if (name === "illuminate/contracts" && (row.kind === "upstream" || row.kind === "xaravel")) {
+      problems.push(`${label} is already a dependency of every upstream and xaravel package (AD-2)`);
+    } else if (!viaRequire.has(name)) {
+      problems.push(`${label} is not reachable through ${row.name}'s require graph, so the edge would not trace to Upstream's composer graph`);
+    } else if (row.upstream !== null && reachable(rows, [name], (other) => [...other.require, ...usePackages(other)]).has(row.upstream)) {
+      problems.push(`${label} would create a cycle: ${name} reaches ${row.upstream} through require and uses`);
+    }
+  }
+  return problems;
+}
+
+/** Throws naming every unsound `uses` edge in `rows` (ESC-15.1-1). */
+export function assertUses(rows: readonly PackageRow[]): void {
+  const problems = rows.flatMap((row) => usesProblems(rows, row));
+  if (problems.length > 0) {
+    throw new Error(`Invalid uses in the package table:\n${problems.map((problem) => `  ${problem}`).join("\n")}`);
+  }
+}
+
 export function buildTable(upstream: string): PackageRow[] {
   const illuminate = join(upstream, "src", "Illuminate");
   if (!existsSync(illuminate)) {
@@ -259,6 +389,14 @@ export function buildTable(upstream: string): PackageRow[] {
   for (const row of STATIC_ROWS) {
     rows.push({ ...row, require: [], suggest: [] });
   }
+  for (const [name, uses] of Object.entries(UPSTREAM_USES)) {
+    const row = rows.find((candidate) => candidate.name === name);
+    if (row === undefined) {
+      throw new Error(`UPSTREAM_USES names ${name}, which has no package row`);
+    }
+    row.uses = [...uses].sort((a, b) => (a.package < b.package ? -1 : a.package > b.package ? 1 : 0)).map((use) => ({ ...use }));
+  }
+  assertUses(rows);
   return rows.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
 }
 
