@@ -5,9 +5,10 @@
 //
 // Generators follow DIV-12.18: a source generator function writes `yield keyed(k, v)` for PHP's `yield $k => $v` and
 // `yield* yieldFrom(it)` for `yield from $it`, and the internal sources below do the same. Calling a generator function
-// gives a bare JS generator object, which is no `Traversable` in the runtime (it answers `instanceof Generator`), so
-// `makeIterator` wraps it in the runtime's `Generator` before Upstream's `Traversable` test; a bare generator object
-// passed to the constructor is still refused, as Upstream refuses one. PHP's interfaces are brand getters (AD-9.5), and
+// gives a bare JS generator object, which answers `instanceof Generator`, `Traversable` and `Iterator` as PHP's does but
+// carries no runtime brand, so `makeIterator` wraps it in the runtime's `Generator` (spotting it as a `Generator`
+// without the `Traversable` brand) before Upstream's `Traversable` test; a bare generator object passed to the
+// constructor is still refused, as Upstream refuses one. PHP's interfaces are brand getters (AD-9.5), and
 // `IteratorAggregate` is `[Symbol.iterator]` (the values) and `entries()` (AD-26); `keys()` is Upstream's member, a
 // lazy collection of the keys, which iterates as the keys.
 //
@@ -43,6 +44,7 @@ import {
   count,
   explode,
   Generator,
+  hasBrand,
   identical,
   in_array,
   InvalidArgumentException,
@@ -1658,7 +1660,8 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) imp
       if (maybeTraversable instanceof Traversable) this.#ownedIterators.delete(maybeTraversable);
 
       // DIV-12.18: a generator function's bare JS generator object iterates as the runtime's `Generator`.
-      if (maybeTraversable instanceof Generator && !(maybeTraversable instanceof Traversable)) {
+      // It answers `instanceof Traversable` too, but carries no brand; the runtime's `Generator` wrapper does.
+      if (maybeTraversable instanceof Generator && !hasBrand(maybeTraversable, Traversable)) {
         maybeTraversable = Generator.owned(maybeTraversable as globalThis.Generator<unknown, unknown, unknown>);
         this.#ownedIterators.add(maybeTraversable as Generator);
       }

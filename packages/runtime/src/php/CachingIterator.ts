@@ -6,11 +6,16 @@
 // `Iterator`, `Traversable` and `Countable`; `[Symbol.iterator]()` yields the values, `entries()` the pairs and
 // `keys()` the keys, by PHP's `foreach` protocol. Under `FULL_CACHE` a key PHP cannot store in an array throws PHP's
 // `TypeError` after the element is cached and before the inner iterator moves, as PHP's fetch order leaves it. `CATCH_GET_CHILD` is kept but not acted on (there is no `RecursiveCachingIterator`);
-// the `ArrayAccess` methods and `setFlags` are not ported.
+// the `ArrayAccess` methods and `setFlags` are not ported. A bare JS generator object (DIV-12.18) is an `Iterator`, as
+// PHP's `Generator` is: `getInnerIterator()` gives it back, and the five methods read it through a runtime `Generator`
+// wrapping it (action item epic-14-retro-item-5-traversable-js-generator). `Generator` is a static import used only at call
+// time; it is safe at load because nothing `Generator.ts` imports reaches `CachingIterator.ts`.
 import { registerClass } from "../registry/registry";
 import { BadMethodCallException } from "./BadMethodCallException";
 import { toPhpString } from "./casts";
 import { Iterator } from "./Iterator";
+import { Generator as PhpGenerator } from "./Generator";
+import { isJsGenerator } from "./jsGenerator";
 import { foreachIterator, foreachKeys, foreachValues } from "./liveCursor";
 import { arrayFromEntries, PhpArray, type PhpKeyInput } from "./PhpArray";
 import { className, phpTypeName } from "./phpType";
@@ -39,6 +44,9 @@ export class CachingIterator implements Iterator, Stringable {
   /** Cache every element read. */
   static readonly FULL_CACHE = 256;
 
+  /** The iterator the constructor got, as `getInnerIterator()` gives it. */
+  readonly #given: Iterator;
+  /** The iterator the five methods are called on: `#given`, or a `Generator` wrapping a bare JS generator object. */
   readonly #inner: Iterator;
   readonly #flags: number;
   #valid = false;
@@ -59,7 +67,8 @@ export class CachingIterator implements Iterator, Stringable {
         "CachingIterator::__construct(): Argument #2 ($flags) must contain only one of CachingIterator::CALL_TOSTRING, CachingIterator::TOSTRING_USE_KEY, CachingIterator::TOSTRING_USE_CURRENT, or CachingIterator::TOSTRING_USE_INNER",
       );
     }
-    this.#inner = iterator;
+    this.#given = iterator;
+    this.#inner = isJsGenerator(iterator) ? new PhpGenerator(iterator) : iterator;
     this.#flags = flags;
   }
 
@@ -112,7 +121,7 @@ export class CachingIterator implements Iterator, Stringable {
   }
 
   getInnerIterator(): Iterator {
-    return this.#inner;
+    return this.#given;
   }
 
   getFlags(): number {
