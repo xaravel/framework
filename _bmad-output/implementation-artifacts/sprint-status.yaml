@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-29-2026 20:51
+last_updated: 10-29-2026 21:26
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -2279,7 +2279,7 @@ action_items:
       @xaravel/runtime/php already exports, so an epic's first Story can raise them
       in one round; document it in docs/ops/ beside the Story loop (P1)."
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "_bmad-output/implementation-artifacts/epic-14-retro-2026-10-29.md"
   - id: "epic-14-retro-item-5-traversable-js-generator"
     epic: 14
