@@ -483,7 +483,7 @@ xaravelTest("XT-conformance-48", "conformance/component-map is a Protected Path 
 
   // The wiring: script, typecheck include, the workflow.
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
-  expect(scripts["component-map:check"]).toBe("bun tools/component-map/component-map.ts check");
+  expect(scripts["component-map:check"]).toBe("bun --no-env-file tools/component-map/component-map.ts check");
   const tsconfig = JSON.parse(readFileSync(join(root, "tsconfig.json"), "utf8")) as { include: string[] };
   expect(tsconfig.include).toContain("tools/component-map/**/*.ts");
   const text = readFileSync(join(root, ".github", "workflows", "component-map.yml"), "utf8");

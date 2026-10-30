@@ -258,7 +258,7 @@ xaravelTest("XT-conformance-59", "bun run inventory --check regenerates the Inve
     "bun run inventory:cross-check",
   ]);
   const scripts = JSON.parse(readFileSync(join(root, "package.json"), "utf8")).scripts;
-  expect([scripts.inventory, scripts["inventory:cross-check"]]).toEqual(["bun tools/inventory/inventory.ts generate", "bun tools/inventory/cross-check.ts"]);
+  expect([scripts.inventory, scripts["inventory:cross-check"]]).toEqual(["bun --no-env-file tools/inventory/inventory.ts generate", "bun --no-env-file tools/inventory/cross-check.ts"]);
 });
 
 // ---------------------------------------------------------------------------

@@ -386,6 +386,6 @@ xaravelTest("XT-conformance-213", "check passes on the repository and the packag
   expect(cli.stdout).toBe(`Expectations OK: ${pairs} line(s) in ${report.shards} shard(s) cover ${pairs} Test ID × Variant pair(s).\n`);
 
   const scripts = (JSON.parse(read(root, "package.json")) as { scripts: Record<string, string> }).scripts;
-  expect(scripts["expectations:init"]).toBe("bun tools/expectations/expectations.ts init");
-  expect(scripts["expectations:check"]).toBe("bun tools/expectations/expectations.ts check");
+  expect(scripts["expectations:init"]).toBe("bun --no-env-file tools/expectations/expectations.ts init");
+  expect(scripts["expectations:check"]).toBe("bun --no-env-file tools/expectations/expectations.ts check");
 });

@@ -3,7 +3,7 @@
 `bun run lint` is the lint gate every PR runs (AD-28.1): CI's required `ci.yml#check` job runs it, so a lint failure fails the PR (Stories 6.1, 6.2, 6.3; NFR-3, AD-6, AD-16.4). It is two commands, chained:
 
 ```sh
-bun --bun oxlint --type-aware && bun run lint:disables
+bun --no-env-file --bun oxlint --type-aware && bun --no-env-file run lint:disables
 ```
 
 ## oxlint (`.oxlintrc.json`)

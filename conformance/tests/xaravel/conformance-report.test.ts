@@ -534,5 +534,5 @@ xaravelTest("XT-conformance-145", "each push to main appends one history record 
   expect(checkWorkflows(root).violations).toEqual([]);
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
   expect(scripts["conformance:history"]).toBe("bun --no-env-file tools/conformance-report/history.ts");
-  expect(scripts["expectations:check"]).toBe("bun tools/expectations/expectations.ts check");
+  expect(scripts["expectations:check"]).toBe("bun --no-env-file tools/expectations/expectations.ts check");
 }, 60_000);

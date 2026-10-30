@@ -747,7 +747,7 @@ xaravelTest("XT-conformance-239", "a Story may commit signed fixtures only under
   expect(allowedPath({ storyId: "9.1", component: "generators" }, `${FIXTURES_DIR}/generators/${"a".repeat(64)}.json`)).toBe(false);
 
   const pkg = JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> };
-  expect(pkg.scripts["oracle:story"]).toBe("bun tools/oracle/story.ts");
+  expect(pkg.scripts["oracle:story"]).toBe("bun --no-env-file tools/oracle/story.ts");
   const proc = Bun.spawn([process.execPath, "run", "oracle:verify-fixtures"], { cwd: root, stdout: "pipe", stderr: "pipe" });
   const [stdout, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
   expect(code).toBe(0);

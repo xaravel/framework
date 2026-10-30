@@ -167,7 +167,7 @@ xaravelTest("XT-conformance-130", "an unawaited thenable builder, await on a pla
 xaravelTest("XT-conformance-131", "an oxlint-disable of a spine rule, a blanket disable or a config that lowers a spine rule fails bun run lint:disables (chained into CI's bun run lint) naming path:line:col; the real repository passes (AD-16.4, AD-28.1)", () => {
   // The wiring: `lint` chains `lint:disables`, and CI's required `check` job runs `bun run lint`.
   const scripts = (readJson(join(root, "package.json")) as { scripts: Record<string, string> }).scripts;
-  expect(scripts["lint"]).toBe("bun --bun oxlint --type-aware && bun run lint:disables");
+  expect(scripts["lint"]).toBe("bun --no-env-file --bun oxlint --type-aware && bun --no-env-file run lint:disables");
   expect(scripts["lint:disables"]).toBe("bun --no-env-file tools/lint-rules/disables.ts");
   const ci = Bun.YAML.parse(readFileSync(join(root, ".github", "workflows", "ci.yml"), "utf8")) as { jobs: Record<string, { steps: { run?: string }[] }> };
   expect(ci.jobs["check"]!.steps.map((step) => step.run)).toContain("bun run lint");

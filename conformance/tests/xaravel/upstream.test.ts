@@ -166,8 +166,8 @@ xaravelTest("XT-conformance-39", "bun run upstream:sync checks out each of the f
 
   // The wiring: scripts, gitignore, typecheck and lint exclusions, the CI job.
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
-  expect(scripts["upstream:sync"]).toBe("bun tools/upstream/upstream.ts sync");
-  expect(scripts["upstream:check"]).toBe("bun tools/upstream/upstream.ts check");
+  expect(scripts["upstream:sync"]).toBe("bun --no-env-file tools/upstream/upstream.ts sync");
+  expect(scripts["upstream:check"]).toBe("bun --no-env-file tools/upstream/upstream.ts check");
   expect(readFileSync(join(root, ".gitignore"), "utf8").split("\n")).toContain("/conformance/upstream/");
   const tsconfig = JSON.parse(readFileSync(join(root, "tsconfig.json"), "utf8")) as { include: string[]; exclude: string[] };
   expect(tsconfig.include).toContain("tools/upstream/**/*.ts");

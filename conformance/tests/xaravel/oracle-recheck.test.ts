@@ -257,7 +257,7 @@ xaravelTest("XT-conformance-188", "the nightly re-evaluates each committed reque
     expect([args.join(" "), cliInProcess(args).code]).toEqual([args.join(" "), 2]);
   }
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
-  expect(scripts["oracle:recheck"]).toBe("bun tools/oracle/recheck.ts");
+  expect(scripts["oracle:recheck"]).toBe("bun --no-env-file tools/oracle/recheck.ts");
 });
 
 xaravelTest("XT-conformance-229", "oracle.yml's nightly determinism job runs the recheck after the image build, even when the determinism step failed (AD-28.3)", () => {
