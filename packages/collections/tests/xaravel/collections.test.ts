@@ -44,7 +44,7 @@ import { join, relative, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Arr, Collection, collect, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
 import { TestBackedEnum, TestStringBackedEnum, FIXTURES as ENUM_FIXTURES } from "../ported/framework/tests/Support/Fixtures/Enums";
-import { ArgumentCountError, ArrayIterator, BlockedByComponentError, Generator } from "@xaravel/runtime";
+import { ArgumentCountError, ArrayIterator, BlockedByComponentError, Generator, Iterator, Traversable } from "@xaravel/runtime";
 import { SupportLazyCollectionBlockedBySupportTest } from "../support/SupportClockBoundary";
 import { Arrayable } from "@xaravel/contracts/support";
 import { array_values, arrayEntries, Error as PhpError, fqcn, InvalidArgumentException, jsonEncode, keyed, looseEquals, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_NUMERIC, SORT_NATURAL, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError, ValueError } from "@xaravel/runtime";
@@ -2187,4 +2187,219 @@ xaravelTest(
     Assert.assertSame(0, gate.exitCode, new TextDecoder().decode(gate.stdout) + new TextDecoder().decode(gate.stderr));
   },
   200_000,
+);
+
+/**
+ * A generator function over `count` items that logs `start <name>` on entry and `finally <name>` in its `finally`,
+ * the sources of the PHP 8.5.11 probe that XT-collections-19 follows.
+ */
+function loggedSource(log: string[], name: string, count: number): () => globalThis.Generator<number, void, undefined> {
+  return function* () {
+    log.push(`start ${name}`);
+    try {
+      for (let item = 1; item <= count; item++) yield item;
+    } finally {
+      log.push(`finally ${name}`);
+    }
+  };
+}
+
+/** The probe's `LoggingIterator`: a userland `Iterator` over `1..count` whose `valid` and `current` log. */
+class LoggingIterator {
+  #index = 0;
+
+  constructor(private readonly name: string, private readonly log: string[], private readonly count = 3) {}
+
+  get [Iterator.brand](): true {
+    return true;
+  }
+
+  get [Traversable.brand](): true {
+    return true;
+  }
+
+  current(): unknown {
+    this.log.push(`current ${this.name}`);
+    return this.#index + 1;
+  }
+
+  key(): unknown {
+    return this.#index;
+  }
+
+  next(): void {
+    this.#index++;
+  }
+
+  rewind(): void {
+    this.#index = 0;
+  }
+
+  valid(): boolean {
+    this.log.push(`valid ${this.name}`);
+    return this.#index < this.count;
+  }
+}
+
+/** The exception `fn` throws, or `null` when it throws none. */
+function failureOf(fn: () => unknown): unknown {
+  try {
+    fn();
+  } catch (error) {
+    return error;
+  }
+  return null;
+}
+
+// XT-collections-19 (Epic 14 retrospective item 1): `LazyCollection.combine` and `zip` close the temporary generators
+// they open. The expected logs are those a PHP 8.5.11 probe printed on 2026-10-29, running Upstream's
+// `LazyCollection.php` at the Pin over the same sources (generator functions logging `start <n>` on entry and
+// `finally <n>` in a `finally`, each wrapped in `new LazyCollection(...)` unless noted). The probe also printed, for
+// `zip` reading a user-held unstarted `Generator` or a userland `Iterator` (whose `valid` and `current` log) before an
+// owned generator function source, with each owned source starting where PHP first reads it:
+//   $this->zip(fn () => $held, $fn)->first(), then $held->current(), next(), next():
+//     start this, start held, start fn, finally this, finally fn, after first, held current 1, resumed held, finally held
+//   $this->zip(fn () => $user, $fn)->first():                 start this, current user, start fn, finally this, finally fn
+//   LazyCollection([1, 2, 3])->zip(fn () => $user, $fn)->first(): current user, start fn, finally fn
+//   an empty $this->zip(fn () => $user, $fn)->first():
+//     start this, finally this, valid user, current user, start fn, finally fn
+xaravelTest(
+  "XT-collections-19",
+  "LazyCollection combine and zip start each temporary source generator where PHP 8.5.11 first reads it, in PHP's order among user-held Generators and userland Iterators, and, when the enumeration is abandoned (first, take, a break) or throws, run its finally in PHP's destruction order (zip's sources in order, combine's values before this collection's source); exhausted runs are unchanged; a user-held runtime Generator stays resumable; a cleanup exception propagates when no other is active, and the loop body's exception wins over one (DIV-9.16)",
+  () => {
+    const lazy = (log: string[], name: string, count = 3): LazyCollection => new LazyCollection(loggedSource(log, name, count));
+
+    // zip abandoned by first().
+    let log: string[] = [];
+    Assert.assertSame([1, 1, 1], lazy(log, "this").zip(lazy(log, "a"), lazy(log, "b")).first().all());
+    Assert.assertSame(["start this", "start a", "start b", "finally this", "finally a", "finally b"], log);
+
+    // zip take(2).
+    log = [];
+    Assert.assertSame(2, lazy(log, "this").zip(lazy(log, "a")).take(2).all().length);
+    Assert.assertSame(["start this", "start a", "finally this", "finally a"], log);
+
+    // zip over an array source.
+    log = [];
+    Assert.assertSame([1, 1], new LazyCollection([1, 2, 3]).zip(lazy(log, "a")).first().all());
+    Assert.assertSame(["start a", "finally a"], log);
+
+    // zip with a generator function argument, left by a break.
+    log = [];
+    for (const pair of lazy(log, "this").zip(loggedSource(log, "fn", 3))) {
+      void pair;
+      log.push("body");
+      break;
+    }
+    Assert.assertSame(["start this", "start fn", "body", "finally this", "finally fn"], log);
+
+    // zip exhausted: unchanged.
+    log = [];
+    Assert.assertSame(3, lazy(log, "this").zip(lazy(log, "a")).all().length);
+    Assert.assertSame(["start this", "start a", "finally this", "finally a"], log);
+
+    // combine abandoned by first() and by take(2).
+    log = [];
+    Assert.assertSame(1, lazy(log, "this").combine(lazy(log, "values")).first());
+    Assert.assertSame(["start this", "start values", "finally values", "finally this"], log);
+    log = [];
+    Assert.assertSame(new PhpArray([[1, 1], [2, 2]]), lazy(log, "this").combine(lazy(log, "values")).take(2).all());
+    Assert.assertSame(["start this", "start values", "finally values", "finally this"], log);
+
+    // combine over an array source.
+    log = [];
+    Assert.assertSame(1, new LazyCollection([1, 2, 3]).combine(lazy(log, "values")).first());
+    Assert.assertSame(["start values", "finally values"], log);
+
+    // combine with both sources empty: unchanged.
+    log = [];
+    Assert.assertSame([], lazy(log, "this", 0).combine(lazy(log, "values", 0)).all());
+    Assert.assertSame(["start this", "finally this", "start values", "finally values"], log);
+
+    // combine with fewer values: unchanged.
+    log = [];
+    let failure = failureOf(() => lazy(log, "this", 3).combine(lazy(log, "values", 2)).all());
+    Assert.assertInstanceOf(ValueError, failure);
+    Assert.assertSame("Both parameters should have an equal number of elements", (failure as ValueError).message);
+    Assert.assertSame(["start this", "start values", "finally values", "finally this"], log);
+
+    // combine with more values.
+    log = [];
+    failure = failureOf(() => lazy(log, "this", 2).combine(lazy(log, "values", 3)).all());
+    Assert.assertInstanceOf(ValueError, failure);
+    Assert.assertSame("Both parameters should have an equal number of elements", (failure as ValueError).message);
+    Assert.assertSame(["start this", "start values", "finally this", "finally values"], log);
+
+    // A user-held runtime Generator passed to zip stays resumable after first().
+    const heldEvents: string[] = [];
+    const held = new Generator((function* () {
+      try { yield 1; heldEvents.push("resumed"); yield 2; }
+      finally { heldEvents.push("finally"); }
+    })());
+    log = [];
+    Assert.assertSame([1, 1], lazy(log, "this").zip(() => held).first().all());
+    Assert.assertSame(["start this", "finally this"], log);
+    Assert.assertSame([], heldEvents);
+    Assert.assertSame(1, held.current());
+    held.next();
+    Assert.assertSame(2, held.current());
+    held.next();
+    Assert.assertSame(["resumed", "finally"], heldEvents);
+
+    // zip reads a user-held unstarted Generator, then an owned source, in PHP's order.
+    log = [];
+    const unstarted = new Generator((function* () {
+      log.push("start held");
+      try { yield 1; log.push("resumed held"); yield 2; }
+      finally { log.push("finally held"); }
+    })());
+    Assert.assertSame([1, 1, 1], lazy(log, "this").zip(() => unstarted, loggedSource(log, "fn", 3)).first().all());
+    log.push("after first");
+    log.push(`held current ${String(unstarted.current())}`);
+    unstarted.next();
+    unstarted.next();
+    Assert.assertSame(["start this", "start held", "start fn", "finally this", "finally fn", "after first", "held current 1", "resumed held", "finally held"], log);
+
+    // zip reads a userland Iterator, then an owned source, in PHP's order.
+    log = [];
+    let user = new LoggingIterator("user", log);
+    Assert.assertSame([1, 1, 1], lazy(log, "this").zip(() => user, loggedSource(log, "fn", 3)).first().all());
+    Assert.assertSame(["start this", "current user", "start fn", "finally this", "finally fn"], log);
+    log = [];
+    user = new LoggingIterator("user", log);
+    Assert.assertSame([1, 1, 1], new LazyCollection([1, 2, 3]).zip(() => user, loggedSource(log, "fn", 3)).first().all());
+    Assert.assertSame(["current user", "start fn", "finally fn"], log);
+    log = [];
+    user = new LoggingIterator("user", log);
+    Assert.assertSame([null, 1, 1], lazy(log, "this", 0).zip(() => user, loggedSource(log, "fn", 3)).first().all());
+    Assert.assertSame(["start this", "finally this", "valid user", "current user", "start fn", "finally fn"], log);
+
+    // A throwing finally in an abandoned zip source: first() throws that cleanup exception, and every source closes.
+    const cleanupError = new RuntimeException("finally error");
+    const failFinally = (events: string[]): never => { events.push("finally failing"); throw cleanupError; };
+    const failingSource = (events: string[]): LazyCollection => new LazyCollection(function* () {
+      try { yield 1; yield 2; }
+      finally { failFinally(events); }
+    });
+    log = [];
+    failure = failureOf(() => failingSource(log).zip(lazy(log, "a")).first());
+    Assert.assertSame(cleanupError, failure);
+    Assert.assertSame(["start a", "finally failing", "finally a"], log);
+
+    // The loop body's exception wins over a source's throwing finally (DIV-9.16), which still runs once.
+    const bodyError = new RuntimeException("body error");
+    log = [];
+    failure = failureOf(() => {
+      for (const pair of lazy(log, "this").zip(failingSource(log))) {
+        void pair;
+        throw bodyError;
+      }
+    });
+    Assert.assertSame(bodyError, failure); // adapted:DIV-9.16
+    Assert.assertSame(["start this", "finally this", "finally failing"], log);
+    log = [];
+    failure = failureOf(() => lazy(log, "this").combine(failingSource(log)).each(() => { throw bodyError; }));
+    Assert.assertSame(bodyError, failure); // adapted:DIV-9.16
+    Assert.assertSame(["start this", "finally failing", "finally this"], log);
+  },
 );

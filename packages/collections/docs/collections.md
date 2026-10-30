@@ -236,15 +236,14 @@ Temporary JS generator sources created for framework enumeration are owned by
 the runtime. Direct enumeration and composed `chunk`, `sliding` and `chunkWhile`
 operations close those sources on early exit or callback error. The common
 `first`, `take`, `isEmpty`, `skip` and `skipWhile` paths also use public traversal
-cleanup. Manual iterator APIs preserve an advanced held Generator’s current
+cleanup, and so do `combine` and `zip`: each temporary source they read starts
+where PHP first reads it and, on early exit or a throw, closes in PHP's order
+(`zip`'s sources in order, `combine`'s values before this collection's source).
+Manual iterator APIs preserve an advanced held Generator’s current
 position and return no items from an exhausted one, without rewinding it.
 Explicit runtime Generators held by the user remain resumable. A cleanup
 exception propagates when no callback exception is already active; if both throw,
 the callback exception wins (DIV-9.16).
-
-`combine` and `zip` still coordinate manual iterators and can leave temporary
-input generators open on early exit. Their cleanup remains for the later
-LazyCollection Story; the guarantees above do not cover those wrappers.
 
 ### Arr helpers (Story 14.6)
 

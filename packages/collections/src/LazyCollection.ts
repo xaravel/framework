@@ -21,7 +21,8 @@
 //
 // This module imports `Collection` first: `Collection.ts` loads the trait before either class is defined. `zip` reads
 // its iterators' `contains->valid()`, `map->current()` and `each->next()` as the `__get` / `__call` calls PHP makes
-// (DIV-12.16's form), and PHP's `INF` (`flatten`, `dot`) is `Infinity`. The `*Using` members pass their comparison
+// (DIV-12.16's form); it and `combine` close the temporary generators they hold as manual cursors through
+// `deferredIteratorScope`, opened where PHP first reads each cursor and closed in PHP's destruction order. PHP's `INF` (`flatten`, `dot`) is `Infinity`. The `*Using` members pass their comparison
 // callback through to Collection's, so a PHP callable string such as `'strcasecmp'` reaches the runtime's `array_udiff`
 // & co., which call the runtime's export of that name (DIV-9.13, ESC-14.4-2).
 import { Collection } from "./Collection";
@@ -1092,7 +1093,9 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) imp
 
   /**
    * Create a collection by using this collection for keys and another (an array, an `IteratorAggregate` or a generator
-   * function) for its values, lazily. Enumerating it throws PHP's `ValueError` when their counts differ.
+   * function) for its values, lazily. Enumerating it throws PHP's `ValueError` when their counts differ. A temporary
+   * values generator starts at its first `valid()`, as in PHP, and when the enumeration is abandoned or throws, it is
+   * closed before this collection's source, the order PHP destroys them in.
    */
   combine(values: unknown): this {
     return this.lazyInstance(function* (this: LazyCollection) {
@@ -1101,18 +1104,26 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) imp
 
       const errorMessage = "Both parameters should have an equal number of elements";
 
-      for (const key of this) {
-        if (!iterator.valid()) {
-          throw new ValueError(errorMessage);
+      // `foreach ($this as $key)`, stepped by hand so that `$iterator` (a CV) closes before the `foreach` temporary.
+      for (const keys of closingScope(this[Symbol.iterator]())) {
+        for (const start of this.deferredIteratorScope(iterator)) {
+          for (let step = keys.next(); step.done !== true; step = keys.next()) {
+            const key = step.value;
+            start();
+            if (!iterator.valid()) {
+              throw new ValueError(errorMessage);
+            }
+
+            yield keyed(key, iterator.current());
+
+            iterator.next();
+          }
+
+          start();
+          if (iterator.valid()) {
+            throw new ValueError(errorMessage);
+          }
         }
-
-        yield keyed(key, iterator.current());
-
-        iterator.next();
-      }
-
-      if (iterator.valid()) {
-        throw new ValueError(errorMessage);
       }
     });
   }
@@ -1130,6 +1141,8 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) imp
   /**
    * Zip the collection together with one or more arrays, lazily: lazy collections of the n-th items, while any source
    * has one, `null` for a shorter source. `new LazyCollection([1, 2, 3]).zip([4, 5, 6])` is `[[1, 4], [2, 5], [3, 6]]`.
+   * Each temporary source generator starts where PHP first reads it, and when the enumeration is abandoned or throws,
+   * they are closed in order, this collection's first, as PHP destroys them.
    */
   zip(items: unknown, ...moreItems: unknown[]): this {
     void items;
@@ -1139,10 +1152,16 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) imp
     return this.lazyInstance(function* (this: LazyCollection) {
       const iterators = new Collection(iterables).map((iterable: unknown) => this.makeIterator(iterable)).prepend(this.getIterator());
 
-      while (toBool((iterators.__get("contains") as HigherOrderCollectionProxy).__call("valid", []))) {
-        yield this.newInstance((iterators.__get("map") as HigherOrderCollectionProxy).__call("current", []));
+      // Destroying `$iterators` closes them in order. Each owned one is read through a `StartingCursor`, so it starts
+      // where PHP's `contains->valid()` or `map->current()` first reads it, in PHP's order among the others.
+      for (const starts of this.deferredIteratorScopes([...iterators] as Iterator[])) {
+        const cursors = new Collection(([...iterators] as Iterator[]).map((iterator, index) => (this.#ownedIterators.has(iterator) ? new StartingCursor(iterator, starts[index]!) : iterator)));
 
-        (iterators.__get("each") as HigherOrderCollectionProxy).__call("next", []);
+        while (toBool((cursors.__get("contains") as HigherOrderCollectionProxy).__call("valid", []))) {
+          yield this.newInstance((cursors.__get("map") as HigherOrderCollectionProxy).__call("current", []));
+
+          (cursors.__get("each") as HigherOrderCollectionProxy).__call("next", []);
+        }
       }
     });
   }
@@ -1577,6 +1596,45 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) imp
   }
 
   /**
+   * Like `iteratorScope`, but the cleanup traversal opens only when the yielded `start()` is first called, which is
+   * where PHP first reads the cursor (a non-owned iterator gets a no-op `start`). The traversal is closed on exit.
+   */
+  protected *deferredIteratorScope(iterator: Iterator): globalThis.Generator<() => void, void, undefined> {
+    if (!this.#ownedIterators.has(iterator)) {
+      yield () => {};
+      return;
+    }
+    const opened: { traversal: globalThis.Iterator<unknown> | null } = { traversal: null };
+    try {
+      yield () => {
+        if (opened.traversal !== null) return;
+        opened.traversal = iterator.entries()[Symbol.iterator]();
+        // Only our fresh runtime Generator wrappers are primed; this runs the generator to its first yield, as the
+        // first read PHP makes at this point does.
+        opened.traversal.next();
+      };
+    } finally {
+      opened.traversal?.return?.();
+    }
+  }
+
+  /**
+   * `deferredIteratorScope` for each iterator, the first innermost, so that on exit they close in order, as PHP
+   * destroys an array of iterators. Yields the `start()` functions in the iterators' order.
+   */
+  protected *deferredIteratorScopes(iterators: readonly Iterator[]): globalThis.Generator<(() => void)[], void, undefined> {
+    if (iterators.length === 0) {
+      yield [];
+      return;
+    }
+    for (const start of this.deferredIteratorScope(iterators[iterators.length - 1]!)) {
+      for (const starts of this.deferredIteratorScopes(iterators.slice(0, -1))) {
+        yield [...starts, start];
+      }
+    }
+  }
+
+  /**
    * Make an iterator from the given source: an `IteratorAggregate`'s iterator, an `ArrayIterator` over an array, or
    * what a callable source returns (a generator, wrapped in the runtime's `Generator` under DIV-12.18; any other
    * value wrapped in an array).
@@ -1608,6 +1666,49 @@ export class LazyCollection extends mixin(null, EnumeratesValues, Macroable) imp
     }
 
     return new ArrayIterator(toPhpArray(source));
+  }
+}
+
+/**
+ * An owned iterator as `zip` reads it: `valid`, `current`, `key` and `next` call its scope's `start()` first, then
+ * forward. Internal to this module; it never leaves `zip`.
+ */
+class StartingCursor {
+  readonly #iterator: Iterator;
+  readonly #start: () => void;
+
+  constructor(iterator: Iterator, start: () => void) {
+    this.#iterator = iterator;
+    this.#start = start;
+  }
+
+  valid(): boolean {
+    this.#start();
+    return this.#iterator.valid();
+  }
+
+  current(): unknown {
+    this.#start();
+    return this.#iterator.current();
+  }
+
+  key(): unknown {
+    this.#start();
+    return this.#iterator.key();
+  }
+
+  next(): void {
+    this.#start();
+    this.#iterator.next();
+  }
+}
+
+/** Hold `iterator` for a `for…of` scope that returns it on exit; a body exception wins over one from `return()`. */
+function* closingScope<T>(iterator: globalThis.Iterator<T>): globalThis.Generator<globalThis.Iterator<T>, void, undefined> {
+  try {
+    yield iterator;
+  } finally {
+    iterator.return?.();
   }
 }
 
