@@ -107,4 +107,5 @@ epic-14:
   doc: _bmad-output/implementation-artifacts/epic-14-retro-2026-10-29.md
   blocked: false
   checkpoint_approved: false
-  waiting_on_maintainer: []
+  waiting_on_maintainer:
+    - epic-14-retro-item-7-lazy-range-php-arithmetic
