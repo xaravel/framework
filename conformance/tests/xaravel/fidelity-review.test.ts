@@ -95,6 +95,8 @@ import {
   WHOLE_FILE_CAP,
   wholeFileEvidence,
   withWholeFiles,
+  workspacePackages,
+  packageImports,
   xaravelTestEvidence,
   type ChecklistItem,
   type PriorFinding,
@@ -1518,6 +1520,76 @@ xaravelTest(
     expect(dataWhole.map((item) => [item.path, item.reason])).toEqual([["a/rows.json", "read by a/tests/rows.test.ts"], ["a/tests/rows.test.ts", "changed"]]);
     expect(dataWhole[0]!.text).toBe('{"rows":[1,2]}\n');
     expect(wholeFileEvidence(dataRoot, [{ filename: "a/source.ts", status: "added", patch: "@@ -0,0 +1 @@\n+x" }], new Map(), 400_000).map((item) => item.path)).toEqual(["a/source.ts"]);
+    // ESC-14.8-3: a name a changed line imports from another workspace package shows the file that declares it,
+    // resolved through the package's exports map: a direct export, a barrel re-export with `as`, a star re-export and
+    // a barrel's local re-export of an import. A name the package does not export, a subpath its exports map lacks and
+    // an unknown package stay named as unavailable, with why; an unchanged import line and the package's own imports add none.
+    const pkgRoot = tempDir("fidelity-packages-");
+    const pkgFiles: Record<string, string> = {
+      "packages/rt/package.json": JSON.stringify({ name: "@xaravel/rt", exports: { ".": "./src/index.ts", "./php": { bun: "./src/php/index.ts" } } }),
+      "packages/rt/src/index.ts": 'import { helper } from "./helper";\nexport { helper };\nexport * from "./star";\n',
+      "packages/rt/src/helper.ts": "export function helper(): null {\n  return null;\n}\n",
+      "packages/rt/src/star.ts": "export const starred = 1;\n",
+      "packages/rt/src/php/index.ts": '// export { decoy } from "./missing";\nexport { plus, sum as array_sum } from "./arithmetic";\nexport { direct } from "./direct";\n',
+      "packages/rt/src/php/arithmetic.ts": "export function plus(): number {\n  return 1;\n}\nexport function sum(): number {\n  return 2;\n}\n",
+      "packages/rt/src/php/direct.ts": "export class direct {}\n",
+      "packages/col/package.json": JSON.stringify({ name: "@xaravel/col", exports: { ".": "./src/index.ts" } }),
+      "packages/col/src/index.ts": "export const own = 1;\n",
+      "packages/col/tests/lazy.test.ts": [
+        'import { own } from "@xaravel/col";',
+        'import { helper } from "@xaravel/rt";',
+        "import {",
+        "  array_sum,",
+        "  direct as Direct,",
+        "  absent,",
+        '} from "@xaravel/rt/php";',
+        'import { starred } from "@xaravel/rt";',
+        'import { nothing } from "@xaravel/rt/none";',
+        'import { gone } from "@xaravel/unknown";',
+        "",
+      ].join("\n"),
+    };
+    for (const [path, text] of Object.entries(pkgFiles)) {
+      write(pkgRoot, path, text);
+    }
+    const lazyTest = "packages/col/tests/lazy.test.ts";
+    const pkgExists = (path: string): boolean => Object.hasOwn(pkgFiles, path);
+    const pkgRead = (path: string): string | null => pkgFiles[path] ?? null;
+    const packages = workspacePackages(pkgRoot);
+    expect([...packages.entries()]).toEqual([
+      ["@xaravel/col", { dir: "packages/col", exports: { ".": "./src/index.ts" } }],
+      ["@xaravel/rt", { dir: "packages/rt", exports: { ".": "./src/index.ts", "./php": { bun: "./src/php/index.ts" } } }],
+    ]);
+    // Lines 4-5 (`array_sum`, `direct as Direct`) changed: only the multi-line statement holding them counts.
+    expect(packageImports(lazyTest, pkgFiles[lazyTest]!, new Set([4, 5]), packages, pkgExists, pkgRead)).toEqual([
+      { specifier: "@xaravel/rt/php", names: ["array_sum"], target: "packages/rt/src/php/arithmetic.ts", note: null },
+      { specifier: "@xaravel/rt/php", names: ["direct"], target: "packages/rt/src/php/direct.ts", note: null },
+      { specifier: "@xaravel/rt/php", names: ["absent"], target: null, note: "unavailable: @xaravel/rt/php (packages/rt/src/php/index.ts) exports no absent, directly or through its re-exports" },
+    ]);
+    expect(packageImports(lazyTest, pkgFiles[lazyTest]!, null, packages, pkgExists, pkgRead)).toEqual([
+      { specifier: "@xaravel/rt", names: ["helper"], target: "packages/rt/src/helper.ts", note: null },
+      { specifier: "@xaravel/rt/php", names: ["array_sum"], target: "packages/rt/src/php/arithmetic.ts", note: null },
+      { specifier: "@xaravel/rt/php", names: ["direct"], target: "packages/rt/src/php/direct.ts", note: null },
+      { specifier: "@xaravel/rt/php", names: ["absent"], target: null, note: "unavailable: @xaravel/rt/php (packages/rt/src/php/index.ts) exports no absent, directly or through its re-exports" },
+      { specifier: "@xaravel/rt", names: ["starred"], target: "packages/rt/src/star.ts", note: null },
+      { specifier: "@xaravel/rt/none", names: ["nothing"], target: null, note: 'unavailable: packages/rt/package.json\'s exports map has no "./none" entry' },
+      { specifier: "@xaravel/unknown", names: ["gone"], target: null, note: "unavailable: no workspace package under packages/ is named @xaravel/unknown" },
+    ]);
+    expect(packageImports(lazyTest, pkgFiles[lazyTest]!, new Set([1]), packages, pkgExists, pkgRead)).toEqual([]);
+    // In (h): after the changed file, each declaring file in full, and each unresolved name as a note.
+    const pkgWhole = wholeFileEvidence(pkgRoot, [{ filename: lazyTest, status: "modified", patch: "@@ -3,4 +3,5 @@\n import {\n-  sum,\n+  array_sum,\n+  direct as Direct,\n   absent,\n" }], new Map(), 400_000);
+    expect(pkgWhole.map((item) => [item.path, item.reason, item.text === null ? item.note : item.text])).toEqual([
+      [lazyTest, "changed", pkgFiles[lazyTest]],
+      ["packages/rt/src/php/arithmetic.ts", `declares array_sum, which ${lazyTest} imports from @xaravel/rt/php`, pkgFiles["packages/rt/src/php/arithmetic.ts"]],
+      ["packages/rt/src/php/direct.ts", `declares direct, which ${lazyTest} imports from @xaravel/rt/php`, pkgFiles["packages/rt/src/php/direct.ts"]],
+      ["@xaravel/rt/php { absent }", `imported by ${lazyTest}`, "unavailable: @xaravel/rt/php (packages/rt/src/php/index.ts) exports no absent, directly or through its re-exports"],
+    ]);
+    // The ESC-14.8-3 case: testFlatMapIsLazy's import of the runtime's array_sum shows packages/runtime/src/php/arithmetic.ts.
+    const isLazyTest = "packages/collections/tests/ported/framework/tests/Support/SupportLazyCollectionIsLazyTest.test.ts";
+    const isLazyLine = read(isLazyTest).split("\n").findIndex((line) => line.includes("array_sum") && line.includes('"@xaravel/runtime/php"')) + 1;
+    expect(isLazyLine).toBeGreaterThan(0);
+    const realExists = (path: string): boolean => existsSync(join(root, path));
+    expect(packageImports(isLazyTest, read(isLazyTest), new Set([isLazyLine]), workspacePackages(root), realExists, (path) => (realExists(path) ? read(path) : null))).toContainEqual({ specifier: "@xaravel/runtime/php", names: ["array_sum"], target: "packages/runtime/src/php/arithmetic.ts", note: null });
     // One over the limit shows the lines the test's string literals select, most selective first, each literal whole
     // or not at all within the limit, in file order; a literal matching nearly every line is left out.
     const common = Array.from({ length: 6_000 }, (_, index) => `{"kind":"method","n":${index},"pad":"${"x".repeat(30)}"}`);
