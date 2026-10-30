@@ -73,7 +73,7 @@ xaravelTest(
     expect(scripts["xt:coverage"]).toBe("bun --no-env-file tools/xt-coverage/coverage.ts");
     const check = Bun.spawnSync([process.execPath, join(root, "tools", "xt-coverage", "consequences.ts"), "--check"], { cwd: root, stdout: "pipe", stderr: "pipe" });
     expect([check.exitCode, check.stderr.toString()]).toEqual([0, ""]);
-    expect([...expectedFiles(root).keys()]).toEqual(["conformance", "runtime", "contracts", "macroable", "conditionable", "reflection", "collections"].map((component) => `conformance/xaravel-consequences/${component}.jsonl`));
+    expect([...expectedFiles(root).keys()]).toEqual(["conformance", "runtime", "contracts", "macroable", "conditionable", "reflection", "collections", "config"].map((component) => `conformance/xaravel-consequences/${component}.jsonl`));
     expect(CONSEQUENCE_SOURCES["conformance"]).toEqual({ frs: [1, 2, 3, 4, 5, 6, 7, 8, 9, 111, 112, 113, 114, 115, 116], ads: [15, 16, 17, 21, 28] });
     expect(CONSEQUENCE_SOURCES["runtime"]).toEqual({ frs: [], ads: [2, 5, 6, 9, 10, 23] });
     // MAINT-2026-10-22-consequence-rows: from contracts on, a row is what the Component's Epic declares on its Covers
@@ -82,7 +82,7 @@ xaravelTest(
     const epics = readFileSync(join(root, "_bmad-output", "planning-artifacts", "epics.md"), "utf8");
     const withLists = { frs: prdConsequences(readFileSync(join(root, PRD_FILE), "utf8")), ads: spineRules(readFileSync(join(root, SPINE_FILE), "utf8")) };
     const derived = new Map<string, { frs: number[]; ads: number[] }>();
-    for (const epic of [10, 11, 12, 13, 14]) {
+    for (const epic of [10, 11, 12, 13, 14, 15]) {
       const manifestFile = `stories/${epic}.1.md`;
       const { manifest, violations } = parseManifest(manifestFile, readFileSync(join(root, manifestFile), "utf8"));
       expect([manifestFile, violations]).toEqual([manifestFile, []]);
@@ -103,13 +103,14 @@ xaravelTest(
     }
     // Every row from contracts on has an Epic in the loop above, so a new row without one fails here.
     expect([...derived.keys()].sort()).toEqual(Object.keys(CONSEQUENCE_SOURCES).filter((component) => component !== "conformance" && component !== "runtime").sort());
-    // FR-26 (Epics 11-13) has no consequence list, so it is dropped; FR-23 (Epic 14) has one.
+    // FR-26 (Epics 11-13) has no consequence list, so it is dropped; FR-23 (Epic 14) and FR-20 (Epic 15) have one.
     expect(Object.fromEntries(derived)).toEqual({
       contracts: { frs: [10, 19, 21], ads: [1, 2, 6, 27] },
       macroable: { frs: [], ads: [2, 6] },
       conditionable: { frs: [], ads: [2, 6] },
       reflection: { frs: [], ads: [2, 6] },
       collections: { frs: [23], ads: [2, 6] },
+      config: { frs: [20], ads: [2, 6] },
     });
     for (const [component, { frs, ads }] of derived) {
       const componentIds = readConsequences(root, component).map((line) => line.id);

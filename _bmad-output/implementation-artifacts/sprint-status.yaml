@@ -168,7 +168,7 @@ development_status:
   epic-14-retrospective: done
 
   epic-15: in-progress
-  15-1-config-repository: blocked  # ESC-15.1-1 (Macroable edge), ESC-15.1-2 (no sealed Application), ESC-15.1-3 (no config consequence row); spec planned, implementation waits on the rulings
+  15-1-config-repository: in-progress  # ESC-15.1-2 and ESC-15.1-3 ruled (option 1); ESC-15.1-1 (Macroable edge) waits on the Maintainer and holds only testItIsMacroable
   15-2-phpdotenv-grammar-port: backlog
   15-3-bun-s-env-autoload-neutralised: backlog
   epic-15-retrospective: optional
