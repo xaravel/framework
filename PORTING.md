@@ -250,6 +250,13 @@ Xaravel uses JavaScript `RegExp`, not PCRE (DIV-10). The conversion rule is owne
 - **Markers.** A converted pattern is an adaptation under DIV-10.1: the line that holds it carries `// adapted:DIV-10.1`, whether or not it is an assertion line.
 - **Replacements and callbacks.** A pattern passed to a `preg_replace`-style API (`Str.replaceMatches`, `Stringable.replaceMatches`) is converted without adding a `g` flag, because the API keeps PHP's replace-all and limit semantics; its replacement string keeps PHP's `$1` and `\1` references verbatim, and its callback receives PHP's match array (`match[0]`, `match[1]`), as Upstream's does.
 - **Wildcards.** A `Str.is`-style wildcard (`whenIs('foo/*')`) is not a regular expression, so it stays a string.
+- **The runtime's `preg_*` functions** (ESC-15.2-5). `@xaravel/runtime/php`'s `preg_match`, `preg_match_all`, `preg_split` and `preg_replace_callback` take the PHP pattern string and convert it by this rule, plus four forms its converter handles so their results match PHP's:
+  - the `A` modifier becomes the `RegExp` sticky flag `y`, which anchors each match at the start offset as `PCRE_ANCHORED` does;
+  - a branch-reset group `(?|…)` is emulated: each alternative's groups compile as separate `RegExp` groups and are remapped to the shared numbers in the match array PHP returns;
+  - a pattern without `u` matches the subject's UTF-8 bytes, as PCRE does: the subject becomes a byte string, one code unit per byte, offsets, lengths and quantifier counts are in bytes, and `\s`, `\S`, `\d`, `\w` and `\b` keep PCRE's ASCII meanings;
+  - with `u`, `\s` and `\S` use PCRE2's Unicode whitespace set, which leaves out U+FEFF that JavaScript's `\s` includes.
+
+  Any other PCRE-only form, those listed below among them, throws a JS `TypeError` naming the limit; the converter never converts silently. A port that calls these functions passes Upstream's pattern string unchanged.
 
 These PCRE-only features have no equivalent. An Upstream test that depends on one is skipped as `intentional-divergence:DIV-10` (DIV-10.1):
 

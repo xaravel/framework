@@ -110,8 +110,7 @@ epic-14:
   checkpoint_approved: false
   waiting_on_maintainer: []
 epic-15:
-  # No retrospective yet: this entry routes the monitor-ruled action item that waits on a ruling (step D).
-  # Item 1's attempt makes the Protected XT-conformance-269 (builtin-scan fixture) stale; see its spec's Auto Run Result.
-  waiting_on_maintainer:
-    - epic-15-item-1-runtime-phpdotenv-builtins
-    - epic-15-item-2-runtime-pcre-functions  # ESC-15.2-5 (PCRE forms PORTING.md does not cover)
+  # No retrospective yet: this entry routes the monitor-ruled action items that wait on a ruling (step D).
+  # Items 1 and 2 were ruled in decisions/MAINT-2026-10-30-story-15-2.md: XT-conformance-269's fixture no longer names
+  # builtins item 1 adds, and ESC-15.2-5 extends PORTING.md's PCRE rule for item 2.
+  waiting_on_maintainer: []

@@ -102,7 +102,7 @@ const THING = [
 const HELPERS = [
   "<?php",
   "",
-  "if (! function_exists('collect')) {",
+  "if (! defined('COLLECT_HELPERS')) {",
   "    function collect($value = []) { return $value; }",
   "}",
   "",
@@ -130,7 +130,7 @@ const SNAPSHOT: Record<string, string> = {
   // The ai Component: its own `<repo>/src`, and a Pest helper in `tests/Pest.php`, which no testsuite selects.
   "ai/src/Gateway.php": "<?php\n\nnamespace Laravel\\Ai;\n\nfunction id() { return uniqid(fakeHelper()); }\n",
   "ai/tests/Pest.php": "<?php\n\nfunction fakeHelper() { return 'x'; }\n\nfunction requiresApiKey() {}\n",
-  "ai/tests/Feature/GatewayTest.php": "<?php\n\nrequiresApiKey();\ntest('id', fn () => expect(strtok('a b', ' ')));\n",
+  "ai/tests/Feature/GatewayTest.php": "<?php\n\nrequiresApiKey();\ntest('id', fn () => expect(soundex('a b')));\n",
   "ai/phpunit.xml.dist": PHPUNIT,
 };
 
@@ -161,7 +161,7 @@ xaravelTest(
       expect(result.code).toBe(0);
       expect(result.stdout).toBe(
         [
-          `function function_exists calls=1 strings=0 first=${SRC}/helpers.php:3`,
+          `function defined calls=1 strings=0 first=${SRC}/helpers.php:3`,
           `function in_anon calls=1 strings=0 first=${SRC}/Thing.php:22`,
           `function str_pad calls=2 strings=0 first=${SRC}/Thing.php:12`,
           `function str_repeat calls=1 strings=0 first=${SRC}/Thing.php:16`,
@@ -190,7 +190,7 @@ xaravelTest(
       expect(ai.code).toBe(0);
       expect(ai.stdout).toBe(
         [
-          "function strtok calls=1 strings=0 first=ai/tests/Feature/GatewayTest.php:4",
+          "function soundex calls=1 strings=0 first=ai/tests/Feature/GatewayTest.php:4",
           "function uniqid calls=1 strings=0 first=ai/src/Gateway.php:5",
           "builtins: ai: 2 function(s) and 0 construct(s) not in @xaravel/runtime/php; 2 file(s) scanned.",
           "",
