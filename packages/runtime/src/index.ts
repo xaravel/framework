@@ -61,6 +61,7 @@ export {
   array_merge_recursive,
   array_pad,
   array_pop,
+  array_reduce,
   array_replace,
   array_replace_recursive,
   array_reverse,
@@ -98,6 +99,7 @@ export {
   count,
   DivisionByZeroError,
   DomainException,
+  EmptyIterator,
   end,
   Error,
   ErrorException,
@@ -319,4 +321,4 @@ export {
   PREG_UNMATCHED_AS_NULL,
 } from "./php/index";
 
-export { file_get_contents, getenv, putenv, superglobals } from "./php/index";
+export { DIRECTORY_SEPARATOR, file_get_contents, getenv, putenv, superglobals } from "./php/index";

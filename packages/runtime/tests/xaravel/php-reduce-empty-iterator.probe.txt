@@ -1,0 +1,10 @@
+reduce	[16,6,null,"x",null,[1,2],null,"qr"]
+reduce.order	[4,[["start",1],[1,2],[2,3],[3,4]]]
+reduce.callables	[7,7,7,16,106,"s+a+b",[[0,1],2],6,-50]
+reduce.bad_callback	["TypeError: array_reduce(): Argument #2 ($callback) must be a valid callback, no array or string given","TypeError: array_reduce(): Argument #2 ($callback) must be a valid callback, function \"nope\" not found or invalid function name","TypeError: array_reduce(): Argument #2 ($callback) must be a valid callback, array callback must have exactly two members","TypeError: array_reduce(): Argument #2 ($callback) must be a valid callback, function \"nope\" not found or invalid function name"]
+reduce.bad_array	["TypeError: array_reduce(): Argument #1 ($array) must be of type array, string given","TypeError: array_reduce(): Argument #1 ($array) must be of type array, null given","TypeError: array_reduce(): Argument #1 ($array) must be of type array, stdClass given","TypeError: array_reduce(): Argument #1 ($array) must be of type array, int given","TypeError: array_reduce(): Argument #1 ($array) must be of type array, string given","TypeError: array_reduce(): Argument #1 ($array) must be of type array, ArrayIterator given","TypeError: array_reduce(): Argument #1 ($array) must be of type array, EmptyIterator given"]
+reduce.reflection	[2,3,false]
+reduce.counts	["ArgumentCountError: array_reduce() expects at least 2 arguments, 1 given","ArgumentCountError: array_reduce() expects at least 2 arguments, 0 given","ArgumentCountError: array_reduce() expects at most 3 arguments, 4 given",true]
+empty	[false,null,null,false,[],[],0,"{}",[],true,"O:13:\"EmptyIterator\":0:{}","EmptyIterator",true,true,false,false,0,"EmptyIterator",true,true,false,"BadMethodCallException: Accessing the key of an EmptyIterator"]
+empty.access	["BadMethodCallException: Accessing the value of an EmptyIterator","BadMethodCallException: Accessing the key of an EmptyIterator"]
+separator	"\/"

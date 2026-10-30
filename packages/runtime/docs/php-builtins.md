@@ -49,9 +49,9 @@ A class implements one with a brand getter per token in its chain:
   runtime's throwables keep their JS `toString()`, and port `getMessage`, `getCode` and `getPrevious` only (the other
   four are optional in the TS interface).
 
-The classes below also carry the `Countable` brand (`Symbol.for('Countable')`), and all but `CachingIterator` the
-`ArrayAccess` brand (`Symbol.for('ArrayAccess')`), the brands the grader and `@xaravel/contracts` read, so
-`assertCount` and `assertContains` take them as PHPUnit does.
+Every class below except `EmptyIterator` also carries the `Countable` brand (`Symbol.for('Countable')`), and every
+one except `CachingIterator` and `EmptyIterator` the `ArrayAccess` brand (`Symbol.for('ArrayAccess')`), the brands the grader
+and `@xaravel/contracts` read, so `assertCount` and `assertContains` take them as PHPUnit does.
 
 ## The position
 
@@ -110,6 +110,16 @@ is the inner iterator's `valid()`. `getInnerIterator()` and `getFlags()` give it
   (an object) throws PHP's `TypeError` `Cannot access offset of type stdClass on array` with the element already
   cached and `valid()` true, and the inner iterator not moved, as PHP's fetch order leaves it.
 - Two string flags throw PHP's `ValueError`; an argument that is no `Iterator` throws PHP's `TypeError`.
+
+## `EmptyIterator`
+
+`new EmptyIterator()` (ESC-15.2-6, registered as `EmptyIterator`) is PHP's `Iterator` with no elements, as phpoption's
+`None::getIterator` returns it: `valid()` is `false`, `next()` and `rewind()` do nothing, and `current()` and `key()`
+throw PHP's `BadMethodCallException` `Accessing the value of an EmptyIterator` and `Accessing the key of an
+EmptyIterator`. It carries the `Iterator` and `Traversable` brands only (not `Countable` or `ArrayAccess`).
+`[Symbol.iterator]()`, `entries()` and `keys()` walk it by PHP's `foreach` protocol and yield nothing, so
+`iterator_to_array` gives `[]` and `iterator_count` 0. It has no properties: `jsonEncode` gives `{}`, `toPhpArray`
+`[]`, `phpSerialize` `O:13:"EmptyIterator":0:{}`, and two compare `==`. It is not final, as in PHP.
 
 ## `WeakMap` and `InternalIterator`
 

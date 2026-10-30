@@ -13,7 +13,8 @@ import { arrayCells, rekeyEntry, referenceEntry, setEntryCell } from "./arrayRef
 // `array_intersect`, the callback forms `array_udiff`, `array_diff_uassoc`, `array_diff_ukey`, `array_uintersect` and
 // `array_intersect_uassoc` (`php_array_diff` / `php_array_intersect` with `zend_sort`, as written),
 // `array_merge_recursive`, `array_replace`, `array_replace_recursive`, `array_pad`, and `arrayUnion` for PHP's `+` on
-// arrays (`add_function_array`). A callback that is a PHP function name resolves through `phpFunction` (ESC-14.4-2). A
+// arrays (`add_function_array`); and (action item epic-15-item-4-runtime-directory-separator-array-reduce-empty-iterator,
+// ESC-15.2-6) `array_reduce`. A callback that is a PHP function name resolves through `phpFunction` (ESC-14.4-2). A
 // PHP array comes in as `arrayEntries` reads it and goes out through `arrayFromEntries` (the AD-9 form); `toPhpArray`
 // alone returns a `PhpArray`. `undefined` reads as null (AD-9), and an omitted optional argument is PHP's default.
 // PHP's warnings and deprecations are not reproduced. Everything is synchronous.
@@ -582,6 +583,22 @@ export function array_any(array: unknown, callback: unknown): boolean {
  */
 export function array_all(array: unknown, callback: unknown): boolean {
   return findEntry("array_all", array, callback, false) === null;
+}
+
+/**
+ * PHP's `array_reduce($array, $callback, $initial = null)`: folds the values of `array` in order, the carry starting
+ * at `initial` and becoming `callback(carry, value)` each time (the key is not passed); `initial` for `[]`. The
+ * callback is taken as `array_any` takes one (DIV-9.13/14) and must not be null. Throws PHP's `TypeError` for a
+ * non-array and for a callback PHP or the runtime refuses.
+ */
+export function array_reduce(array: unknown, callback: unknown, initial: unknown = null): unknown {
+  const entries = arrayParameter("array_reduce", 1, "array", array);
+  const fn = requiredCallback("array_reduce", 2, callback);
+  let carry = initial ?? null;
+  for (const [, value] of entries) {
+    carry = fn(carry, value) ?? null;
+  }
+  return carry;
 }
 
 /**

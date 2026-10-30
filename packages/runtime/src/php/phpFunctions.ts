@@ -20,7 +20,7 @@ import { setlocale } from "./locale";
 import { strtolower, strrev } from "./stringFunctions";
 import { is_subclass_of } from "./typeTests";
 import { ArgumentCountError } from "./ArgumentCountError";
-import { array_all, array_any, array_combine, array_diff, array_diff_assoc, array_diff_key, array_diff_uassoc, array_diff_ukey, array_filter, array_find_key, array_first, array_flip, array_intersect, array_intersect_assoc, array_intersect_key, array_intersect_uassoc, array_key_exists, array_key_first, array_key_last, array_keys, array_last, array_map, array_merge, array_merge_recursive, array_pad, array_replace, array_replace_recursive, array_reverse, array_search, array_slice, array_udiff, array_uintersect, array_unique, array_values, count, in_array, is_scalar, iterator_count, iterator_to_array, max, min } from "./arrayFunctions";
+import { array_all, array_any, array_combine, array_diff, array_diff_assoc, array_diff_key, array_diff_uassoc, array_diff_ukey, array_filter, array_find_key, array_first, array_flip, array_intersect, array_intersect_assoc, array_intersect_key, array_intersect_uassoc, array_key_exists, array_key_first, array_key_last, array_keys, array_last, array_map, array_merge, array_merge_recursive, array_pad, array_reduce, array_replace, array_replace_recursive, array_reverse, array_search, array_slice, array_udiff, array_uintersect, array_unique, array_values, count, in_array, is_scalar, iterator_count, iterator_to_array, max, min } from "./arrayFunctions";
 import { array_pop, array_shift, array_splice, array_unshift, arsort, asort, end, reset, strcasecmp, strcmp, strcoll, strnatcasecmp, strnatcmp, uasort } from "./arrayRefFunctions";
 import { isNumeric } from "./isNumeric";
 import { jsonLastError } from "./jsonLastError";
@@ -128,6 +128,7 @@ export const PHP_FUNCTIONS: Readonly<Record<string, PhpFunction>> = Object.freez
       entry("is_subclass_of", is_subclass_of, 2, 3),
       entry("array_all", array_all, 2, 2),
       entry("array_any", array_any, 2, 2),
+      entry("array_reduce", array_reduce, 2, 3),
       entry("array_combine", array_combine, 2, 2),
       entry("array_diff", array_diff, 1, 2, true),
       entry("array_diff_assoc", array_diff_assoc, 1, 2, true),
