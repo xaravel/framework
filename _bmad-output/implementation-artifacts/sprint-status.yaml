@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-30-2026 05:04
+last_updated: 10-30-2026 06:41
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -169,7 +169,7 @@ development_status:
 
   epic-15: in-progress
   15-1-config-repository: done
-  15-2-phpdotenv-grammar-port: blocked  # ESC-15.2-1 approved by the monitor (parts a-f, items epic-15-item-1 and -2; part g waits on -2); ESC-15.2-2 (superglobals, getenv/putenv), -3 (sync env-file read, AD-6) and -4 (PhpOption/ResultType owners, AD-22) wait on the Maintainer (decisions/MAINT-2026-10-30-story-15-2.md); ESC-15.2-5 (PCRE forms for item -2, divergence) waits on the Maintainer
+  15-2-phpdotenv-grammar-port: in-progress  # ESC-15.2-1 (monitor) and ESC-15.2-2..5 (Maintainer) ruled (decisions/MAINT-2026-10-30-story-15-2.md); runtime items epic-15-item-1, -2 and -3 land first, then the phpdotenv, PhpOption and ResultType port in packages/config
   15-3-bun-s-env-autoload-neutralised: backlog
   epic-15-retrospective: optional
 
@@ -2354,4 +2354,19 @@ action_items:
       other runtime behaviour changes"
     owner: "orchestrator"
     status: in-progress
+    ref: "decisions/MAINT-2026-10-30-story-15-2.md"
+  - id: "epic-15-item-3-runtime-process-environment"
+    epic: 15
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-30-story-15-2.md),
+      in scope packages/runtime: @xaravel/runtime/php exports getenv and putenv over
+      process.env (ESC-15.2-1 part g, ESC-15.2-2); two process-wide string-keyed arrays
+      for $_SERVER and $_ENV, seeded once at module load from process.env as the PHP
+      CLI seeds them under the Oracle image variables_order (record it: no php.ini,
+      so EGPCS fills both) and never re-read, as boot-time state outside AD-5 frame
+      slots (ESC-15.2-2); and file_get_contents for a local path as a sync read returning
+      false on a missing or unreadable file, with no warning (DIV-9.17) (ESC-15.2-3).
+      XT-runtime cases against PHP; existing exports stay; no other runtime behaviour
+      changes; lands before Story 15.2 resumes"
+    owner: "orchestrator"
+    status: open
     ref: "decisions/MAINT-2026-10-30-story-15-2.md"

@@ -4261,6 +4261,11 @@ So that everyday code reads as it does in Laravel (FR-21, FR-20).
 **Then** it returns Upstream's coerced values
 **And** `Env.getOrFail` throws Upstream's exception for a missing key.
 
+**Given** Support's `Env`, which uses `PhpOption\Option` and `Dotenv\Repository\RepositoryBuilder`
+**When** the Story imports them
+**Then** it imports them from `@xaravel/config`, which owns phpdotenv, PhpOption and ResultType (ESC-15.2-4), and `@xaravel/support` declares that dependency although illuminate/support's composer.json does not require illuminate/config (AD-22's "below every consumer" case)
+**And** the scaffold edge that dependency needs is added by an Infrastructure change before the Story: the scaffold's `uses` field accepts only a package reachable through the row's own requires, so this edge needs its own ruling.
+
 **Given** the PHP 8.4 lazy-object helpers (`lazy()`, `proxy()`, and the `testLazy*` / `testProxy*` / `testClosureOnly*` tests)
 **When** they are ported
 **Then** they are implemented over a Proxy wherever Upstream behaviour can be reproduced
