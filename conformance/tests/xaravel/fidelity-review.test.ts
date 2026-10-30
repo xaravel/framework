@@ -64,6 +64,7 @@ import {
   precedenceSection,
   SKIP_REASONS_HEADING,
   skipEligibilityEvidence,
+  escalationEvidence,
   skipReasonsSection,
   PROMPT_CAP,
   RECORD_KIND,
@@ -948,15 +949,23 @@ xaravelTest(
     const withTable = buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence: precedenceSection(readme), skipReasons, storyId: "14.2", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: [], evidence: NO_EVIDENCE });
     expect(withTable.system).toContain(skipReasons!);
     expect(withTable.system.indexOf(skipReasons!)).toBeGreaterThan(withTable.system.indexOf("## Precedence"));
-    expect(bare).toContain("### (i) The `blocked-by` rule, and the Phases and first Epics of the Components added skip lines name (F-4, ESC-14.2-5)\n\nNo added Expectations line is a `skip` with reason `not-ported-yet` or `blocked-by:<c>` that names another Component.");
+    expect(bare).toContain("### (i) The `blocked-by` rule, the Phases and first Epics of the Components added skip lines name, and the Escalations they cite (F-4, ESC-14.2-5, ESC-15.1-5)\n\nNo added Expectations line is a `skip` with reason `not-ported-yet` or `blocked-by:<c>` that names another Component.");
     expect(buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.1", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: [], evidence: NO_EVIDENCE }).system).toContain(`unavailable: conformance/README.md has no ${SKIP_REASONS_HEADING} section`);
     const shard = "conformance/expectations/collections/framework/tests/Support/SupportCollectionTest.jsonl";
     const held = "Illuminate\\Tests\\Support\\SupportCollectionTest::testContains#0";
     const skipLine = (fields: Record<string, unknown>) => JSON.stringify({ id: held, variant: "none", status: "skip", reason: "not-ported-yet", adapted: null, escalation: null, ...fields });
     const eligibility = (filename: string, ...lines: string[]) => skipEligibilityEvidence(root, [{ filename, status: "modified", patch: `@@ -1 +1,${lines.length} @@\n-a\n${lines.map((line) => `+${line}`).join("\n")}\n` }]);
-    // A not-ported-yet line held by an Escalation that names `packages/runtime`: the rule, then the group with both Components.
+    // A not-ported-yet line held by an Escalation that names `packages/runtime`: the rule, the group with both Components,
+    // then the Escalation in full and its decision (ESC-15.1-5).
     const runtimeHeld = eligibility(shard, skipLine({ escalation: "ESC-14.2-4" }));
-    expect(runtimeHeld.map((entry) => entry.label)).toEqual([expect.stringMatching(/^tools\/expectations\/reasons\.ts:\d+-\d+, the `blocked-by:<c>` rule `bun run expectations:reasons` applies$/), "collections, not-ported-yet, ESC-14.2-4"]);
+    expect(runtimeHeld.map((entry) => entry.label)).toEqual([
+      expect.stringMatching(/^tools\/expectations\/reasons\.ts:\d+-\d+, the `blocked-by:<c>` rule `bun run expectations:reasons` applies$/),
+      "collections, not-ported-yet, ESC-14.2-4",
+      "conformance/escalations/ESC-14.2-4.md, the Escalation the lines cite",
+      "decisions/ESC-14.2-4.md, its decision",
+    ]);
+    expect(runtimeHeld[2]!.text).toBe(readFileSync(join(root, "conformance", "escalations", "ESC-14.2-4.md"), "utf8"));
+    expect(runtimeHeld[3]!.text).toBe(readFileSync(join(root, "decisions", "ESC-14.2-4.md"), "utf8"));
     expect(runtimeHeld[0]!.text!.split("\n")[0]!.trim()).toBe('if (prefix === "blocked-by") {');
     expect(runtimeHeld[0]!.text).toContain("blockerEpic > ownEpic");
     expect(runtimeHeld[0]!.lang).toBe("ts");
@@ -971,10 +980,31 @@ xaravelTest(
     expect(auth[1]!.text).toMatch(/- `auth`: Phase 8, first Epic [^\n]*: valid$/m);
     // Lines that share a Component, reason and Escalation are one group; past 20 Test IDs it counts the rest.
     const grouped = eligibility(shard, ...Array.from({ length: 25 }, (_, i) => skipLine({ variant: `v${i}`, escalation: "ESC-14.2-4" })));
-    expect(grouped.length).toBe(2);
+    expect(grouped.length).toBe(4);
     expect(grouped[1]!.text).toStartWith("25 added lines with reason `not-ported-yet`, escalation `ESC-14.2-4`:");
     expect(grouped[1]!.text).toContain(`- ${held} × v19\n- and 5 more\n`);
     expect(grouped[1]!.text).not.toContain("× v20");
+    // Two groups citing one Escalation show it once, after the first.
+    const twice = eligibility(shard, skipLine({ escalation: "ESC-14.2-4" }), skipLine({ reason: "blocked-by:auth", escalation: "ESC-14.2-4" }));
+    expect(twice.slice(1).map((entry) => entry.label)).toEqual(["collections, not-ported-yet, ESC-14.2-4", "conformance/escalations/ESC-14.2-4.md, the Escalation the lines cite", "decisions/ESC-14.2-4.md, its decision", "collections, blocked-by:auth, ESC-14.2-4"]);
+    // A cited Escalation with no file is named as unavailable, with why, and has no decision entry.
+    const missing = eligibility(shard, skipLine({ reason: "blocked-by:auth", escalation: "ESC-99.9-9" }));
+    expect(missing.slice(2)).toEqual([{ label: "conformance/escalations/ESC-99.9-9.md, the Escalation the lines cite", text: null, unavailable: "conformance/escalations/ESC-99.9-9.md does not exist" }]);
+    // An open Escalation comes with why its decision is absent; a decided one with its decision; an id that is not a
+    // file name is not read.
+    const escRoot = tempDir("xaravel-fidelity-esc-");
+    write(escRoot, "conformance/escalations/ESC-1.1-1.md", "open escalation\n");
+    write(escRoot, "conformance/escalations/ESC-1.1-2.md", "decided escalation\n");
+    write(escRoot, "decisions/ESC-1.1-2.md", "the ruling\n");
+    expect(escalationEvidence(escRoot, "ESC-1.1-1")).toEqual([
+      { label: "conformance/escalations/ESC-1.1-1.md, the Escalation the lines cite", text: "open escalation\n", unavailable: null },
+      { label: "decisions/ESC-1.1-1.md, its decision", text: null, unavailable: "decisions/ESC-1.1-1.md does not exist: ESC-1.1-1 is open, with no decision yet" },
+    ]);
+    expect(escalationEvidence(escRoot, "ESC-1.1-2").map((entry) => entry.text)).toEqual(["decided escalation\n", "the ruling\n"]);
+    expect(escalationEvidence(escRoot, "../ESC-1.1-2")).toEqual([{ label: "Escalation ../ESC-1.1-2, which the lines cite", text: null, unavailable: '"../ESC-1.1-2" is not an Escalation id' }]);
+    const escPrompt = buildPrompt({ checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "15.1", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: [], evidence: { ...NO_EVIDENCE, skipEligibility: escalationEvidence(escRoot, "ESC-1.1-1") } }).user;
+    expect(escPrompt).toContain("#### conformance/escalations/ESC-1.1-1.md, the Escalation the lines cite\n\n```markdown\nopen escalation\n");
+    expect(escPrompt).toContain("#### decisions/ESC-1.1-1.md, its decision\n\nunavailable: decisions/ESC-1.1-1.md does not exist: ESC-1.1-1 is open, with no decision yet");
     // Nothing when no other Component is named, the line is not such a skip, or the file is not an Expectations shard.
     expect(eligibility(shard, skipLine({}))).toEqual([]);
     expect(eligibility(shard, skipLine({ status: "pass", reason: null, escalation: "ESC-14.2-4" }))).toEqual([]);
@@ -982,7 +1012,7 @@ xaravelTest(
     expect(eligibility("packages/collections/tests/data.jsonl", skipLine({ escalation: "ESC-14.2-4" }))).toEqual([]);
     expect(eligibility(shard, "{not json")).toEqual([]);
     // gatherEvidence carries it as (i).
-    expect(gatherEvidence(root, [{ filename: shard, status: "modified", patch: `@@ -1 +1 @@\n-a\n+${skipLine({ escalation: "ESC-14.2-4" })}\n` }], none).skipEligibility.length).toBe(2);
+    expect(gatherEvidence(root, [{ filename: shard, status: "modified", patch: `@@ -1 +1 @@\n-a\n+${skipLine({ escalation: "ESC-14.2-4" })}\n` }], none).skipEligibility.length).toBe(4);
 
     // (c) for changed fixtures: a Story's own error fixture, added with its request, reaches the prompt.
     const fixtureRepo = makeRepo({ change: false });

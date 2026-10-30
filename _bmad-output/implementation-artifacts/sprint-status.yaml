@@ -168,7 +168,7 @@ development_status:
   epic-14-retrospective: done
 
   epic-15: in-progress
-  15-1-config-repository: in-progress  # 30 of 33 pass; ESC-15.1-1 (scaffold uses edge, config -> macroable) and ESC-15.1-4 (DIV-12.6 offsetGet) approved by the Maintainer; port testItIsMacroable, testOffsetGet and testOffsetSet; ESC-15.1-5 (Fidelity evidence) is the orchestrator's to rule
+  15-1-config-repository: in-progress  # 30 of 33 pass; ESC-15.1-1 (scaffold uses edge, config -> macroable) and ESC-15.1-4 (DIV-12.6 offsetGet) approved by the Maintainer, ESC-15.1-5 (Fidelity evidence) ruled in #557; port testItIsMacroable, testOffsetGet and testOffsetSet
   15-2-phpdotenv-grammar-port: backlog
   15-3-bun-s-env-autoload-neutralised: backlog
   epic-15-retrospective: optional
