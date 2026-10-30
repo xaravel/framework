@@ -2,7 +2,7 @@
 title: 'Story 15.1: Config Repository'
 type: 'feature'
 created: '2026-10-29'
-status: 'blocked'
+status: 'ready-for-dev'
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
@@ -104,3 +104,5 @@ The overlay is keyed by the Repository instance: one Repository per Application 
 
 Status: blocked
 Blocking condition: intent gap. Three questions were raised in one round before building (lesson, epic 14), and planning stops on them: ESC-15.1-1 (Macroable edge for `config`; stops `testItIsMacroable`), ESC-15.1-2 (no sealed Application; decides how a Repository write with no frame behaves and stops XT-config-1), ESC-15.1-3 (no `config` consequence row; stops XT-config-1 and XT-config-2). The plan above is complete for the other 32 Test IDs. Once the three are ruled, set this spec to `ready-for-dev` and resume at implementation. `bun run scan:builtins config` found no missing runtime builtin.
+
+Rulings (2026-10-29): ESC-15.1-2 and ESC-15.1-3 are approved, option 1 each, by the orchestrator (`decisions/ESC-15.1-2.md`, `decisions/ESC-15.1-3.md`); the `config` consequence row and `conformance/xaravel-consequences/config.jsonl` are on `main`. ESC-15.1-1 changes how AD-2 derives a package's edges, so it waits on the Maintainer and holds only `testItIsMacroable`. Resume at implementation for the other 32 Test IDs and XT-config-1/2.

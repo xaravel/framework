@@ -62,6 +62,8 @@ export const CONSEQUENCE_SOURCES: Readonly<Record<string, ConsequenceSource>> = 
   reflection: { frs: [], ads: [2, 6] },
   // Epic 14: "Covers: FR-23.", plus AD-2 and AD-6.
   collections: { frs: [23], ads: [2, 6] },
+  // Epic 15: "Covers: FR-20, through the Repository and the env parser.", plus AD-2 and AD-6 (ESC-15.1-3).
+  config: { frs: [20], ads: [2, 6] },
 };
 
 export interface Consequence {
