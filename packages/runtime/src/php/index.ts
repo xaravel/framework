@@ -200,7 +200,7 @@ export { is_a, is_array, is_bool, is_callable, is_int, is_iterable, is_null, is_
 export { UnitEnum } from "./UnitEnum";
 export { valueCopy } from "./valueCopy";
 
-export { plus, array_sum, divide, intdiv, floor, ceil, PHP_INT_MAX, PHP_INT_MIN } from "./arithmetic";
+export { plus, minus, array_sum, divide, intdiv, floor, ceil, PHP_INT_MAX, PHP_INT_MIN } from "./arithmetic";
 export { LC_ALL, LC_CTYPE, LC_NUMERIC, LC_TIME, LC_COLLATE, LC_MONETARY, LC_MESSAGES, setlocale } from "./locale";
 export { array_chunk } from "./arrayFunctions";
 export { arrayAppend, key, ksort, krsort, uksort, sort, rsort } from "./arrayRefFunctions";

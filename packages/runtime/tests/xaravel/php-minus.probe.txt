@@ -1,0 +1,7 @@
+ints	[["integer",2],["integer",-2],["integer",9007199254740992],["integer",-9223372036854775807],["integer",0],["integer",0],["integer",2]]
+overflow	[["double",-9.223372036854776e+18],["double",9.223372036854776e+18],["double",-1.8446744073709552e+19],["double",1.8446744073709552e+19]]
+floats	[["double",4.5],["double",0.9],["double",2.0],["double","+0"],["double","-0"],["double","-0"],["double","+0"],["double","INF"],["double","-INF"],["double","NAN"],["double","-INF"],["double","NAN"],["double","NAN"],["double",9.223372036854776e+18]]
+coerced	[["integer",7],["double",1.5],["double",999.0],["integer",0],["integer",1],["integer",-1],["double",9.223372036854776e+18],["integer",1],["integer",0],["double","-0"],["double",-4.5],["double",9.223372036854776e+18]]
+leading	[["integer",10],["integer",10],["integer",-1],["double",999.5],["integer",2]]
+unsupported	["TypeError: Unsupported operand types: array - int","TypeError: Unsupported operand types: int - array","TypeError: Unsupported operand types: array - array","TypeError: Unsupported operand types: array - array","TypeError: Unsupported operand types: string - int","TypeError: Unsupported operand types: int - string","TypeError: Unsupported operand types: stdClass - int","TypeError: Unsupported operand types: Closure - int","TypeError: Unsupported operand types: float - string","TypeError: Unsupported operand types: array - bool","TypeError: Unsupported operand types: null - array","TypeError: Unsupported operand types: ArrayObject - int"]
+function	[false,false]
