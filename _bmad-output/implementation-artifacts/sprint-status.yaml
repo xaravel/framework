@@ -156,7 +156,7 @@ development_status:
   13-1-reflector-and-reflectsclosures: done
   epic-13-retrospective: done
 
-  epic-14: in-progress
+  epic-14: done
   14-1-enumerable-core-construction-conversion-and-serialization: done
   14-2-retrieval-search-and-mutation-methods: done
   14-3-filtering-slicing-and-conditional-methods: done
@@ -164,7 +164,7 @@ development_status:
   14-5-mapping-grouping-sorting-chunking-and-aggregates: done
   14-6-arr-helpers: done  # Maintainer traversal-by-value ruling implemented; 83 pass, four legitimate Support holds; current Fidelity and full harness verified.
   14-7-lazycollection-behaviour: done
-  14-8-lazycollection-laziness-guarantees: in-progress  # ESC-14.8-3 approved by the orchestrator (amendment 2026-10-21, decisions/ESC-14.8-3.md): (h) now shows the source of each name a changed line imports from another workspace package; re-run the Fidelity Review on the changed tree. FlatMap port and XT-collections-16 landed and pass.
+  14-8-lazycollection-laziness-guarantees: done  # ESC-14.8-3 tool fix landed (#537); Fidelity re-run passed tree 8956514a (two passes, current); story:check 14.8 pass; Epic-close checks met.
   epic-14-retrospective: optional
 
   epic-15: backlog
