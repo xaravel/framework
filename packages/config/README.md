@@ -10,4 +10,5 @@ Xaravel is an independent open-source project. It is not affiliated with, sponso
 
 - `@xaravel/collections` (workspace): Upstream `composer.json` `require` (AD-2).
 - `@xaravel/contracts` (workspace): allowed for every package (AD-2).
+- `@xaravel/macroable` (workspace): used directly by Upstream source and reached through its `composer.json` `require` graph (AD-2): Illuminate\Config\Repository uses Illuminate\Support\Traits\Macroable, reached through illuminate/collections' require.
 - `@xaravel/runtime` (workspace): allowed for every package (AD-2).

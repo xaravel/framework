@@ -26,7 +26,7 @@ laravel/framework v13.37.0 685f8d6c2ab4547287500bc80ccdf2ca12635109 99ed2f8f5d01
 
 To repair a modified or missing directory, run `bun run upstream:sync`. The check also fails on anything else in `conformance/upstream/`: a stale `.<name>.tmp-*` clone left by a killed sync (the next sync removes it) or a directory the pin does not name (remove it yourself).
 
-`tools/scaffold/table.ts` builds the package table from `conformance/upstream/framework` only. Without a snapshot it fails, telling you to run `bun run upstream:sync`.
+`tools/scaffold/table.ts` builds the package table from `conformance/upstream/framework` only. Without a snapshot it fails, telling you to run `bun run upstream:sync`. Each row's `require` and `suggest` are its `composer.json` lists. A row may also carry `uses`: a package its Upstream source uses directly but reaches only through its `require` graph, with the reason (`UPSTREAM_USES` in `table.ts`; `config` uses `illuminate/macroable`, [ESC-15.1-1](../../conformance/escalations/ESC-15.1-1.md)). The scaffold makes each `uses` edge a workspace dependency, and the table build, `bun run scaffold` and `scaffold:check` reject one that names no package row, is not reachable through `require`, is already a dependency, would close a cycle or has an empty reason.
 
 ## Offline use
 

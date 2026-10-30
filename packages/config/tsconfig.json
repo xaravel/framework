@@ -23,6 +23,9 @@
       "path": "../contracts"
     },
     {
+      "path": "../macroable"
+    },
+    {
       "path": "../runtime"
     }
   ]
