@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-29-2026 22:47
+last_updated: 10-29-2026 23:10
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -2311,3 +2311,16 @@ action_items:
     owner: "orchestrator"
     status: in-progress
     ref: "_bmad-output/implementation-artifacts/epic-14-retro-2026-10-29.md"
+  - id: "epic-14-retro-item-8-runtime-minus"
+    epic: 14
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-29-epic-14-retro-minus.md),
+      in scope packages/runtime: @xaravel/runtime/php exports minus(a, b), PHP 8.5.11
+      subtraction $a - $b, as plus does +: PHP numeric-string coercion, an int or
+      float result with int overflow to float as PHP does, and PHP TypeError Unsupported
+      operand types: <a> - <b> for an array or other unsupported operand. XT-runtime
+      cases against PHP; the PORTING idiom row is already in place; existing exports
+      stay; no other runtime behaviour changes. When it lands, its PR takes epic-14-retro-item-7-lazy-range-php-arithmetic
+      out of epic 14 waiting_on_maintainer, so item 7 resumes with minus"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-29-epic-14-retro-minus.md"
