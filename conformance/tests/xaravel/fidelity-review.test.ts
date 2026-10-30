@@ -86,6 +86,8 @@ import {
   UPSTREAM_SNAPSHOT_DIR,
   importedPathConsts,
   phpMethodBodies,
+  portingSections,
+  scriptRuns,
   upstreamTraitPaths,
   upstreamCitedSources,
   upstreamMethodsCited,
@@ -1626,6 +1628,127 @@ xaravelTest(
       const attributesEntry = wholeFileEvidence(root, [{ filename: attributesTs, status: "modified", patch: probePatch }], new Map(), 400_000).find((item) => item.path === attributesPhp)!;
       expect([attributesEntry.reason, attributesEntry.text]).toEqual([`Upstream counterpart of ${attributesTs}`, read(attributesPhp)]);
     }
+    // epic-15-retro-item-3 (E2): each PORTING.md section a changed file cites (`§ <heading>`, `'s § <heading>`,
+    // `'s <heading>`, `:<line>`) is shown at tier 0 beside the cited records, as the section's text; text no heading
+    // starts, a line past the end and a changed PORTING.md add none.
+    const portRules = tempDir("fidelity-porting-");
+    const portingText = "# PORTING.md\n\nIntro.\n\n## Idiom table\n\nRows.\n\n```md\n## not a heading\n```\n\n## PCRE conversion (DIV-10)\n\nForms.\n\n## PCRE conversion extras\n\nMore.\n";
+    write(portRules, "PORTING.md", portingText);
+    const idiomSection = "## Idiom table\n\nRows.\n\n```md\n## not a heading\n```\n";
+    const pcreSection = "## PCRE conversion (DIV-10)\n\nForms.\n";
+    expect(portingSections("PORTING.md § PCRE conversion lists every form", portingText)).toEqual([{ heading: "PCRE conversion (DIV-10)", text: pcreSection }]);
+    expect(portingSections("PORTING.md § PCRE conversion extras, and PORTING.md's § pcre conversion (DIV-10)", portingText).map((section) => section.heading)).toEqual(["PCRE conversion extras", "PCRE conversion (DIV-10)"]);
+    expect(portingSections("see PORTING.md's idiom table and PORTING.md:3 and PORTING.md:6", portingText)).toEqual([{ heading: "Idiom table", text: idiomSection }]);
+    expect(portingSections("PORTING.md:10", portingText).map((section) => section.heading)).toEqual(["Idiom table"]);
+    expect(portingSections("PORTING.md:19", portingText).map((section) => section.heading)).toEqual(["PCRE conversion extras"]);
+    // A citation wrapped onto the next comment line (as in packages/mockery/src/Mockery/Container.ts).
+    expect(portingSections("// under PORTING.md §\n// PCRE conversion (DIV-10.1), and PORTING.md's\n * idiom table", portingText).map((section) => section.heading)).toEqual(["PCRE conversion (DIV-10)", "Idiom table"]);
+    expect(portingSections("PORTING.md's spread row, PORTING.md:20, PORTING.md:21, PORTING.md:0, PORTING.md § PCRE conversions, docs/PORTING.md § Idiom table", portingText)).toEqual([]);
+    write(portRules, "a/x.ts", "// Applies PORTING.md § PCRE conversion lists and PORTING.md's idiom table; ESC-1.1-1.\nexport const x = 1;\n");
+    write(portRules, "decisions/ESC-1.1-1.md", "ruling\n");
+    const portingWhole = wholeFileEvidence(portRules, [{ filename: "a/x.ts", status: "added", patch: "@@ -0,0 +1 @@\n+x" }], new Map(), 400_000);
+    expect(portingWhole.map((item) => [item.path, item.reason, item.text])).toEqual([
+      ["decisions/ESC-1.1-1.md", "cited by a/x.ts", "ruling\n"],
+      ["PORTING.md § PCRE conversion (DIV-10)", "cited by a/x.ts", pcreSection],
+      ["PORTING.md § Idiom table", "cited by a/x.ts", idiomSection],
+      ["a/x.ts", "changed", readFileSync(join(portRules, "a/x.ts"), "utf8")],
+    ]);
+    expect(wholeFileEvidence(portRules, [{ filename: "a/x.ts", status: "added", patch: "@@ -0,0 +1 @@\n+x" }, { filename: "PORTING.md", status: "modified", patch: "@@ -1 +1 @@\n-x\n+y" }], new Map(), 400_000).map((item) => item.path)).toEqual(["decisions/ESC-1.1-1.md", "a/x.ts", "PORTING.md"]);
+    // A section that does not fit is named as omitted for size.
+    const portingTight = wholeFileEvidence(portRules, [{ filename: "a/x.ts", status: "added", patch: "@@ -0,0 +1 @@\n+x" }], new Map(), 1_000);
+    expect(portingTight.find((item) => item.path === "PORTING.md § Idiom table")!.note).toMatch(/^omitted for size: /);
+    // The E2 case: pcre.ts cites PORTING.md § PCRE conversion (DIV-10.1).
+    const pcreTs = "packages/runtime/src/php/pcre.ts";
+    const pcreEntry = wholeFileEvidence(root, [{ filename: pcreTs, status: "modified", patch: probePatch }], new Map(), 400_000).find((item) => item.path === "PORTING.md § PCRE conversion (DIV-10)")!;
+    expect([pcreEntry.reason, pcreEntry.text!.startsWith("## PCRE conversion (DIV-10)\n"), pcreEntry.text!.includes("\n## ")]).toEqual([`cited by ${pcreTs}`, true, false]);
+    // epic-15-retro-item-3 (E3): the source of each repository tool a changed test runs and does not import, at tier 1:
+    // an array-literal element that resolves to a non-test .ts file, or the first .ts path of the root package.json
+    // script a ["run", "<script>"] pair or a "bun run <script>" literal names. A missing file, an imported one, a test
+    // file and an unknown script add none.
+    const runRoot = tempDir("fidelity-runs-");
+    write(runRoot, "package.json", JSON.stringify({ scripts: { "gate:x": "bun --no-env-file tools/g/g.ts --gate", "gate:y": "bun --no-env-file ./tools/h/h.ts", "plain": "echo hi" } }));
+    write(runRoot, "tools/t/t.ts", "export const t = 1;\n");
+    write(runRoot, "tools/g/g.ts", "export const g = 1;\n");
+    write(runRoot, "tools/h/h.ts", "export const h = 1;\n");
+    write(runRoot, "tools/i/i.ts", "export const i = 1;\n");
+    write(runRoot, "tools/r/r.ts", "export const r = 1;\n");
+    write(runRoot, "a/tests/helper.test.ts", "export const helper = 1;\n");
+    const runTest = "a/tests/run.test.ts";
+    const runText = [
+      'import { i } from "../../tools/i/i";',
+      'const REPO = join(import.meta.dir, "..", "..");',
+      'bun([join(REPO, "tools", "t", "t.ts"), "--check"]);',
+      'bun([join(REPO, "tools", "i", "i.ts")]);',
+      'bun([join(REPO, "tools", "missing", "m.ts")]);',
+      'bun([join(import.meta.dir, "helper.test.ts")]);',
+      'spawn(["tools/r/r.ts"]);',
+      'bun(["run", "gate:x", "a"]);',
+      'bun(["run", "unknown"]);',
+      'bun(["run", "plain"]);',
+      'const command = "bun run gate:y";',
+      "// synced by `bun run gate:x`, and \"bun run gate:y\" in a comment",
+      '/* "bun run plain" */',
+      'expect(["tools/t/t.ts"]).toEqual(["tools/g/g.ts"]);',
+      'expect([["tools/h/h.ts"], "tools/r/r.ts"].map(String));',
+      'Assert.assertSame(["tools/t/t.ts"], x);',
+      'assertEquals(["tools/t/t.ts"], x);',
+      'for (const bad of ["tools/t/t.ts"]) {}',
+      'if ("x" in ["tools/t/t.ts"]) {}',
+    ].join("\n");
+    write(runRoot, runTest, runText);
+    const runExists = (path: string): boolean => existsSync(join(runRoot, path));
+    const runRead = (path: string): string | null => (runExists(path) ? readFileSync(join(runRoot, path), "utf8") : null);
+    expect(scriptRuns(runTest, runText, runExists, runRead)).toEqual([
+      { target: "tools/g/g.ts", script: "gate:x" },
+      { target: "tools/h/h.ts", script: "gate:y" },
+      { target: "tools/r/r.ts", script: null },
+      { target: "tools/t/t.ts", script: null },
+    ]);
+    expect(scriptRuns(runTest, 'bun(["run", "gate:x"]);', runExists, () => null)).toEqual([]);
+    // A commented `bun run` mention, one quoted inside a message, and arrays an assertion or a loop takes as data, run nothing.
+    const runData = [
+      "// The snapshot is synced by `bun run gate:x`.",
+      '/* see "bun run gate:y" */',
+      'Assert.fail("the snapshot is missing; run `bun run gate:x`");',
+      'expect(f()).toEqual(["tools/t/t.ts"]);',
+      'expect(["tools/t/t.ts", "tools/r/r.ts"].map(String)).toBe(x);',
+      'expect([["tools/t/t.ts"]]).toBe(x);',
+      'Assert.assertSame(["tools/g/g.ts"], x);',
+      'assertTrue(["tools/g/g.ts"]);',
+      'for (const bad of ["tools/h/h.ts", ["run", "gate:x"]]) {}',
+      'for (const key in ["tools/h/h.ts"]) {}',
+    ].join("\n");
+    expect(scriptRuns(runTest, runData, runExists, runRead)).toEqual([]);
+    const runWhole = wholeFileEvidence(runRoot, [{ filename: runTest, status: "added", patch: "@@ -0,0 +1 @@\n+x" }], new Map(), 400_000);
+    expect(runWhole.map((item) => [item.path, item.reason])).toEqual([
+      ["tools/g/g.ts", `run by ${runTest} as \`bun run gate:x\``],
+      ["tools/h/h.ts", `run by ${runTest} as \`bun run gate:y\``],
+      ["tools/r/r.ts", `run by ${runTest}`],
+      ["tools/t/t.ts", `run by ${runTest}`],
+      ["tools/i/i.ts", `imported by ${runTest}`],
+      [runTest, "changed"],
+    ]);
+    expect(runWhole[3]!.text).toBe("export const t = 1;\n");
+    // A changed tool the test runs follows readData's scope rule: one outside the scope stays last.
+    const runChanged = wholeFileEvidence(runRoot, [{ filename: runTest, status: "added", patch: "@@ -0,0 +1 @@\n+x" }, { filename: "tools/t/t.ts", status: "modified", patch: probePatch }], new Map(), 400_000, (path) => path !== "tools/t/t.ts");
+    expect(runChanged.find((item) => item.path === "tools/t/t.ts")!.reason).toBe("changed, outside the Story's scope");
+    // A changed tool in the scope stays a changed file, with no `run by` entry.
+    const runInScope = wholeFileEvidence(runRoot, [{ filename: runTest, status: "added", patch: "@@ -0,0 +1 @@\n+x" }, { filename: "tools/t/t.ts", status: "modified", patch: probePatch }], new Map(), 400_000);
+    expect(runInScope.filter((item) => item.path === "tools/t/t.ts").map((item) => [item.path, item.reason])).toEqual([["tools/t/t.ts", "changed"]]);
+    // A changed file that is not a test runs nothing, even when it holds a spawn array.
+    write(runRoot, "tools/x/x.ts", 'spawn(["tools/r/r.ts"]);\n');
+    expect(wholeFileEvidence(runRoot, [{ filename: "tools/x/x.ts", status: "modified", patch: probePatch }], new Map(), 400_000).map((item) => [item.path, item.reason])).toEqual([["tools/x/x.ts", "changed"]]);
+    // A tool that does not fit is named as omitted for size.
+    write(runRoot, "tools/t/t.ts", `export const t = "${"t".repeat(5_000)}";\n`);
+    const runTight = wholeFileEvidence(runRoot, [{ filename: runTest, status: "added", patch: "@@ -0,0 +1 @@\n+x" }], new Map(), 3_000);
+    expect(runTight.find((item) => item.path === "tools/t/t.ts")!.note).toMatch(/^omitted for size: /);
+    // The E3 case: XT-config-7 runs async-surface.ts by path and api-surface.ts through `bun run api-surface:gate`.
+    const epicClose = "packages/config/tests/xaravel/epic-close.test.ts";
+    const epicCloseRuns = wholeFileEvidence(root, [{ filename: epicClose, status: "modified", patch: probePatch }], new Map(), 400_000).filter((item) => item.reason.startsWith("run by"));
+    expect(epicCloseRuns.map((item) => [item.path, item.reason, item.text])).toEqual([
+      ["tools/api-surface/api-surface.ts", `run by ${epicClose} as \`bun run api-surface:gate\``, read("tools/api-surface/api-surface.ts")],
+      ["tools/async-surface/async-surface.ts", `run by ${epicClose}`, read("tools/async-surface/async-surface.ts")],
+    ]);
     // ESC-14.8-3: a name a changed line imports from another workspace package shows the file that declares it,
     // resolved through the package's exports map: a direct export, a barrel re-export with `as`, a star re-export and
     // a barrel's local re-export of an import. A name the package does not export, a subpath its exports map lacks and
@@ -1880,6 +2003,8 @@ xaravelTest(
     // The prompt: (h) fills what the cap leaves, names (a)/(d)/(f) files instead of repeating them, and says what a
     // file named without its text means.
     const promptBase = { checklistText: CHECKLIST, items: ITEMS, precedence: null, storyId: "9.10", tree: "a".repeat(40), base: "b".repeat(40), manifestText: "", inventory: [], oracleRequests: [], files: registryPatch(registryPath) };
+    // epic-15-retro-item-3 (E2): a PORTING.md section entry is fenced as Markdown.
+    expect(buildPrompt({ ...promptBase, evidence: { ...NO_EVIDENCE, wholeFiles: [portingWhole[1]!] } }).user).toContain("#### PORTING.md § PCRE conversion (DIV-10) (cited by a/x.ts)\n\n```markdown\n## PCRE conversion (DIV-10)");
     // ESC-14.6-4: Inventory shows only method fragments; full test declarations carry their helper traits.
     const traitRoot = tempDir("fidelity-traits-");
     const traitBase = "conformance/upstream/framework/tests/Support";
