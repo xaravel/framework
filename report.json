@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "commit": "7ac1bdfdc2b336e67ef7a71a318d043b8e9f99cd",
+  "commit": "e541d8c8e6302e04621cbbac7b3e9bea4fe9a87d",
   "pin": {
     "tag": "v13.37.0",
     "commit": "685f8d6c2ab4547287500bc80ccdf2ca12635109"
@@ -12,17 +12,17 @@
   },
   "overall": {
     "pairs": 23291,
-    "passing": 1040,
-    "rate": 0.04465244085698338,
+    "passing": 1041,
+    "rate": 0.044695375896268943,
     "statuses": {
-      "pass": 1040,
+      "pass": 1041,
       "fail-known": 0,
-      "skip": 22251,
+      "skip": 22250,
       "quarantined": 0
     },
     "failKnown": 0,
     "reasons": {
-      "not-ported-yet": 18834,
+      "not-ported-yet": 18833,
       "blocked-by": 36,
       "intentional-divergence": 0,
       "php-only": 0,
@@ -36,9 +36,9 @@
       "blocked-by:mail": 2,
       "blocked-by:support": 27,
       "deferred:ai-sdk": 3381,
-      "not-ported-yet": 18834
+      "not-ported-yet": 18833
     },
-    "adapted": 348
+    "adapted": 349
   },
   "components": {
     "ai": {
@@ -193,17 +193,17 @@
     },
     "collections": {
       "pairs": 1029,
-      "passing": 999,
-      "rate": 0.9708454810495627,
+      "passing": 1000,
+      "rate": 0.9718172983479106,
       "statuses": {
-        "pass": 999,
+        "pass": 1000,
         "fail-known": 0,
-        "skip": 30,
+        "skip": 29,
         "quarantined": 0
       },
       "failKnown": 0,
       "reasons": {
-        "not-ported-yet": 1,
+        "not-ported-yet": 0,
         "blocked-by": 29,
         "intentional-divergence": 0,
         "php-only": 0,
@@ -213,10 +213,9 @@
       },
       "reasonsDetail": {
         "blocked-by:database": 2,
-        "blocked-by:support": 27,
-        "not-ported-yet": 1
+        "blocked-by:support": 27
       },
-      "adapted": 327
+      "adapted": 328
     },
     "concurrency": {
       "pairs": 20,
@@ -1046,8 +1045,8 @@
   },
   "alpha": {
     "applicable": 18395,
-    "passing": 1040,
-    "rate": 0.05653710247349823,
+    "passing": 1041,
+    "rate": 0.056591465072030445,
     "target": 0.9,
     "variants": [
       "none",
@@ -1112,7 +1111,7 @@
     "perVariant": {
       "none": {
         "applicable": 17690,
-        "passing": 1040
+        "passing": 1041
       },
       "pgsql": {
         "applicable": 92,
@@ -1140,7 +1139,7 @@
       }
     },
     "remaining": {
-      "not-ported-yet": 18182,
+      "not-ported-yet": 18181,
       "blocked-by": 36
     },
     "noAlphaLine": 294,
