@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-29-2026 16:49
+last_updated: 10-29-2026 18:39
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -165,7 +165,7 @@ development_status:
   14-6-arr-helpers: done  # Maintainer traversal-by-value ruling implemented; 83 pass, four legitimate Support holds; current Fidelity and full harness verified.
   14-7-lazycollection-behaviour: done
   14-8-lazycollection-laziness-guarantees: done  # ESC-14.8-3 tool fix landed (#537); Fidelity re-run passed tree 8956514a (two passes, current); story:check 14.8 pass; Epic-close checks met.
-  epic-14-retrospective: optional
+  epic-14-retrospective: done
 
   epic-15: backlog
   15-1-config-repository: backlog
@@ -2243,3 +2243,71 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/MAINT-2026-10-29-story-14-8.md"
+  - id: "epic-14-retro-item-1-lazy-combine-zip-cleanup"
+    epic: 14
+    action: "packages/collections: LazyCollection.combine and zip call return() on
+      every iterator they open when the outer generator finishes or is abandoned,
+      so a user generator's finally runs as in PHP; add an XT-collections case (take
+      / first over zip and combine); remove the residual from packages/collections/docs/collections.md:245-247.
+      No assertion removed or weakened (S1)."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-14-retro-2026-10-29.md"
+  - id: "epic-14-retro-item-2-remove-attempt-patch"
+    epic: 14
+    action: "Remove the applied blocked-attempt patch _bmad-output/implementation-artifacts/retro-14-runtime-php-types-attempt-1.patch,
+      since its item is done (#456) (S2)."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-14-retro-2026-10-29.md"
+  - id: "epic-14-retro-item-3-fidelity-evidence-gaps"
+    epic: 14
+    action: "tools/fidelity-review, within the 2026-10-21 amendment's What it may
+      change: for a probe output over WHOLE_FILE_CAP supply the rows the changed tests
+      select instead of omitting it (E1); for a Xaravel Test that compares against
+      a signed Oracle fixture supply the fixture's request and decoded output (E2);
+      for a changed Ported Test fixture file supply its Upstream counterpart (E3).
+      A case for each in conformance/tests/xaravel/fidelity-review.test.ts; update
+      the evidence notes in conformance/review/fidelity.md and docs/ops/fidelity-review.md."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-14-retro-2026-10-29.md"
+  - id: "epic-14-retro-item-4-runtime-builtin-scan"
+    epic: 14
+    action: "A tools/ script, with a Xaravel Test, that lists the PHP functions and
+      constructs an Upstream Component's src/ and test files call by name minus those
+      @xaravel/runtime/php already exports, so an epic's first Story can raise them
+      in one round; document it in docs/ops/ beside the Story loop (P1)."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-14-retro-2026-10-29.md"
+  - id: "epic-14-retro-item-5-traversable-js-generator"
+    epic: 14
+    action: "packages/runtime, with its test in packages/collections: Traversable
+      (and Iterator) [Symbol.hasInstance] accept the bare JS generators Generator's
+      already does (isJsGenerator), so new Collection(gen), Arr.from(gen) and merge(gen)
+      iterate it as PHP does; XT-runtime and XT-collections cases for each. No assertion
+      removed or weakened (L1)."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-14-retro-2026-10-29.md"
+  - id: "epic-14-retro-item-6-stdclass-props-hook"
+    epic: 14
+    action: "packages/runtime, with its test in packages/collections: add the [Symbol.for('xaravel.php.props')]
+      hook to stdClass, returning its own properties as a PhpArray, so looseEquals
+      and spaceship compare stdClass objects as PHP does; XT-runtime cases for ==
+      and <=>, and XT-collections cases for contains, unique, max and sort over stdClass
+      and jsonDecode objects (L2)."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-14-retro-2026-10-29.md"
+  - id: "epic-14-retro-item-7-lazy-range-php-arithmetic"
+    epic: 14
+    action: "packages/collections: LazyCollection.range takes unknown bounds and step
+      as Collection.range does and steps with the runtime's PHP plus / minus / spaceship,
+      so numeric-string bounds count and non-numeric ones throw Upstream's TypeError;
+      align the Enumerable.range signature; XT-collections cases for numeric-string
+      and letter bounds (L3)."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-14-retro-2026-10-29.md"
