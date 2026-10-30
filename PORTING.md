@@ -17,7 +17,7 @@ One decided TypeScript form per PHP construct (AD-26). The first column is the s
 | `__get` / `__set` outside `Model` | None (DIV-12). Use the explicit accessor: `$request->title` → `request.input('title')` (DIV-12.5), `$this->route('post')` → `this.route('post')`. | decided |
 | `__toString` | `toString()` plus `[Symbol.toPrimitive]`. | decided |
 | `__invoke` | A method named `__invoke`, which the container, router and dispatcher call. | decided |
-| `ArrayAccess` | `offsetGet` / `offsetSet` / `offsetExists` / `offsetUnset` plus `get()`. Index syntax works only on `Model`, through its Proxy. `$collection[0]` → `collection.get(0)` (DIV-12.6); a write, `isset` or `unset` on any `ArrayAccess` object → `offsetSet` / `offsetExists` / `offsetUnset` (DIV-12.17). | decided |
+| `ArrayAccess` | `offsetGet` / `offsetSet` / `offsetExists` / `offsetUnset` plus `get()`. Index syntax works only on `Model`, through its Proxy. `$collection[0]` → `collection.get(0)` and, on any other `ArrayAccess` object, `$x[k]` → `x.offsetGet(k)` (DIV-12.6); a write, `isset` or `unset` on any `ArrayAccess` object → `offsetSet` / `offsetExists` / `offsetUnset` (DIV-12.17). | decided |
 | `IteratorAggregate`, `Countable` | `[Symbol.iterator]` and `count()`. A Traversable's `[Symbol.iterator]` yields its values, as a JS Array does; `entries()` yields `[key, value]` pairs and `keys()` its keys, as on a JS Map. `foreach ($c as $v)` → `for (const v of c)`; `foreach ($c as $k => $v)` → `for (const [k, v] of c.entries())`. `PhpArray` alone keeps its `[key, value]` iterator (AD-9.5). | decided |
 | Generators (`yield`) | A JS generator function. `yield $v` → `yield v`; `yield $k => $v` → `yield keyed(k, v)`; `yield from $it` → `yield* yieldFrom(it)`, keeping keys. PHP's `Generator` (`current`, `key`, `send`, `getReturn`, …) comes from `@xaravel/runtime/php` and iterates as a Traversable (DIV-12.18). | decided |
 | Traits | `mixin(Base, ...Traits)`, for example `class User extends mixin(Model, HasFactory, Notifiable)`. `boot<Trait>` / `initialize<Trait>` run as Upstream; trait identity comes from `classUsesRecursive()`, with traits registered under their Upstream FQCN (AD-19). | decided |
@@ -94,7 +94,7 @@ The parity rule (PRD §5.1): a Xaravel API has the same name, arguments, default
 - **Order of rewrites.** First apply § Mechanical expression rule, which is syntax-directed and uses no type information. Then apply the type-dependent rewrites, each an adaptation that cites its clause:
   - an IO call or thenable terminal is awaited: DIV-1.1 (with DIV-8.1 for the async body, DIV-8.2 for predicate assertions);
   - `$m->rel()` → `m.related('rel')`: DIV-2.1, and lazy `$m->rel` → `await m.related('rel')`: DIV-2.2;
-  - index access on an `ArrayAccess` receiver, `a[k]` → `a.get(k)`: DIV-12.6;
+  - index access on an `ArrayAccess` receiver: `a[k]` → `a.get(k)` on a Collection, `a.offsetGet(k)` on any other `ArrayAccess` object: DIV-12.6;
   - a Model configuration method call, `fillable(arr)` → `setFillable(arr)`: DIV-12.4;
   - a magic Request property, `request.title` → `request.input('title')`: DIV-12.5;
   - a dynamic where, `whereEmail(v)` → `where('email', v)`: DIV-12.7;
@@ -131,7 +131,7 @@ bun run porting:translate --blade '<blade template>'
 | list `[1, 2]`, `array(1, 2)`, spread `...$a` | `[1, 2]`, `...a`; a spread of a `PhpArray` with integer keys is `...array_values(a)` (DIV-9.15) |
 | every key a non-integer-like string literal | `{ a: 1, 'b-c': 2 }` |
 | any other keyed array | `new PhpArray([[k, v], …])`; an implicit key gets the next literal integer index, and a non-literal key before an implicit one is untranslatable. Explicit (or mixed implicit and explicit) keys that normalise to `0..n-1` in order are a list, ported as a JS `Array` per § Test-adaptation rules / Array literals (DIV-9.2); `porting:translate` does not yet apply this. |
-| `$a[k]` | `a[k]` (ArrayAccess receivers adapt to `.get(k)` under DIV-12) |
+| `$a[k]` | `a[k]` (ArrayAccess receivers adapt to `.get(k)` on a Collection and `.offsetGet(k)` otherwise, under DIV-12.6) |
 | `==`, `!=`/`<>`, `<=>` | `looseEquals(a, b)`, `!looseEquals(a, b)`, `spaceship(a, b)` |
 | `===`, `!==`, `< > <= >=`, arithmetic, bitwise, `??`, `instanceof` | unchanged; the left operand of `??` has its property and index links optional-chained, as in `isset` (`$a->b->c ?? 1` → `a?.b?.c ?? 1`) |
 | `!`, `&&`, `\|\|`, `c ? a : b` | operands and conditions wrapped `toBool(…)` unless boolean-shaped (comparison, `!`, `&&`/`\|\|`, `instanceof`, `isset`, `empty`, a boolean literal) |

@@ -81,6 +81,14 @@ Epic 9's retrospective found no route for an action item that changes `packages/
 
 N ≤ 8 keeps the 2026-10-18 rule.
 
+## Amendment 2026-10-30: a second key for `contract` and `protected-path` Escalations
+
+Twice in two days (ESC-14.8-1/2 in #523/#524, ESC-15.1-2/3 in #550) the orchestrator ruled on its own `contract` and `protected-path` Escalations under "Decisions during a Story". The rulings were sound, but I want a second, independent judgment on every such ruling before it lands. So, from now on:
+
+- **The orchestrator does not write the decision** for a `contract` or `protected-path` Escalation. It raises the Escalation with its recommendation, marks the Story `blocked` (or the item waiting), lists it under Rulings in INBOX and moves on.
+- **The second key** is the monitor, under my standing rules (`decisions/MAINT-2026-10-26-runtime-builtins.md` and the others recorded in `decisions/`), or me. A recommendation that only applies an existing ruling of mine to the same kind of change (as ESC-15.1-2 applied ESC-11.1-2) still needs that second key; it simply gets it quickly.
+- **Unchanged:** the 2026-10-21 amendment. The orchestrator still fixes and rules on the Fidelity Review's own evidence gaps itself. So are its rulings on other triggers within "Decisions during a Story".
+
 ## Revoking
 
 Delete this file, or create `~/.xaravel-orchestrator/STOP` on the M1.
