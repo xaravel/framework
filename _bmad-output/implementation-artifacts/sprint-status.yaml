@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-30-2026 12:30
+last_updated: 10-30-2026 15:23
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -171,7 +171,7 @@ development_status:
   15-1-config-repository: done
   15-2-phpdotenv-grammar-port: done  # ESC-15.2-6 landed (#569); three runtime throws became Upstream code; two current Fidelity passes at tree 6095fb1a; XT-config-3 and XT-config-4 pass against the signed fixtures.
   15-3-bun-s-env-autoload-neutralised: done
-  epic-15-retrospective: optional
+  epic-15-retrospective: done
 
   epic-16: backlog
   16-1-schema-types-and-serializer: backlog
@@ -2385,3 +2385,73 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/ESC-15.2-6.md"
+  - id: "epic-15-retro-item-1-config-presealed-base-write-target"
+    epic: 15
+    action: "Name the Story that gives the config Repository its pre-sealed base write
+      (S1): add an AC to Story 17.4, or whichever Story adds the Application sealed
+      state, naming packages/config, so XT-config-1 gains its full wording (config([...])
+      on a sealed Application inside a unit frame), as decisions/ESC-15.1-2.md says.
+      Mirrors epic-11-retro-item-7-macroable-boot-write. Edits epics.md."
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md"
+  - id: "epic-15-retro-item-2-untargeted-deferrals"
+    epic: 15
+    action: "Resolve Epic 15 untargeted deferrals (S2 a-d) in packages/config and
+      packages/runtime: probe each against the Oracle (nested-frame snapshot in packages/config
+      Repository.ts, multibyte cap in the Dotenv Lexer, file_get_contents on non-UTF-8
+      input and class_exists on a trait in packages/runtime); fix with an XT case
+      where the port diverges from PHP, otherwise remove the residual from spec and
+      docs. A fix needing a divergence, another component or an Expectations change
+      waits on the Maintainer. No assertion removed or weakened."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md"
+  - id: "epic-15-retro-item-3-fidelity-evidence-porting-and-tools"
+    epic: 15
+    action: "Show the evidence E2 and E3 found missing (tools/fidelity-review), within
+      the 2026-10-21 amendment: supply the PORTING.md section a change cites or applies,
+      and the source of the tools whose output a changed test or check asserts on
+      (api-surface:gate, async-surface.ts); add a case for each in conformance/tests/xaravel/fidelity-review.test.ts
+      and update the evidence notes in conformance/review/fidelity.md and docs/ops/fidelity-review.md."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md"
+  - id: "epic-15-retro-item-4-entry-script-lint-holes"
+    epic: 15
+    action: "Close the entry-script lint holes (tools/entry-scripts; L1): recognise
+      bunx, env and VAR= prefixes with quoted values, exec and time, subshells and
+      $( ), and a path-qualified bun; read every workspace package.json except test
+      fixtures; report forms that cannot carry --no-env-file or document why bunfig
+      env = false covers them; add XT-conformance cases and fix any existing script
+      the stricter lint finds."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md"
+  - id: "epic-15-retro-item-5-getenv-equals-name"
+    epic: 15
+    action: "Make getenv() for a name containing = match the Oracle (packages/runtime;
+      L3): add an Oracle probe row for putenv(\"FOO=bar=baz\"); getenv(\"FOO=bar\"\
+      ) and match its result in packages/runtime/src/php/environmentFunctions.ts."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md"
+  - id: "epic-15-retro-item-6-pcre-compiled-pattern-cache"
+    epic: 15
+    action: "Rule whether an immutable compiled-pattern cache keyed by pattern text
+      and flags is allowed under AD-5 (L4): Dotenv.parse is about 30x slower than
+      PHP because every preg_* call recompiles its pattern (pcre.ts reads AD-5 as
+      forbidding a cache)."
+    owner: "Maintainer"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md"
+  - id: "epic-15-retro-item-7-builtin-scan-vendor-constants-classes"
+    epic: 15
+    action: "Widen the builtin scan (tools/scans; P1, L5): scan the vendor libraries
+      an Upstream Component ports (phpdotenv, phpoption) from a pinned source; list
+      PHP constants such as DIRECTORY_SEPARATOR and builtin or SPL classes named after
+      new, instanceof or ::; list PCRE forms in scanned patterns that the runtime
+      converter refuses; update docs/ops/builtin-scan.md and add XT cases."
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md"
