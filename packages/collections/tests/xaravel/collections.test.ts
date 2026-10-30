@@ -42,7 +42,7 @@ import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writ
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
-import { Arr, Collection, collect, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
+import { Arr, Collection, collect, data_get, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
 import { TestBackedEnum, TestStringBackedEnum, FIXTURES as ENUM_FIXTURES } from "../ported/framework/tests/Support/Fixtures/Enums";
 import { ArgumentCountError, ArrayIterator, BlockedByComponentError, Generator, Iterator, Traversable } from "@xaravel/runtime";
 import { SupportLazyCollectionBlockedBySupportTest } from "../support/SupportClockBoundary";
@@ -2413,5 +2413,47 @@ xaravelTest(
     failure = failureOf(() => lazy(log, "this").combine(failingSource(log)).each(() => { throw bodyError; }));
     Assert.assertSame(bodyError, failure); // adapted:DIV-9.16
     Assert.assertSame(["start this", "finally failing", "finally this"], log);
+  },
+);
+
+// Action item epic-14-retro-item-5-traversable-js-generator: a bare JS generator object, what a ported generator
+// function returns (DIV-12.18), is a Traversable as PHP's `Generator` is, so Collection, `collect`, `Arr.from`,
+// `merge`, `union`, `data_get`'s `*` wildcard, a `mapWithKeys` callback's result and a LazyCollection source read its
+// keys and values. The expected values are those of
+// `generator-sources.probe.txt`, which `generator-sources.probe.php` writes with PHP 8.5.11 by running Upstream at the
+// Pin; every recorded label is recomputed here and compared through `jsonEncode`.
+const GENERATOR_SOURCES = readFileSync(join(import.meta.dir, "generator-sources.probe.txt"), "utf8").trim().split("\n").map((line) => {
+  const tab = line.indexOf("\t");
+  return [line.slice(0, tab), line.slice(tab + 1)] as const;
+});
+
+xaravelTest(
+  "XT-collections-20",
+  "a bare JS generator object passed to Collection, collect, Arr.from, merge, union, data_get's wildcard, mapWithKeys and LazyCollection gives PHP 8.5.11's values and keys, and LazyCollection's constructor still refuses one",
+  () => {
+    function* g(): globalThis.Generator<unknown, void, unknown> { yield 1; yield 2; }
+    function* gk(): globalThis.Generator<unknown, void, unknown> { yield keyed("a", 1); yield keyed(5, 2); yield 3; }
+    function* gn(): globalThis.Generator<unknown, void, unknown> { yield keyed("a", { n: 1 }); yield { n: 2 }; }
+    const attempt = (fn: () => unknown): unknown => {
+      try { return fn(); } catch (error) { return `${fqcn(error as object)}: ${(error as Error).message}`; }
+    };
+    const cases: Record<string, () => unknown> = {
+      collection: () => [new Collection(g()).all(), collect(gk()).all()],
+      "arr.from": () => [Arr.from(g()), Arr.from(gk())],
+      merge: () => [collect([0]).merge(g()).all(), collect({ a: 0, x: 9 }).merge(gk()).all()],
+      union: () => collect(new PhpArray<string | number, unknown>([[0, "z"], ["a", 0]])).union(gk()).all(),
+      "lazy.constructor": () => attempt(() => new LazyCollection(g())),
+      "lazy.make": () => LazyCollection.make(() => gk()).all(),
+      "lazy.merge": () => LazyCollection.make([0]).merge(g()).all(),
+      data_get: () => [data_get(gn(), "*"), data_get(gn(), "*.n")],
+      map_with_keys: () => [Arr.mapWithKeys([1], () => gk()), collect([1]).mapWithKeys(() => gk()).all()],
+    };
+    for (const [label, json] of GENERATOR_SOURCES) {
+      Assert.assertSame(json, jsonEncode(cases[label]!()), label);
+    }
+    Assert.assertSame(jsonEncode(Object.keys(cases).sort()), jsonEncode(GENERATOR_SOURCES.map(([label]) => label).sort()));
+    Assert.assertTrue(g() instanceof Traversable);
+    Assert.assertTrue(g() instanceof Iterator);
+    Assert.assertTrue(g() instanceof Generator);
   },
 );

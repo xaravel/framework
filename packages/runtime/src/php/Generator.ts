@@ -13,8 +13,9 @@
 //   that generator, and gives the inner generator's return value (null for an array or a Traversable).
 //
 // `x instanceof Generator` is also true for a bare JS generator object (action item
-// epic-14-item-3-runtime-type-tests-functions, ESC-14.1-9), as PHP sees one; `isGeneratorObject` is the wrapper-class
-// test the runtime's own sites use. It carries the `Iterator` and `Traversable` brands; `[Symbol.iterator]()`, `entries()` and `keys()` run PHP's
+// epic-14-item-3-runtime-type-tests-functions, ESC-14.1-9), as PHP sees one, and so are `x instanceof Iterator` and
+// `x instanceof Traversable` (action item epic-14-retro-item-5-traversable-js-generator); `isGeneratorObject` is the
+// wrapper-class test the runtime's own sites use. The wrapper carries the `Iterator` and `Traversable` brands; `[Symbol.iterator]()`, `entries()` and `keys()` run PHP's
 // `foreach` protocol and refuse a closed generator when called. `phpSerialize` and `phpUnserialize` refuse it with
 // PHP's `Exception`. Not ported: `Generator::throw`, and a JS generator advanced before it is wrapped (its earlier
 // yields are not seen). It is registered as `Generator`, and is not in `Symbol.for('xaravel.php.classes')`. It and
@@ -24,6 +25,7 @@ import { arrayEntries } from "./casts";
 import { Error as PhpError } from "./Error";
 import { Exception } from "./Exception";
 import { Iterator } from "./Iterator";
+import { isJsGenerator, type JsGenerator } from "./jsGenerator";
 import { delegated, isDelegated, KeyedYield } from "./keyed";
 import { foreachIterator, foreachKeys, foreachValues, TRAVERSAL_EXIT } from "./liveCursor";
 import { INT_MAX, INT_MIN, intKey } from "./phpInt";
@@ -31,16 +33,7 @@ import { phpType } from "./phpType";
 import { isTraversable, iteratorOf } from "./traverse";
 import { Traversable } from "./Traversable";
 
-/** A JS generator object, as a ported generator function returns it. */
-type JsGenerator = globalThis.Generator<unknown, unknown, unknown>;
-
-/** `%GeneratorPrototype%`, which every JS generator object inherits. */
-const JS_GENERATOR_PROTOTYPE = Object.getPrototypeOf(Object.getPrototypeOf((function* () {})())) as object;
-
-/** Whether `value` is a JS generator object (what a ported generator function returns). Internal. */
-export function isJsGenerator(value: unknown): value is JsGenerator {
-  return typeof value === "object" && value !== null && Object.prototype.isPrototypeOf.call(JS_GENERATOR_PROTOTYPE, value);
-}
+export { isJsGenerator };
 
 /** The int value of a PHP int key, or null for any other key. */
 function intOf(key: unknown): bigint | null {

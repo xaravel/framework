@@ -18,6 +18,7 @@ import {
   Closure,
   explode,
   Generator,
+  hasBrand,
   identical,
   in_array,
   is_array,
@@ -383,7 +384,8 @@ function iterateValues(target: unknown): Iterable<unknown> {
   if (is_array(target)) {
     return arrayEntries(target as object).map(([, item]) => item);
   }
-  if (target instanceof Generator && !(target instanceof Traversable)) {
+  // A bare JS generator object answers `instanceof Generator` and `instanceof Traversable` but carries no brand.
+  if (target instanceof Generator && !hasBrand(target, Traversable)) {
     return new Generator(target);
   }
   return target as Iterable<unknown>;

@@ -30,7 +30,7 @@ collect(["a", "b", "c"]).filter((v) => v !== "b").values().toJson(); // '["a","c
 
 - a PHP array (list, plain object or `PhpArray`);
 - another `Enumerable` (its `all()`), an `Arrayable` (its `toArray()`), a `Jsonable` (its decoded JSON) or a `JsonSerializable` (its `jsonSerialize()`, cast to an array);
-- a Traversable (`ArrayObject`, a runtime `Generator`, …) with its keys, or a runtime `WeakMap` as the list of its values;
+- a Traversable (`ArrayObject`, a runtime `Generator`, a generator object such as `gen()` returns, …) with its keys, or a runtime `WeakMap` as the list of its values;
 - any other object, as its public properties;
 - `null` or nothing, for an empty collection, and a scalar or an enum case, as a one-item collection.
 

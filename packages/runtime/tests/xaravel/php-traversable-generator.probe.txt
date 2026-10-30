@@ -1,0 +1,5 @@
+instanceof	[true,true,true,false]
+is_a	[true,true,true,false,true]
+caching	[["a",1,true],[5,2,true],[6,3,false]]
+caching.inner	[true,true]
+caching.to_array	{"a":1,"5":2,"6":3}

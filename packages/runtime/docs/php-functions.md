@@ -132,8 +132,10 @@ map it:
   carry, with PHP's members `offsetExists`, `offsetGet`, `offsetSet` and `offsetUnset`.
 - The three tokens are recorded, so `interfaceExists('ArrayAccess')`, `interfaceExists('UnitEnum')` and
   `interfaceExists('BackedEnum')` are true, as in PHP, and `is_a` resolves their names.
-- `x instanceof Generator` is also true for a bare JS generator object, as PHP sees one. `Traversable` and `Iterator`
-  do not answer a bare JS generator object.
+- `x instanceof Generator`, `x instanceof Iterator` and `x instanceof Traversable` are also true for a bare JS
+  generator object, as PHP's `Generator` implements both interfaces, and so are `is_a(gen, 'Iterator')` and
+  `is_a(gen, 'Traversable')`. It carries no brand, so `hasBrand(gen, Traversable)` is `false`; the runtime reads it
+  through a `Generator` wrapping it, and `new CachingIterator(gen)` takes one.
 
 ## Array functions
 
@@ -544,9 +546,6 @@ byte of 0x80 or more on its own), and a string holding a lone surrogate passed t
 - PHP global function names without a runtime export resolve to no callable. Class and object method callbacks
   resolve through `resolveCallable`, including callable arrays and `Class::method` strings (DIV-9.13/14).
 - `sprintf`'s locale handling (`setlocale`, a locale decimal point for `%f` / `%g`): the point is always `.`.
-- `Traversable` and `Iterator` answering a bare JS generator object: it answers `instanceof Generator` and
-  `is_a(gen, 'Generator')`, but not `instanceof Traversable` / `Iterator`, nor `is_a(gen, 'Traversable')` /
-  `is_a(gen, 'Iterator')`.
 - A token for `Countable` or any other PHP interface not listed above: `Countable` is no recorded token, so
   `is_a(x, 'Countable')` is `false` (`count` reads the `Symbol.for("Countable")` brand directly).
 - A contract token passed to `sprintf`, `implode`, `explode` or `array_key_exists` is not read as its class-string:
