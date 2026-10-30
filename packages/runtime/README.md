@@ -15,12 +15,12 @@ Xaravel is an independent open-source project. It is not affiliated with, sponso
 - [The serialize and JSON codecs](docs/codecs.md): `phpSerialize`, `phpUnserialize`, `jsonEncode`, `jsonDecode`.
 - [PHP exceptions and the protocol](docs/exceptions.md): PHP's `Exception`, `Error` and SPL classes.
 - [PHP built-in interfaces and SPL classes](docs/php-builtins.md): `Traversable`, `Throwable` and kin as tokens,
-  `ArrayIterator`, `ArrayObject`, `CachingIterator` and `WeakMap`.
+  `ArrayIterator`, `ArrayObject`, `CachingIterator`, `EmptyIterator` and `WeakMap`.
 - [Userland arguments and returns](docs/php-userland-arguments.md): explicit weak parameter binding and normalized returns.
 - [Chunking, sorting, arithmetic and callables](docs/php-chunk-sort-arith-callables.md): PHP builtins and owned generator cleanup.
 - [PHP generators and functions](docs/php-functions.md): `Generator`, `keyed` and `yieldFrom` (DIV-12.18), and
   PHP's array, `range` and string functions under their PHP names (`in_array`, `array_unique`, `substr`, …), and the
-  process environment and file read (`getenv`, `putenv`, `superglobals`, `file_get_contents`).
+  process environment and file read (`getenv`, `putenv`, `superglobals`, `file_get_contents`, `DIRECTORY_SEPARATOR`).
 - [Traits and `inject` metadata](docs/traits-and-inject.md): `mixin`, trait boot and initialize, `inject`, the Spec
   values and `returns`.
 - [PHP reflection and attributes](docs/reflection.md): `ReflectionClass` and its kin over `inject` metadata,

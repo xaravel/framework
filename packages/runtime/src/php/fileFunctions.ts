@@ -13,6 +13,12 @@ import { boolParameter, intParameter, nullableIntParameter, stringParameter } fr
 import { decodeResult, wellFormed } from "./stringFunctions";
 import { ValueError } from "./ValueError";
 
+/**
+ * PHP's `DIRECTORY_SEPARATOR` (action item epic-15-item-4-runtime-directory-separator-array-reduce-empty-iterator,
+ * ESC-15.2-6): `"/"`, as on the Oracle image's Linux and on macOS. Windows, where PHP's is a backslash, is not a target.
+ */
+export const DIRECTORY_SEPARATOR = "/";
+
 /** PHP 8.5.11's registered stream wrappers (`stream_get_wrappers()` on the probe's host), plain files' `file` included. */
 const WRAPPERS: ReadonlySet<string> = new Set(["https", "ftps", "compress.zlib", "compress.bzip2", "php", "file", "glob", "data", "http", "ftp", "phar", "zip"]);
 

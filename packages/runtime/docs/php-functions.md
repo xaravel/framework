@@ -204,6 +204,12 @@ map it:
   `false`, `array_all([])` `true`, `array_find_key` gives the first matching key or `null`). The callback is taken as
   `array_filter` takes one (DIV-9.13) but must not be `null`: `null` throws PHP's `TypeError`
   `array_any(): Argument #2 ($callback) must be a valid callback, no array or string given`.
+- `array_reduce(array, callback, initial = null)` (ESC-15.2-6): folds the values in insertion order, the carry
+  starting at `initial` and becoming `callback(carry, value)` for each (the key is not passed). For an empty array it
+  returns `initial` without calling the callback. A
+  [registry](#callables-php-function-names) entry (2 required arguments, 3 in all). The callback is taken as
+  `array_any` takes one: every PHP callable form through the shared resolver (DIV-9.13), and not `null`. A non-array
+  throws PHP's `TypeError` `array_reduce(): Argument #1 ($array) must be of type array, string given`.
 - `array_first(array)` and `array_last(array)`: the first or last value, `null` for an empty array.
 - `array_search(needle, haystack, strict = false)`: the first key whose value is `==` `needle` (`in_array`'s
   comparison, the enum rule included) or `===` it (`identical`), else `false`.
@@ -774,6 +780,9 @@ U+FFFD where PHP keeps the bytes; no limit is thrown, since the runtime never se
 `process.env` for the whole process and nothing is restored afterwards, as in the CLI; PHP's non-CLI SAPIs restore
 `putenv` values at request end, which the runtime does not (ESC-15.2-2 rules `getenv` and `putenv` over
 `process.env`).
+
+`DIRECTORY_SEPARATOR` (ESC-15.2-6), the constant phpdotenv's `Paths::filePaths` joins a directory and a file name
+with, is `"/"`, as on the Oracle image's Linux and on macOS; Windows, where PHP's is a backslash, is not a target.
 
 ## Values JS cannot hold
 
