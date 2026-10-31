@@ -210,6 +210,28 @@ map it:
   [registry](#callables-php-function-names) entry (2 required arguments, 3 in all). The callback is taken as
   `array_any` takes one: every PHP callable form through the shared resolver (DIV-9.13), and not `null`. A non-array
   throws PHP's `TypeError` `array_reduce(): Argument #1 ($array) must be of type array, string given`.
+- `array_column(array, column_key, index_key = null)` (ESC-16.1-2): the value of the column `column_key` in each row,
+  in order, or the whole row when `column_key` is null. An array row is looked up as `zend_symtable_find` does
+  (`"1"` finds the int key 1); an object row by its public properties only (its class's PHP property table and its
+  dynamic properties, protected and private ones excluded; an AD-26 enum case's `name` and, when backed, `value`), so a
+  method is never a column and `array_column(Suit.cases(), "value")` gives the backing values in case order. A row
+  without the column, or that is neither an array nor an object, is skipped. With `index_key`, each value is keyed by
+  the row's value there as an array key takes it (null `""`, a bool 0 or 1, a float truncated, a numeric string its
+  int, a contract token its FQCN); a row without one is appended at the next int key, or dropped when that key is
+  taken (past `PHP_INT_MAX`, as `zend_hash_next_index_insert` fails); an index value no key takes throws PHP's
+  `TypeError` `Cannot access offset of type <type> on array` (`array`, `stdClass`, an enum's FQCN). `column_key` and
+  `index_key` are PHP's `string|int|null` parameters (a bool or a float tried as an int first, then as a string; an
+  object its `__toString` port; a contract token its FQCN), anything else throws `array_column(): Argument #2
+  ($column_key) must be of type string|int|null, array given` (`Closure given` for a closure). A
+  [registry](#callables-php-function-names) entry (2 required arguments, 3 in all). Known limits:
+  - PHP reads object properties with the caller's scope, so a class method sees its own protected and private
+    properties; the runtime cannot see the caller and reads public properties only, as ESC-16.1-2 scopes it.
+  - PHP's `__isset` / `__get` fallback (`ZEND_PROPERTY_ISSET`) is not followed (AD-26: no magic outside `Model`,
+    which does not exist yet).
+  - A typed property with no default that was never assigned has no form in the PHP property table, which reads it
+    as null, so its row is not skipped as PHP skips it.
+  - A class without a PHP property table counts every own enumerable key as a public property, as `objectProps`
+    reads it for the codecs.
 - `array_first(array)` and `array_last(array)`: the first or last value, `null` for an empty array.
 - `array_search(needle, haystack, strict = false)`: the first key whose value is `==` `needle` (`in_array`'s
   comparison, the enum rule included) or `===` it (`identical`), else `false`.
@@ -503,6 +525,13 @@ array size (`HT_MAX_SIZE`, 2^30), with both of PHP's size messages; PHP's `TypeE
   `TypeError` (`chunk_split("é", 1, "|")`); one that rejoins it does not (`chunk_split("é", 1, "")` is `"é"`).
 - `substr(string, offset, length = null)` counts UTF-8 bytes, as PHP's string is its bytes: a negative offset counts
   from the end, a negative length stops that many bytes before it, and `null` runs to the end.
+- `rawurldecode(string)` (ESC-16.1-2, `php_raw_url_decode`): each `%XX` (two hex digits, either case) is the byte
+  it names (`rawurldecode("%e2%82%AC")` is `"€"`); `+`, a lone `%` and a `%` without two hex digits after it stay as
+  they are (`rawurldecode("a%20b+c")` is `"a b+c"`, `rawurldecode("%41%4")` `"A%4"`). Its argument is a PHP `string`
+  parameter: an int, float, bool or null is its string (`rawurldecode(12)` is `"12"`, `true` `"1"`, `1e100`
+  `"1.0E+100"`), an object its `__toString` port, and anything else throws PHP's `TypeError` `rawurldecode():
+  Argument #1 ($string) must be of type string, array given`. A [registry](#callables-php-function-names) entry
+  (exactly 1 argument). A result that is no valid UTF-8 (`rawurldecode("%FF")`) throws a JS `TypeError` (DIV-9.18).
 
 - `implode(separator, array)` and `implode(array)`, as PHP 8.5 compiles a direct call: each value as PHP's `(string)`
   gives it (`[1, 1.5, true, false, null]` is `"1,1.5,1,,"`, an array `"Array"`, an object its `__toString` port, an
@@ -800,7 +829,7 @@ sequence (`substr("héllo", 1, 1)`, `trim("ê", "é")`, `chunk_split("é", 1, "|
 more, a `sprintf` result that is no valid UTF-8 (a precision that splits a sequence, `%.1s` of `"é"`, or a `%c`
 byte of 0x80 or more on its own), and a string holding a lone surrogate passed to `substr`, `str_starts_with`,
 `str_contains`, `strlen`, `lcfirst`, `range`, `explode`, `sprintf`, `strcmp`, `strcasecmp`, `strnatcmp`,
-`strnatcasecmp`, `strcoll`, `unhandledMatch`, `strtoupper`, `trim`, `chunk_split`, or any of the
+`strnatcasecmp`, `strcoll`, `unhandledMatch`, `strtoupper`, `trim`, `chunk_split`, `rawurldecode`, or any of the
 [phpdotenv builtins](#phpdotenv-builtins) that takes a string.
 
 ## Not ported

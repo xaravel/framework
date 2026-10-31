@@ -14,21 +14,23 @@ import { arrayCells, rekeyEntry, referenceEntry, setEntryCell } from "./arrayRef
 // `array_intersect_uassoc` (`php_array_diff` / `php_array_intersect` with `zend_sort`, as written),
 // `array_merge_recursive`, `array_replace`, `array_replace_recursive`, `array_pad`, and `arrayUnion` for PHP's `+` on
 // arrays (`add_function_array`); and (action item epic-15-item-4-runtime-directory-separator-array-reduce-empty-iterator,
-// ESC-15.2-6) `array_reduce`. A callback that is a PHP function name resolves through `phpFunction` (ESC-14.4-2). A
-// PHP array comes in as `arrayEntries` reads it and goes out through `arrayFromEntries` (the AD-9 form); `toPhpArray`
-// alone returns a `PhpArray`. `undefined` reads as null (AD-9), and an omitted optional argument is PHP's default.
+// ESC-15.2-6) `array_reduce`; and (action item epic-16-item-1-runtime-array-column-rawurldecode, ESC-16.1-2)
+// `array_column` (`array_column_fetch_prop`, `array_set_zval_key`). A callback that is a PHP function name resolves
+// through `phpFunction` (ESC-14.4-2). A PHP array comes in as `arrayEntries` reads it and goes out through
+// `arrayFromEntries` (the AD-9 form); `toPhpArray` alone returns a `PhpArray`. `undefined` reads as null (AD-9), and an
+// omitted optional argument is PHP's default.
 // PHP's warnings and deprecations are not reproduced. Everything is synchronous.
-import { isContractToken } from "../registry/registry";
+import { fqcn, isContractToken } from "../registry/registry";
 import { arrayPointer, setArrayPointer } from "./arrayPointer";
 import { ArgumentCountError } from "./ArgumentCountError";
 import { arrayCount, arrayEntries, floatValue, isTrue, toFloat, toInt, toPhpString } from "./casts";
-import { isEnumCase } from "./classExistence";
+import { isBackedEnumClass, isEnumCase } from "./classExistence";
 import { callableParameter } from "./callables";
 import { Error as PhpError } from "./Error";
 import { identical } from "./identical";
 import { binaryStrcmp, looseEquals, spaceship } from "./looseEquals";
 import { objectProps } from "./mangle";
-import { arrayParameter, boolParameter, intParameter, nullableIntParameter } from "./phpArguments";
+import { arrayParameter, boolParameter, intParameter, nullableIntParameter, nullableStringOrIntParameter } from "./phpArguments";
 import { arrayFromEntries, nextFreeIndex, normalizeKey, PhpArray, phpArrayWithNextFree, type PhpArrayKey, type PhpKeyInput } from "./PhpArray";
 import { phpType, phpTypeName } from "./phpType";
 import { phpValueOf } from "./throwableArguments";
@@ -599,6 +601,91 @@ export function array_reduce(array: unknown, callback: unknown, initial: unknown
     carry = fn(carry, value) ?? null;
   }
   return carry;
+}
+
+/** A column or index key as `array_column` parses it: an int, a string, or null (`Z_PARAM_STR_OR_LONG_OR_NULL`). */
+type ColumnKey = { readonly int: number | bigint } | { readonly string: string };
+
+/**
+ * The public properties of the object `o` by name, as `has_property` / `read_property` see them from outside its
+ * class: an AD-26 enum case's `name` and, when its enum is backed, `value`; else `objectProps`' entries less the
+ * mangled (protected and private) names. A method is never one.
+ */
+function publicProps(o: object): Map<string, unknown> {
+  if (isEnumCase(o)) {
+    const record = o as { name?: unknown; value?: unknown };
+    const props = new Map<string, unknown>([["name", record.name ?? null]]);
+    if (isBackedEnumClass(Reflect.get(Object.getPrototypeOf(o) as object, "constructor"))) {
+      props.set("value", record.value ?? null);
+    }
+    return props;
+  }
+  return new Map(objectProps(o).filter(([name]) => !name.startsWith("\0")));
+}
+
+/**
+ * PHP's `array_column_fetch_prop`: the value `key` names in `row` as `[value]`, or null when it has none. On an object
+ * row the key is a property name (an int as its string) among its public properties; on an array row it is looked up
+ * as `zend_symtable_find` does (`"1"` finds the int key 1); any other row has none.
+ */
+function columnValue(row: unknown, key: ColumnKey): [unknown] | null {
+  if (typeof row !== "object" || row === null) {
+    return null;
+  }
+  const type = phpType(row);
+  if (type === "object") {
+    const props = publicProps(row);
+    const name = "int" in key ? String(key.int) : key.string;
+    return props.has(name) ? [props.get(name) ?? null] : null;
+  }
+  if (type !== "array") {
+    return null;
+  }
+  const target = "int" in key ? normalizeKey(key.int) : normalizeKey(key.string);
+  const found = arrayEntries(row).find(([entry]) => sameKey(entry, target));
+  return found === undefined ? null : [found[1]];
+}
+
+/**
+ * PHP's `array_column($array, $column_key, $index_key = null)`: the values of the column `column_key` of each row of
+ * `array`, in order; the whole row when `column_key` is null. A row that is an array gives the value at that key
+ * (looked up as `zend_symtable_find` does), a row that is an object its public property of that name (an AD-26 enum
+ * case its `name` or backed `value`), and a row without one, or that is neither, is skipped (a null `column_key` takes
+ * every row). With `index_key`, each value is keyed by the row's value at `index_key` (null `""`, a bool 0 or 1, a
+ * float truncated, a numeric string its int, as `array_set_zval_key` makes it), or appended at the next int key when
+ * the row has none; without, the result is a list. Throws PHP's `TypeError` for a non-array `array`, a key that is no
+ * string, int or null (an object without a `__toString` port, an array), and `Cannot access offset of type <type> on
+ * array` for an index value no array key takes.
+ */
+export function array_column(array: unknown, column_key: unknown, index_key: unknown = null): unknown {
+  const entries = arrayParameter("array_column", 1, "array", array);
+  const column = nullableStringOrIntParameter("array_column", 2, "column_key", column_key);
+  const index = nullableStringOrIntParameter("array_column", 3, "index_key", index_key);
+  const result = new PhpArray<PhpKeyInput, unknown>();
+  for (const [, row] of entries) {
+    let value: unknown;
+    if (column === null) {
+      value = row ?? null;
+    } else {
+      const found = columnValue(row, column);
+      if (found === null) {
+        continue;
+      }
+      value = found[0];
+    }
+    value = valueCopy(value);
+    const keyed = index === null ? null : columnValue(row, index);
+    if (keyed === null) {
+      // `zend_hash_next_index_insert` fails silently when the next free index is taken (past `PHP_INT_MAX`).
+      if (!result.has(nextFreeIndex(result) ?? 0n)) {
+        result.push(value);
+      }
+      continue;
+    }
+    const keyValue = keyed[0];
+    result.set(normalizeKey(isContractToken(keyValue) ? fqcn(keyValue) : keyValue), value);
+  }
+  return arrayFromEntries(result);
 }
 
 /**

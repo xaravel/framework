@@ -689,9 +689,9 @@ xaravelTest(
     }
     // The original 100 plus array_is_list, array_push, http_build_query and array_sum, the 19 phpdotenv builtins
     // (ESC-15.2-1 parts a-e), the 6 PCRE functions (ESC-15.2-1 part f) and the 3 process-environment functions getenv,
-    // putenv and file_get_contents (ESC-15.2-1 part g, ESC-15.2-3), array_reduce (ESC-15.2-6), and trait_exists
-    // (epic-15-retro-item-10-runtime-trait-registry).
-    Assert.assertSame(134, registry().length);
+    // putenv and file_get_contents (ESC-15.2-1 part g, ESC-15.2-3), array_reduce (ESC-15.2-6), trait_exists
+    // (epic-15-retro-item-10-runtime-trait-registry), and array_column and rawurldecode (ESC-16.1-2).
+    Assert.assertSame(136, registry().length);
 
     // Xaravel-only: the helpers, classes and constants are never resolved; a non-string is no name.
     for (const helper of ["arrayUnion", "arrayEntries", "offsetAssign", "phpFunction", "bindPhpArguments", "phpReturn", "ArrayObject", "SORT_STRING", "Foo::bar", "strlen::x"]) {
