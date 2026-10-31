@@ -8,6 +8,8 @@
 // And (action item epic-15-item-1-runtime-phpdotenv-builtins, ESC-15.2-1 part a) `strpos`, `str_replace`, `ltrim`,
 // `rtrim`, `ord`, `strtok`, `addcslashes` and `stripcslashes`, over UTF-8 bytes too; `strtok`'s remembered string and
 // position live in a Scope Frame slot (AD-5).
+// And (action item epic-16-item-1-runtime-array-column-rawurldecode, ESC-16.1-2) `rawurldecode`
+// (`ext/standard/url.c`), over UTF-8 bytes too.
 // A result or input JS cannot hold (a result that splits a UTF-8 sequence, DIV-9.18; an input holding a lone surrogate)
 // throws a JS `TypeError` naming the limit, as the codecs do.
 import { LONE_SURROGATE, utf8 } from "./mangle";
@@ -627,4 +629,26 @@ export function stripcslashes(string: unknown): string {
     }
   }
   return decodeResult("stripcslashes", Uint8Array.from(out));
+}
+
+/**
+ * PHP's `rawurldecode($string)` (`ext/standard/url.c`: `php_raw_url_decode`): each `%XX` (two hex digits, either
+ * case) is the byte it names; `+`, a lone `%` and a `%` not followed by two hex digits stay as they are. Coerced as
+ * PHP's `string` parameter (`12` is `"12"`, true `"1"`); anything else throws PHP's `TypeError`. A result that is no
+ * valid UTF-8 (`%FF`) throws a JS `TypeError` (DIV-9.18).
+ */
+export function rawurldecode(string: unknown): string {
+  const bytes = utf8.encode(wellFormed("rawurldecode", stringParameter("rawurldecode", 1, "string", string)));
+  const out = new Uint8Array(bytes.length);
+  let length = 0;
+  for (let i = 0; i < bytes.length; i++) {
+    const c = bytes[i]!;
+    if (c === 0x25 && i + 2 < bytes.length && isHexDigit(bytes[i + 1]) && isHexDigit(bytes[i + 2])) {
+      out[length++] = Number.parseInt(String.fromCharCode(bytes[i + 1]!, bytes[i + 2]!), 16);
+      i += 2;
+    } else {
+      out[length++] = c;
+    }
+  }
+  return decodeResult("rawurldecode", out.subarray(0, length));
 }

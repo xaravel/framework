@@ -137,6 +137,47 @@ export function numberOrStringParameter(fn: string, position: number, name: stri
   throw argumentTypeError(fn, position, name, "string|int|float", value);
 }
 
+/**
+ * A `string|int|null` parameter (`Z_PARAM_STR_OR_LONG_OR_NULL`, `zend_parse_arg_str_or_long_slow`): null stays null,
+ * an int and a string as they are; anything else is tried as an int (`zend_parse_arg_long_weak`: a bool 0 or 1, a
+ * finite float in range truncated) and then as a string (`zend_parse_arg_str_weak`: a NaN or out-of-range float its
+ * string, an object with a `__toString` port its string).
+ */
+export function nullableStringOrIntParameter(fn: string, position: number, name: string, value: unknown): { readonly int: number | bigint } | { readonly string: string } | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const php = phpValueOf(value);
+  switch (typeOf(php)) {
+    case "int":
+      return { int: php as number | bigint };
+    case "string":
+      return { string: isContractToken(php) ? fqcn(php) : php as string };
+    case "bool":
+    case "float": {
+      const int = toIntArgument(php);
+      if (int !== null) {
+        return { int };
+      }
+      const string = toStringArgument(php);
+      if (string !== null) {
+        return { string };
+      }
+      break;
+    }
+    case "object": {
+      const string = typeof php === "function" ? null : toStringArgument(php);
+      if (string !== null) {
+        return { string };
+      }
+      break;
+    }
+    default:
+      break;
+  }
+  throw argumentTypeError(fn, position, name, "string|int|null", value);
+}
+
 /** An `array` parameter (`Z_PARAM_ARRAY`): its `[key, value]` entries. */
 export function arrayParameter(fn: string, position: number, name: string, value: unknown): [PhpArrayKey, unknown][] {
   if (typeof value === "object" && value !== null && phpType(value) === "array") {

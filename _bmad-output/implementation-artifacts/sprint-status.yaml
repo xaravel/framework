@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-30-2026 21:40
+last_updated: 10-30-2026 22:40
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -174,7 +174,7 @@ development_status:
   epic-15-retrospective: done
 
   epic-16: in-progress
-  16-1-schema-types-and-serializer: blocked  # ESC-16.1-2 (runtime array_column, rawurldecode; item epic-16-item-1) and ESC-16.1-3 (json-schema consequence row, built) approved by the monitor; ESC-16.1-1 (the test validator for opis/json-schema) waits on the Maintainer
+  16-1-schema-types-and-serializer: blocked  # ESC-16.1-2 (runtime array_column, rawurldecode; item epic-16-item-1, done) and ESC-16.1-3 (json-schema consequence row, built) approved by the monitor; ESC-16.1-1 (the test validator for opis/json-schema) waits on the Maintainer
   16-2-schema-deserializer: backlog
   epic-16-retrospective: optional
 
@@ -2507,5 +2507,5 @@ action_items:
       runtime behaviour changes; get_object_vars and get_class are not part of this
       item; lands before Story 16.1 resumes"
     owner: "orchestrator"
-    status: open
+    status: done
     ref: "decisions/ESC-16.1-2.md"

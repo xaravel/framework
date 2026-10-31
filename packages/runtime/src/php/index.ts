@@ -25,6 +25,7 @@ export {
   ARRAY_FILTER_USE_KEY,
   array_all,
   array_any,
+  array_column,
   array_combine,
   array_diff,
   array_diff_assoc,
@@ -198,7 +199,7 @@ export { SortDirection } from "./SortDirection";
 export { stdClass } from "./stdClass";
 export { sprintf } from "./sprintf";
 export { chunk_split, explode, implode, lcfirst, str_contains, str_starts_with, strlen, strtoupper, substr, trim } from "./stringFunctions";
-export { addcslashes, ltrim, ord, rtrim, str_replace, stripcslashes, strpos, strtok } from "./stringFunctions";
+export { addcslashes, ltrim, ord, rawurldecode, rtrim, str_replace, stripcslashes, strpos, strtok } from "./stringFunctions";
 export { ctype_digit, ctype_space } from "./ctypeFunctions";
 export { FILTER_DEFAULT, FILTER_NULL_ON_FAILURE, FILTER_VALIDATE_BOOL, FILTER_VALIDATE_BOOLEAN, FILTER_VALIDATE_INT, filter_var } from "./filterFunctions";
 export {
