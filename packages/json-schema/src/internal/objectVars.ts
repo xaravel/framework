@@ -10,6 +10,7 @@ export const OBJECT_VARS: unique symbol = Symbol("xaravel.json-schema.objectVars
 
 /** A value with the `get_object_vars` accessor: every Type. */
 export interface HasObjectVars {
+  /** The properties under Upstream's names, in PHP's declaration order. */
   [OBJECT_VARS](): Record<string, unknown>;
 }
 

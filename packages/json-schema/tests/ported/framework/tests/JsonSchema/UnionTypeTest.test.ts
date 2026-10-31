@@ -1,11 +1,10 @@
 // Ported from Laravel v13.37.0 framework/tests/JsonSchema/UnionTypeTest.php.
 //
 // `test_it_round_trips_a_union` and `test_it_round_trips_a_nullable_union` call `JsonSchema::fromArray`, the
-// Deserializer; they belong to Story 16.2 (decisions/ESC-16.1-4.md) and are not ported here. Their Expectations lines
-// stay `skip: not-ported-yet` until Story 16.2 ports them with DeserializerTest.
+// Deserializer, so Story 16.2 ported them (decisions/ESC-16.1-4.md).
 import { portedTest, TestCase } from "@xaravel/assert";
 import { InvalidArgumentException } from "@xaravel/runtime";
-import { JsonSchema } from "../../../../../src";
+import { JsonSchema, Serializer, UnionType } from "../../../../../src";
 
 portedTest('Illuminate\\Tests\\JsonSchema\\UnionTypeTest::test_serializes_as_a_type_array', { case: TestCase }, async function () {
   const type = JsonSchema.union(['string', 'number', 'boolean']);
@@ -69,4 +68,23 @@ portedTest('Illuminate\\Tests\\JsonSchema\\UnionTypeTest::test_it_rejects_a_non_
   this.expectExceptionObject(new InvalidArgumentException('Unsupported JSON Schema type [123] in a multi-type union.'));
 
   JsonSchema.union(['string', 123]);
+});
+
+portedTest('Illuminate\\Tests\\JsonSchema\\UnionTypeTest::test_it_round_trips_a_union', { case: TestCase }, async function () {
+  const schema = { type: ['string', 'number', 'boolean'] };
+
+  const type = JsonSchema.fromArray(schema);
+
+  this.assertInstanceOf(UnionType, type);
+  this.assertSame(schema, Serializer.serialize(type));
+  this.assertEquals(type, JsonSchema.fromArray(Serializer.serialize(type)));
+});
+
+portedTest('Illuminate\\Tests\\JsonSchema\\UnionTypeTest::test_it_round_trips_a_nullable_union', { case: TestCase }, async function () {
+  const schema = { type: ['string', 'number', 'null'] };
+
+  const type = JsonSchema.fromArray(schema);
+
+  this.assertInstanceOf(UnionType, type);
+  this.assertSame(schema, Serializer.serialize(type));
 });

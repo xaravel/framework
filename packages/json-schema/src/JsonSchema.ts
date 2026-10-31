@@ -1,14 +1,16 @@
 // Laravel's `Illuminate\JsonSchema\JsonSchema` (v13.37.0).
 //
 // Upstream's `__callStatic` forwards every static call to a new `JsonSchemaTypeFactory`. The port has no Proxy (AD-26),
-// so the factory's eight methods are explicit static delegators here, typed as the factory types them; `__callStatic`
-// stays for a name given at run time, through the runtime's `callMethod`. `fromArray` and the Deserializer are Story
-// 16.2.
+// so the factory's eight methods are explicit static delegators here (DIV-12.22), typed as the factory types them;
+// `__callStatic` stays for a name given at run time, through the runtime's `callMethod`. `fromArray` hands the raw
+// schema to the `Deserializer`.
 //
-// `JsonSchemaTypeFactory` and every Type extend this class, so this module imports none of them as values: the
-// factory is resolved through the Class Registry when a delegator runs, as PHP's autoloader would load it.
+// `JsonSchemaTypeFactory` and every Type extend this class, and the `Deserializer` builds Types, so this module imports
+// none of them as values: the factory and the Deserializer are resolved through the Class Registry when a method runs,
+// as PHP's autoloader would load them.
 import type { Closure, PhpArrayLike } from "@xaravel/contracts/json-schema";
 import { callMethod, registerClass, resolveClass } from "@xaravel/runtime";
+import type { Deserializer } from "./Deserializer";
 import type { JsonSchemaTypeFactory } from "./JsonSchemaTypeFactory";
 import type { AnyOfType } from "./Types/AnyOfType";
 import type { ArrayType } from "./Types/ArrayType";
@@ -26,8 +28,21 @@ function factory(): JsonSchemaTypeFactory {
   return new klass();
 }
 
+/** The `Deserializer` class, as `Deserializer::deserialize` in `fromArray` names it. */
+function deserializer(): typeof Deserializer {
+  return resolveClass("Illuminate\\JsonSchema\\Deserializer") as unknown as typeof Deserializer;
+}
+
 /** The JSON Schema builder: Laravel's `Illuminate\JsonSchema\JsonSchema`. */
 export class JsonSchema {
+  /**
+   * Build a type from a raw array of the Laravel-supported JSON Schema subset. Throws `InvalidArgumentException` for a
+   * schema outside the subset.
+   */
+  static fromArray(schema: PhpArrayLike): Type {
+    return deserializer().deserialize(schema);
+  }
+
   /** Create a new object schema instance. */
   static object(properties: Closure | PhpArrayLike = []): ObjectType {
     return factory().object(properties);

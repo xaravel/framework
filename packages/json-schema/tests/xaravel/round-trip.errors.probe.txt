@@ -1,0 +1,9 @@
+ref-non-schema-target	"!InvalidArgumentException: The JSON Schema $ref [#\/$defs\/x] does not point to a schema."	
+max-nodes-fan-out	"!InvalidArgumentException: The JSON Schema is too large to deserialize; it expands beyond [20000] fragments."	
+ref-escaped-slash	"{\n    \"minLength\": 1,\n    \"type\": \"string\"\n}"	{"minLength":1,"type":"string"}
+ref-escaped-tilde	"{\n    \"minimum\": 2,\n    \"type\": \"integer\"\n}"	{"minimum":2,"type":"integer"}
+ref-percent-encoded	"{\n    \"type\": \"boolean\"\n}"	{"type":"boolean"}
+ref-list-index	"{\n    \"maximum\": 3,\n    \"type\": \"number\"\n}"	{"maximum":3,"type":"number"}
+ref-used-twice	"{\n    \"properties\": {\n        \"x\": {\n            \"description\": \"X\",\n            \"type\": \"string\"\n        },\n        \"y\": {\n            \"description\": \"N\",\n            \"type\": \"string\"\n        }\n    },\n    \"type\": \"object\"\n}"	{"properties":{"x":{"description":"X","type":"string"},"y":{"description":"N","type":"string"}},"type":"object"}
+number-numeric-string-bound	"{\n    \"minimum\": 7,\n    \"type\": \"number\"\n}"	{"minimum":7.0,"type":"number"}
+integer-string-and-float-bounds	"{\n    \"minimum\": 5,\n    \"maximum\": 7,\n    \"type\": \"integer\"\n}"	{"minimum":5,"maximum":7,"type":"integer"}

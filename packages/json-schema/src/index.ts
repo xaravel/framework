@@ -1,6 +1,7 @@
 // `@xaravel/json-schema`: Laravel's `illuminate/json-schema` (v13.37.0). Importing the package loads every class, so
 // `JsonSchema`'s static builders resolve `JsonSchemaTypeFactory` through the Class Registry, and the Serializer's
-// `instanceof` checks find each Type class. `JsonSchema.fromArray` and the Deserializer are Story 16.2.
+// `instanceof` checks find each Type class, and `JsonSchema.fromArray` resolves the `Deserializer`.
+export { Deserializer } from "./Deserializer";
 export { JsonSchema } from "./JsonSchema";
 export { JsonSchemaTypeFactory } from "./JsonSchemaTypeFactory";
 export { Serializer } from "./Serializer";
