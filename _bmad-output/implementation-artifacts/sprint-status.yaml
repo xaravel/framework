@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-30-2026 22:40
+last_updated: 10-31-2026 15:00
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -176,7 +176,7 @@ development_status:
   epic-16: done
   16-1-schema-types-and-serializer: done
   16-2-schema-deserializer: done  # ESC-16.2-1 ruled (option 1); XT-json-schema-2 cites the ruling; Fidelity current at tree 3b755af6 (F-7 evidence gaps only); full harness differ=0.
-  epic-16-retrospective: optional
+  epic-16-retrospective: done
 
   epic-17: backlog
   17-1-binding-and-resolution-core: backlog
@@ -2509,3 +2509,47 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "decisions/ESC-16.1-2.md"
+  - id: "epic-16-retro-item-1-callstatic-and-ref-utf8"
+    epic: 16
+    action: "packages/json-schema: test JsonSchema.__callStatic (each builder name
+      with a list of arguments equals the named static method; an unknown name and
+      a non-list args behave as PHP, probed on PHP), and correct docs/json-schema.md:89
+      so a $ref whose percent-escape is not UTF-8 is documented as DIV-9.18 TypeError,
+      citing DIV-9.18 in the Divergences section, with an adapted:DIV-9.18 case beside
+      a valid-UTF-8 control; no assertion removed or weakened (findings S1, D1)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-16-retro-2026-10-31.md"
+  - id: "epic-16-retro-item-2-fidelity-evidence-providers-deps-indirect"
+    epic: 16
+    action: "tools/fidelity-review, within the 2026-10-21 amendment: supply with each
+      Inventory row the Upstream data-provider methods its test names and the test-class
+      helpers it calls; supply the package.json and the Upstream composer.json when
+      a changed Xaravel Test cites an AD-2 token; supply the test files a changed
+      test runs in a child bun test through a Story manifest and the Upstream sources
+      a changed *.probe.php loads; a fidelity-review.test.ts case for each, and the
+      evidence notes in conformance/review/fidelity.md and docs/ops/fidelity-review.md
+      (findings E1, E2, E3)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-16-retro-2026-10-31.md"
+  - id: "epic-16-retro-item-3-foreseeable-escalations-precheck"
+    epic: 16
+    action: "Before an epic first Story, report in epic-<N>-context.md: each Story
+      Test ID whose Upstream body calls a class or method a later Story of the same
+      epic owns, the Component missing consequence row, and the Upstream tests non-framework
+      Composer dependencies; no Protected Path edited, or the item waits on the Maintainer
+      (finding P1)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-16-retro-2026-10-31.md"
+  - id: "epic-16-retro-item-4-xt-json-schema-3-flaky"
+    epic: 16
+    action: "packages/json-schema: run the full bun run harness three times under
+      a concurrent typecheck and lint, keeping failing output; if XT-json-schema-3
+      is inconsistent raise a flaky Escalation on story/16.2, else bound the child
+      commands the test spawns (run each check once, in-process where the tool exports
+      a function); no assertion removed or weakened (finding L1)"
+    owner: "orchestrator"
+    status: open
+    ref: "_bmad-output/implementation-artifacts/epic-16-retro-2026-10-31.md"
