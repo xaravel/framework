@@ -1,0 +1,395 @@
+diff --git a/packages/json-schema/docs/json-schema.md b/packages/json-schema/docs/json-schema.md
+index 857d7037..51d5a177 100644
+--- a/packages/json-schema/docs/json-schema.md
++++ b/packages/json-schema/docs/json-schema.md
+@@ -17,7 +17,7 @@ const schema = JsonSchema.object({
+ }).title("Weather request");
+ ```
+ 
+-The builders are `JsonSchema.object(properties)`, `JsonSchema.array()`, `JsonSchema.string()`, `JsonSchema.integer()`, `JsonSchema.number()`, `JsonSchema.boolean()`, `JsonSchema.union(types)` and `JsonSchema.anyOf(schemas)`. Laravel serves them through `JsonSchema::__callStatic`, which forwards to a new `JsonSchemaTypeFactory`; the port declares them as explicit static methods that do the same (see [Divergences](#divergences)), and keeps `JsonSchema.__callStatic(name, args)` for a builder named at run time. `JsonSchemaTypeFactory` implements the `Illuminate\Contracts\JsonSchema\JsonSchema` contract from `@xaravel/contracts/json-schema`, the `$schema` an MCP tool's `schema()` method receives.
++The builders are `JsonSchema.object(properties)`, `JsonSchema.array()`, `JsonSchema.string()`, `JsonSchema.integer()`, `JsonSchema.number()`, `JsonSchema.boolean()`, `JsonSchema.union(types)` and `JsonSchema.anyOf(schemas)`. Laravel serves them through `JsonSchema::__callStatic`, which forwards to a new `JsonSchemaTypeFactory`; the port declares them as explicit static methods that do the same (see [Divergences](#divergences)), and keeps `JsonSchema.__callStatic(name, args)` for a builder named at run time. It behaves as Laravel's `(new JsonSchemaTypeFactory)->$name(...$arguments)`: the name is matched case-insensitively and may name any method of the factory (`fromArray` included); an unknown name throws PHP's `Error` `Call to undefined method Illuminate\JsonSchema\JsonSchemaTypeFactory::<name>()` before `args` is read; `args` is spread as PHP spreads an array, its integer keys positional, and an `args` that is no array or Traversable throws PHP's `TypeError` `Only arrays and Traversables can be unpacked, <type> given`. A string-keyed `args`, PHP's named arguments, throws a `TypeError` instead (DIV-9.15). `JsonSchemaTypeFactory` implements the `Illuminate\Contracts\JsonSchema\JsonSchema` contract from `@xaravel/contracts/json-schema`, the `$schema` an MCP tool's `schema()` method receives.
+ 
+ `object(properties)` takes the properties keyed by name, a plain object (or a `PhpArray` when a name is integer-like, such as `"1"`), or a closure that receives the factory and returns them:
+ 
+@@ -86,7 +86,7 @@ It reads the subset of JSON Schema the builder writes:
+ - A local `$ref` (`#`, `#/$defs/<name>`, `#/definitions/<name>`, any JSON pointer into the root) is resolved, with its sibling keys taking precedence.
+ - Unknown keywords (`$schema`, `$comment`, `readOnly`, …) are ignored.
+ 
+-Anything else throws `InvalidArgumentException`, with Laravel's messages:
++Anything else throws `InvalidArgumentException`, with Laravel's messages, except one case: a `$ref` whose percent-escape decodes to bytes that are not valid UTF-8 (`#/$defs/a%FF`) throws a `TypeError` naming `rawurldecode()`'s UTF-8 limit where Laravel throws `Unable to resolve JSON Schema $ref [<ref>].` (DIV-9.18).
+ 
+ | Schema | Message |
+ | --- | --- |
+@@ -122,3 +122,5 @@ The API and its behaviour are Laravel's. These Divergence Records change how the
+   isFloat(schema.toArray()["minimum"]); // true
+   isFloat(JsonSchema.fromArray(schema.toArray()).toArray()["minimum"]); // true
+   ```
++- **DIV-9.15**, spreading a keyed PHP array into a call: `JsonSchema.__callStatic(name, args)` spreads an integer-keyed `args` positionally, as PHP does, but a string key is a PHP named argument, which the port cannot bind to a JS parameter, so a string-keyed `args` throws a `TypeError` (`callUnpacked(): named argument unpacking is untranslatable for a target without an options form (ESC-14.5-3)`) where Laravel binds it by name or throws `Error: Unknown named parameter`.
++- **DIV-9.18**, PHP strings are JavaScript strings: a string cannot hold bytes that are not valid UTF-8, so a `$ref` JSON-pointer segment whose percent-escape decodes to such bytes (`%FF`) throws `TypeError: rawurldecode(): the result splits a UTF-8 sequence, which JS cannot hold` where Laravel throws `InvalidArgumentException` (`Unable to resolve JSON Schema $ref [<ref>].`); a percent-escape that decodes to valid UTF-8 (`%C3%A9`, `é`) resolves as in Laravel.
+diff --git a/packages/json-schema/src/JsonSchema.ts b/packages/json-schema/src/JsonSchema.ts
+index 819ac650..3cd1a7e7 100644
+--- a/packages/json-schema/src/JsonSchema.ts
++++ b/packages/json-schema/src/JsonSchema.ts
+@@ -9,7 +9,7 @@
+ // none of them as values: the factory and the Deserializer are resolved through the Class Registry when a method runs,
+ // as PHP's autoloader would load them.
+ import type { Closure, PhpArrayLike } from "@xaravel/contracts/json-schema";
+-import { callMethod, registerClass, resolveClass } from "@xaravel/runtime";
++import { callMethod, callUnpacked, method_exists, registerClass, resolveClass } from "@xaravel/runtime";
+ import type { Deserializer } from "./Deserializer";
+ import type { JsonSchemaTypeFactory } from "./JsonSchemaTypeFactory";
+ import type { AnyOfType } from "./Types/AnyOfType";
+@@ -83,9 +83,20 @@ export class JsonSchema {
+     return factory().union(types);
+   }
+ 
+-  /** Dynamically pass static methods to the schema instance. */
++  /**
++   * Dynamically pass static methods to the schema instance.
++   *
++   * As PHP's `(new JsonSchemaTypeFactory)->$name(...$arguments)`: an unknown `name` throws PHP's `Error` `Call to
++   * undefined method` before `args` is read, then `args` is unpacked as PHP spreads it (PORTING.md, `callUnpacked`):
++   * integer keys positional, a value that is no array or Traversable PHP's `TypeError`. A string key stays
++   * untranslatable (DIV-9.15).
++   */
+   static __callStatic(name: string, args: unknown): Type {
+-    return callMethod(factory(), name, ...(args as unknown[])) as Type;
++    const target = factory();
++    if (!method_exists(target, name)) {
++      return callMethod(target, name) as Type;
++    }
++    return callUnpacked([target, name], args) as Type;
+   }
+ }
+ 
+diff --git a/packages/json-schema/tests/xaravel/call-static.probe.php b/packages/json-schema/tests/xaravel/call-static.probe.php
+new file mode 100644
+index 00000000..a6f743fc
+--- /dev/null
++++ b/packages/json-schema/tests/xaravel/call-static.probe.php
+@@ -0,0 +1,63 @@
++<?php
++// The PHP evidence for XT-json-schema-4 (call-static.test.ts, `CASES`): Upstream's illuminate/json-schema at the Pin
++// (conformance/upstream/framework/src/Illuminate/JsonSchema), loaded as it is, calls `JsonSchema::__callStatic($name,
++// $arguments)`, which is `(new JsonSchemaTypeFactory)->$name(...$arguments)`, for each case below. Each line is
++// `<label>\t<class>\t<json_encode($type->toArray())>`, or `<label>\t!<class>: <message>` when PHP throws. The test
++// builds the same calls, in the same order, and compares. Regenerate the record with the host's PHP 8.5, from this
++// directory:
++//   php -d error_reporting=0 call-static.probe.php > call-static.probe.txt
++
++$src = __DIR__.'/../../../../conformance/upstream/framework/src/Illuminate';
++
++spl_autoload_register(function (string $class) use ($src) {
++    foreach (['Illuminate\\JsonSchema\\' => '/JsonSchema/', 'Illuminate\\Contracts\\' => '/Contracts/'] as $prefix => $dir) {
++        if (str_starts_with($class, $prefix)) {
++            require $src.$dir.str_replace('\\', '/', substr($class, strlen($prefix))).'.php';
++
++            return;
++        }
++    }
++});
++
++use Illuminate\JsonSchema\JsonSchema;
++
++$cases = [
++    // Each builder, with a list of arguments.
++    'object-properties' => ['object', [['name' => JsonSchema::string()->required(), 'age' => JsonSchema::integer()->min(0)]]],
++    'object-none' => ['object', []],
++    'any-of' => ['anyOf', [[JsonSchema::string(), JsonSchema::integer()]]],
++    'integer' => ['integer', []],
++    'number' => ['number', []],
++    'string' => ['string', []],
++    'boolean' => ['boolean', []],
++    'array' => ['array', []],
++    'union' => ['union', [['string', 'null']]],
++    // PHP's method names are case-insensitive; extra positional arguments are ignored by a userland method.
++    'case-insensitive' => ['String', []],
++    'extra-positional' => ['integer', [1, 2]],
++    // An integer-keyed array that is not a list spreads positionally.
++    'int-keyed-non-list' => ['string', [1 => 'x']],
++    // A static method of the factory (inherited from JsonSchema).
++    'static-on-factory' => ['fromArray', [['type' => 'string']]],
++    // An unknown name throws before the arguments are unpacked.
++    'unknown-name' => ['foo', []],
++    'unknown-to-array' => ['toArray', []],
++    'unknown-empty-name' => ['', []],
++    'unknown-name-non-array-args' => ['foo', 1],
++    // Arguments that are no array or Traversable.
++    'non-array-int' => ['string', 1],
++    'non-array-null' => ['string', null],
++    'non-array-string' => ['string', 'x'],
++    // String keys are named arguments.
++    'string-keyed-unknown' => ['string', ['a' => 1]],
++    'string-keyed-properties' => ['object', ['properties' => ['name' => JsonSchema::string()]]],
++];
++
++foreach ($cases as $label => [$name, $arguments]) {
++    try {
++        $type = JsonSchema::__callStatic($name, $arguments);
++        echo $label, "\t", get_class($type), "\t", json_encode($type->toArray()), "\n";
++    } catch (Throwable $e) {
++        echo $label, "\t!", get_class($e), ': ', $e->getMessage(), "\n";
++    }
++}
+diff --git a/packages/json-schema/tests/xaravel/call-static.probe.txt b/packages/json-schema/tests/xaravel/call-static.probe.txt
+new file mode 100644
+index 00000000..bd896dc3
+--- /dev/null
++++ b/packages/json-schema/tests/xaravel/call-static.probe.txt
+@@ -0,0 +1,22 @@
++object-properties	Illuminate\JsonSchema\Types\ObjectType	{"properties":{"name":{"type":"string"},"age":{"minimum":0,"type":"integer"}},"type":"object","required":["name"]}
++object-none	Illuminate\JsonSchema\Types\ObjectType	{"type":"object"}
++any-of	Illuminate\JsonSchema\Types\AnyOfType	{"anyOf":[{"type":"string"},{"type":"integer"}]}
++integer	Illuminate\JsonSchema\Types\IntegerType	{"type":"integer"}
++number	Illuminate\JsonSchema\Types\NumberType	{"type":"number"}
++string	Illuminate\JsonSchema\Types\StringType	{"type":"string"}
++boolean	Illuminate\JsonSchema\Types\BooleanType	{"type":"boolean"}
++array	Illuminate\JsonSchema\Types\ArrayType	{"type":"array"}
++union	Illuminate\JsonSchema\Types\UnionType	{"type":["string","null"]}
++case-insensitive	Illuminate\JsonSchema\Types\StringType	{"type":"string"}
++extra-positional	Illuminate\JsonSchema\Types\IntegerType	{"type":"integer"}
++int-keyed-non-list	Illuminate\JsonSchema\Types\StringType	{"type":"string"}
++static-on-factory	Illuminate\JsonSchema\Types\StringType	{"type":"string"}
++unknown-name	!Error: Call to undefined method Illuminate\JsonSchema\JsonSchemaTypeFactory::foo()
++unknown-to-array	!Error: Call to undefined method Illuminate\JsonSchema\JsonSchemaTypeFactory::toArray()
++unknown-empty-name	!Error: Call to undefined method Illuminate\JsonSchema\JsonSchemaTypeFactory::()
++unknown-name-non-array-args	!Error: Call to undefined method Illuminate\JsonSchema\JsonSchemaTypeFactory::foo()
++non-array-int	!TypeError: Only arrays and Traversables can be unpacked, int given
++non-array-null	!TypeError: Only arrays and Traversables can be unpacked, null given
++non-array-string	!TypeError: Only arrays and Traversables can be unpacked, string given
++string-keyed-unknown	!Error: Unknown named parameter $a
++string-keyed-properties	Illuminate\JsonSchema\Types\ObjectType	{"properties":{"name":{"type":"string"}},"type":"object"}
+diff --git a/packages/json-schema/tests/xaravel/call-static.test.ts b/packages/json-schema/tests/xaravel/call-static.test.ts
+new file mode 100644
+index 00000000..1863aa61
+--- /dev/null
++++ b/packages/json-schema/tests/xaravel/call-static.test.ts
+@@ -0,0 +1,116 @@
++// Xaravel Test for Epic 16 retrospective item 1 (finding S1). XT-json-schema-4: `JsonSchema.__callStatic(name, args)`
++// is Laravel's `JsonSchema::__callStatic`, `(new JsonSchemaTypeFactory)->$name(...$arguments)`, checked against
++// Upstream's own results on the host's PHP 8.5.11: `call-static.probe.php` runs Upstream's illuminate/json-schema at
++// the Pin over the calls of `CASES`, and `call-static.probe.txt` is its record (`<label>\t<class>\t<json toArray>`, or
++// `<label>\t!<class>: <message>`; how to regenerate it is in the probe's header). For each case the port's result
++// class (`fqcn`) and `toArray()`, or its thrown class and message, equal the record; each builder case also equals the
++// static builder `JsonSchema.<name>(...args)`. An unknown name throws PHP's `Error` before `args` is read, and an
++// `args` that is no array or Traversable PHP's `TypeError`, as PHP does. A string-keyed `args` is a named-argument
++// spread, which stays untranslatable (DIV-9.15, ESC-14.5-3): the port throws a JS `TypeError` naming it, asserted
++// beside the record's PHP result.
++import { readFileSync } from "node:fs";
++import { join } from "node:path";
++import { Assert, xaravelTest } from "@xaravel/assert";
++import { fqcn, jsonEncode, PhpArray } from "@xaravel/runtime";
++import { JsonSchema, type Type } from "../../src";
++
++/** `callUnpacked`'s diagnostic for a string-keyed spread into a target without an options form (ESC-14.5-3). */
++const UNTRANSLATABLE = "callUnpacked(): named argument unpacking is untranslatable for a target without an options form (ESC-14.5-3)";
++
++/** A case: its label, the name, a builder of fresh arguments, and a call of the static builder it must equal (or null). */
++type Case = readonly [label: string, name: string, args: () => unknown, builder: ((args: unknown[]) => Type) | null];
++
++/** The calls of `call-static.probe.php`, in its order, built as it builds them. */
++const CASES: readonly Case[] = [
++  ["object-properties", "object", () => [{ name: JsonSchema.string().required(), age: JsonSchema.integer().min(0) }], (a) => JsonSchema.object(a[0] as Parameters<typeof JsonSchema.object>[0])],
++  ["object-none", "object", () => [], () => JsonSchema.object()],
++  ["any-of", "anyOf", () => [[JsonSchema.string(), JsonSchema.integer()]], (a) => JsonSchema.anyOf(a[0] as Parameters<typeof JsonSchema.anyOf>[0])],
++  ["integer", "integer", () => [], () => JsonSchema.integer()],
++  ["number", "number", () => [], () => JsonSchema.number()],
++  ["string", "string", () => [], () => JsonSchema.string()],
++  ["boolean", "boolean", () => [], () => JsonSchema.boolean()],
++  ["array", "array", () => [], () => JsonSchema.array()],
++  ["union", "union", () => [["string", "null"]], (a) => JsonSchema.union(a[0] as Parameters<typeof JsonSchema.union>[0])],
++  ["case-insensitive", "String", () => [], null],
++  ["extra-positional", "integer", () => [1, 2], null],
++  ["int-keyed-non-list", "string", () => new PhpArray<number, string>([[1, "x"]]), null],
++  ["static-on-factory", "fromArray", () => [{ type: "string" }], null],
++  ["unknown-name", "foo", () => [], null],
++  ["unknown-to-array", "toArray", () => [], null],
++  ["unknown-empty-name", "", () => [], null],
++  ["unknown-name-non-array-args", "foo", () => 1, null],
++  ["non-array-int", "string", () => 1, null],
++  ["non-array-null", "string", () => null, null],
++  ["non-array-string", "string", () => "x", null],
++  ["string-keyed-unknown", "string", () => ({ a: 1 }), null],
++  ["string-keyed-properties", "object", () => ({ properties: { name: JsonSchema.string() } }), null],
++];
++
++/** The string-keyed cases: a named-argument spread, untranslatable in the port (DIV-9.15). */
++const STRING_KEYED: readonly string[] = ["string-keyed-unknown", "string-keyed-properties"];
++
++/** `value` encoded by `jsonEncode`, PHP's `json_encode` with no flags; throws when it cannot be encoded. */
++function json(value: unknown): string {
++  const encoded = jsonEncode(value);
++  if (encoded === false) {
++    throw new globalThis.Error("jsonEncode failed");
++  }
++  return encoded;
++}
++
++/** A Type as the probe records it: `<class>\t<json toArray>`. */
++function recorded(type: Type): string {
++  return `${fqcn(type)}\t${json(type.toArray())}`;
++}
++
++/** The error `fn` throws, or `null` when it returns. */
++function thrownBy(fn: () => unknown): unknown {
++  try {
++    fn();
++  } catch (error) {
++    return error;
++  }
++  return null;
++}
++
++/** Each label's recorded result, in the probe's order. */
++const evidence: [string, string][] = readFileSync(join(import.meta.dir, "call-static.probe.txt"), "utf8").trim().split("\n").map((line) => {
++  const tab = line.indexOf("\t");
++  return [line.slice(0, tab), line.slice(tab + 1)];
++});
++
++xaravelTest(
++  "XT-json-schema-4",
++  "JsonSchema.__callStatic(name, args) is Laravel's (new JsonSchemaTypeFactory)->$name(...$arguments), against Upstream's results recorded on PHP 8.5.11 (call-static.probe.txt), the record's labels equal to the test's both ways: each builder (object with properties and without, anyOf, integer, number, string, boolean, array, union) gives Upstream's Type class and toArray() and equals JsonSchema.<name>(...args); a name in another case, extra positional arguments, an integer-keyed PhpArray that is not a list and a static method of the factory (fromArray) give Upstream's Type; an unknown name (foo, toArray, the empty name, foo with args 1) throws PHP's Error Call to undefined method Illuminate\\JsonSchema\\JsonSchemaTypeFactory::<name>() before args is read; args that are no array or Traversable (1, null, \"x\") throw PHP's TypeError Only arrays and Traversables can be unpacked, <type> given; and a string-keyed args, a named-argument spread PHP accepts or rejects by parameter name, throws callUnpacked's untranslatable TypeError (DIV-9.15, ESC-14.5-3)",
++  () => {
++    Assert.assertSame(CASES.map(([label]) => label), evidence.map(([label]) => label), "call-static.probe.txt records exactly the test's cases, in order (regenerate it as call-static.probe.php's header says)");
++    const record = new Map(evidence);
++
++    for (const [label, name, args, builder] of CASES) {
++      const expected = record.get(label)!;
++      if (STRING_KEYED.includes(label)) {
++        // PHP binds a string key as a named argument: `$a` is unknown to `string()` (Error), `$properties` binds
++        // `object()`'s parameter (an ObjectType). The port cannot bind a JS parameter by name, so the spread throws.
++        Assert.assertNotEmpty(expected, `${label}: the record shows PHP's result`);
++        const thrown = thrownBy(() => JsonSchema.__callStatic(name, args()));
++        Assert.assertInstanceOf(globalThis.TypeError, thrown, `${label}: a string-keyed args throws TypeError`); // adapted:DIV-9.15
++        Assert.assertSame(UNTRANSLATABLE, (thrown as Error).message, `${label}: naming the untranslatable named-argument spread`); // adapted:DIV-9.15
++        continue;
++      }
++      let actual: string;
++      try {
++        actual = recorded(JsonSchema.__callStatic(name, args()));
++      } catch (thrown) {
++        if (!(thrown instanceof globalThis.Error)) {
++          throw thrown;
++        }
++        actual = `!${fqcn(thrown)}: ${thrown.message}`;
++      }
++      Assert.assertSame(expected, actual, `${label}: __callStatic("${name}", …) gives Upstream's result`);
++      if (builder !== null) {
++        const direct = builder(args() as unknown[]);
++        Assert.assertSame(recorded(direct), actual, `${label}: __callStatic equals JsonSchema.${name}(...args)`);
++      }
++    }
++  },
++);
+diff --git a/packages/json-schema/tests/xaravel/ref-utf8.probe.php b/packages/json-schema/tests/xaravel/ref-utf8.probe.php
+new file mode 100644
+index 00000000..978cfc60
+--- /dev/null
++++ b/packages/json-schema/tests/xaravel/ref-utf8.probe.php
+@@ -0,0 +1,36 @@
++<?php
++// The PHP evidence for XT-json-schema-5 (ref-utf8.test.ts, `CASES`): Upstream's illuminate/json-schema at the Pin
++// (conformance/upstream/framework/src/Illuminate/JsonSchema), loaded as it is, deserializes a schema whose local `$ref`
++// has a percent-escape. `Deserializer::lookupRef` `rawurldecode`s each pointer segment: `%FF` decodes to a byte that
++// is not UTF-8, `%C3%A9` to `é`. Each line is `<label>\t<json_encode($type->toArray())>`, or `<label>\t!<class>:
++// <message>` when PHP throws. The test builds the same schemas, in the same order, and compares. Regenerate the record
++// with the host's PHP 8.5, from this directory:
++//   php -d error_reporting=0 ref-utf8.probe.php > ref-utf8.probe.txt
++
++$src = __DIR__.'/../../../../conformance/upstream/framework/src/Illuminate';
++
++spl_autoload_register(function (string $class) use ($src) {
++    foreach (['Illuminate\\JsonSchema\\' => '/JsonSchema/', 'Illuminate\\Contracts\\' => '/Contracts/'] as $prefix => $dir) {
++        if (str_starts_with($class, $prefix)) {
++            require $src.$dir.str_replace('\\', '/', substr($class, strlen($prefix))).'.php';
++
++            return;
++        }
++    }
++});
++
++use Illuminate\JsonSchema\JsonSchema;
++
++$cases = [
++    'ref-non-utf8' => ['$ref' => '#/d/a%FF', 'd' => ['a' => ['type' => 'string']]],
++    'ref-utf8-control' => ['$ref' => '#/d/a%C3%A9', 'd' => ["a\u{e9}" => ['type' => 'string']]],
++];
++
++foreach ($cases as $label => $schema) {
++    try {
++        $value = json_encode(JsonSchema::fromArray($schema)->toArray());
++        echo $label, "\t", $value, "\n";
++    } catch (Throwable $e) {
++        echo $label, "\t!", get_class($e), ': ', $e->getMessage(), "\n";
++    }
++}
+diff --git a/packages/json-schema/tests/xaravel/ref-utf8.probe.txt b/packages/json-schema/tests/xaravel/ref-utf8.probe.txt
+new file mode 100644
+index 00000000..9df44c77
+--- /dev/null
++++ b/packages/json-schema/tests/xaravel/ref-utf8.probe.txt
+@@ -0,0 +1,2 @@
++ref-non-utf8	!InvalidArgumentException: Unable to resolve JSON Schema $ref [#/d/a%FF].
++ref-utf8-control	{"type":"string"}
+diff --git a/packages/json-schema/tests/xaravel/ref-utf8.test.ts b/packages/json-schema/tests/xaravel/ref-utf8.test.ts
+new file mode 100644
+index 00000000..ef06b8cb
+--- /dev/null
++++ b/packages/json-schema/tests/xaravel/ref-utf8.test.ts
+@@ -0,0 +1,56 @@
++// Xaravel Test for Epic 16 retrospective item 1 (finding D1). XT-json-schema-5: the runtime holds a PHP string as a JS
++// string, so it cannot hold bytes that are not valid UTF-8 (DIV-9.18). `Deserializer::lookupRef` `rawurldecode`s each
++// JSON-pointer segment of a local `$ref`; where the decoded bytes are not UTF-8 (`%FF`), Upstream finds no such key and
++// throws `InvalidArgumentException`, and the port's `rawurldecode` throws a JS `TypeError` naming the limit, never a
++// silently different value. A control beside it (`%C3%A9`, `é`) resolves as in PHP. `ref-utf8.probe.php` runs
++// Upstream's illuminate/json-schema at the Pin over both schemas on the host's PHP 8.5.11, and `ref-utf8.probe.txt`
++// is its record (`<label>\t<json toArray>` or `<label>\t!<class>: <message>`; how to regenerate it is in the probe's
++// header).
++import { readFileSync } from "node:fs";
++import { join } from "node:path";
++import { Assert, xaravelTest } from "@xaravel/assert";
++import { jsonEncode } from "@xaravel/runtime";
++import { JsonSchema } from "../../src";
++
++const RAWURLDECODE_LIMIT = "rawurldecode(): the result splits a UTF-8 sequence, which JS cannot hold";
++
++/** The schemas of `ref-utf8.probe.php`, in its order. */
++const CASES: readonly (readonly [string, () => Record<string, unknown>])[] = [
++  ["ref-non-utf8", () => ({ $ref: "#/d/a%FF", d: { a: { type: "string" } } })],
++  ["ref-utf8-control", () => ({ $ref: "#/d/a%C3%A9", d: { "aé": { type: "string" } } })],
++];
++
++/** The error `fn` throws, or `null` when it returns. */
++function thrownBy(fn: () => unknown): unknown {
++  try {
++    fn();
++  } catch (error) {
++    return error;
++  }
++  return null;
++}
++
++/** Each label's recorded result, in the probe's order. */
++const evidence: [string, string][] = readFileSync(join(import.meta.dir, "ref-utf8.probe.txt"), "utf8").trim().split("\n").map((line) => {
++  const tab = line.indexOf("\t");
++  return [line.slice(0, tab), line.slice(tab + 1)];
++});
++
++xaravelTest(
++  "XT-json-schema-5",
++  "a local $ref whose percent-escape decodes to bytes that are not UTF-8 (#/d/a%FF) throws a TypeError naming rawurldecode()'s UTF-8 limit where Upstream on PHP 8.5.11 throws InvalidArgumentException Unable to resolve JSON Schema $ref [#/d/a%FF]. (DIV-9.18), while the valid UTF-8 control #/d/a%C3%A9 resolves the key aé to Upstream's {\"type\":\"string\"}; the record's labels equal the test's both ways",
++  () => {
++    Assert.assertSame(CASES.map(([label]) => label), evidence.map(([label]) => label), "ref-utf8.probe.txt records exactly the test's cases, in order (regenerate it as ref-utf8.probe.php's header says)");
++    const record = new Map(evidence);
++    const [nonUtf8, control] = CASES;
++
++    // PHP: `rawurldecode('a%FF')` is the bytes `a\xFF`, no key of `d`, so `lookupRef` throws.
++    Assert.assertSame("!InvalidArgumentException: Unable to resolve JSON Schema $ref [#/d/a%FF].", record.get(nonUtf8![0]), "the record shows PHP's InvalidArgumentException");
++    const thrown = thrownBy(() => JsonSchema.fromArray(nonUtf8![1]()));
++    Assert.assertInstanceOf(TypeError, thrown, "a $ref segment decoding to non-UTF-8 bytes throws TypeError"); // adapted:DIV-9.18
++    Assert.assertSame(RAWURLDECODE_LIMIT, (thrown as Error).message, "naming rawurldecode()'s UTF-8 limit"); // adapted:DIV-9.18
++
++    // Control: the same pointer with a valid UTF-8 escape resolves as in PHP.
++    Assert.assertSame(record.get(control![0]), jsonEncode(JsonSchema.fromArray(control![1]()).toArray()), "a $ref segment decoding to valid UTF-8 resolves as in PHP");
++  },
++);
