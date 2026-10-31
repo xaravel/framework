@@ -3,13 +3,13 @@ title: 'JsonSchema.__callStatic tested against PHP, and the non-UTF-8 $ref docum
 type: 'bugfix'
 created: '2026-10-31'
 status: 'blocked'
-baseline_revision: 4610aa55535359c19accbb075a6358443052ab3c
+baseline_revision: aa07e6a1f4289f81bee74ff3b42e8c77df22335e
 review_loop_iteration: 0
 followup_review_recommended: false
 context:
   - _bmad-output/implementation-artifacts/epic-16-retro-2026-10-31.md
   - decisions/DIV-9.md
-warnings: []
+warnings: [oversized]
 deferred: []
 ---
 
@@ -71,6 +71,10 @@ PHP column is the recorded probe; the port must equal it unless marked.
 - Given the recorded probes, when XT-json-schema-4 and -5 run, then every unmarked row equals PHP's record and every marked row throws the DIV clause's `TypeError`.
 - Given the change, when `bun run harness` runs alone, then it reports no differences, and XT-json-schema-1..3 pass unchanged.
 - Given `bun run typecheck` and `bun run lint`, then both pass.
+
+## Resume Plan (2026-10-31)
+
+The intent contract is preserved verbatim. `decisions/MAINT-2026-10-31-epic-16-item-1.md` and amended DIV-9.15 now authorize the string-keyed diagnostic assertions. Keep existing exact record comparisons; strengthen the string-keyed PHP record checks to exact values. Add PHP-backed Traversable, mixed-key and numeric-object rows to XT-json-schema-4, and a truncated `%C3` row to XT-json-schema-5. Narrow documentation claims to name resolution and unpacking, without promising builder arity/type validation; describe DIV-9.18 by decoded bytes JS cannot represent rather than one exceptional input. All implementation remains within the original paths and constraints. These cases complete the deferred coverage findings from the previous review. The existing code map, tasks, and acceptance remain applicable.
 
 ## Verification
 
@@ -135,6 +139,8 @@ Findings:
 
 ## Spec Change Log
 
+- 2026-10-31: Resumed after decisions/MAINT-2026-10-31-epic-16-item-1.md amended DIV-9.15; restored the saved attempt and returned to draft to fold in the prior review's deferred cases before re-review.
+
 ## Review Triage Log
 
 ### 2026-10-31 — Review pass
@@ -165,6 +171,22 @@ Findings:
   - `[false]` `[reject]` (blind-hunter) the spec file name differs from the item id — the Fidelity Review takes the spec by `--spec` path and the item by `--item`; nothing looks it up by name.
   - `[false]` `[reject]` (edge-case-hunter) a non-string `name` — the parameter is typed `string` and PHP's `string $name` is the same contract; `callMethod`'s own check is PHP's `Method name must be a string`.
 
+### 2026-10-31 — Resumed review pass
+- verdicts: 12 findings — high 1, medium 2, low 9, false 0, maybe-false 0
+- findings:
+  - `[medium]` `[patch]` blind-hunter: non-list/Traversable/numeric-object rows ignore values — added PHP-backed consuming object(properties) rows; component run passed, 280 checked/differ=0.
+  - `[low]` `[patch]` blind-hunter: integer-key insertion order untested — added consuming object row with keys 7 then 2 and distinguishable ignored second value; component run passed.
+  - `[high]` `[intent_gap]` blind-hunter: named-before-positional ordering absent — probing reveals a required non-list behavior the unchanged runtime does not provide: PHP gives Unknown named parameter $a, callUnpacked gives Cannot use positional argument after named argument during unpacking. DIV-9.15 permits a TypeError diagnostic, not this different PHP Error. Fix requires packages/runtime outside item scope; parent directs Maintainer waiting under iteration D. Saved resumed attempt and reverted package files.
+  - `[low]` `[reject]` blind-hunter: unknown-name argument iteration side effect untested — inert scalar proves precedence, branch demonstrably calls no unpack helper; extra observable iterator machinery is disproportionate.
+  - `[low]` `[reject]` blind-hunter: matching invalid-byte key PHP success path untested — bytes cannot be represented by port; existing PHP lookup source establishes documentation, no new consumer failure shown.
+  - `[low]` `[reject]` blind-hunter: old Auto Run Result retained — historical record superseded by resumed result below; spec-only finding rejected per workflow.
+  - `[medium]` `[patch]` verification-gap: non-list forwarding could silently discard properties — same consuming-row fix as blind-hunter, verified component pass.
+  - `[low]` `[reject]` intent-alignment: general semantics tested by sampled cases — matrix and new representation rows exercise scoped behavior; no additional concrete defect beyond ordering above.
+  - `[low]` `[reject]` intent-alignment: precedence is not an observation of iteration — carried: branch skips unpacking; observable iterator machinery disproportionate.
+  - `[low]` `[reject]` intent-alignment: diff alone cannot prove PHP host provenance — PHP 8.5.11 observed, probes regenerated with no diff during this run.
+  - `[low]` `[reject]` intent-alignment: matching invalid-byte keys outside fixtures — carried: unsupported JS byte string; no port-representable success case.
+  - `[low]` `[reject]` intent-alignment: diff alone cannot prove commands passed — targeted harness/probes/typecheck/lint results recorded below; full/fidelity not run because scope blocker intervened.
+
 ## Auto Run Result
 
 Status: blocked
@@ -179,3 +201,9 @@ Summary of the attempt (saved, not applied): `retro-16-item-1-callstatic-attempt
 Files changed in this run: this spec, and the saved patch. The code was reverted.
 Follow-up review recommendation: false (no patch applied).
 Residual risk: none on `main`; `JsonSchema.__callStatic` still spreads `args` unchecked until the item resumes.
+
+### Resumed run result (2026-10-31)
+
+Status: blocked. Blocking condition: required named-before-positional unpacking error differs in unchanged runtime; fixing it needs packages/runtime outside the action item's packages/json-schema scope. For `JsonSchema.__callStatic("string", new PhpArray([["a",1],[0,"x"]]))`, host PHP 8.5.11 probe gives `Error: Unknown named parameter $a`; port gives `Error: Cannot use positional argument after named argument during unpacking`. DIV-9.15 now authorizes the named-argument TypeError diagnostic, but not this different PHP Error. Maintainer must authorize a scoped runtime followup or rule on the expected diagnostic. No assertion was weakened.
+
+Saved resumed attempt: `retro-16-item-1-callstatic-resumed-attempt.patch`; package changes reverted. It includes original implementation plus consuming non-list/Traversable/numeric-object and integer insertion-order probes, exact named-key records, and truncated UTF-8 coverage. Four text review layers completed (edge-case: no findings); Fidelity and full harness not run because scope blocker halted the unit. Component harness: 280 checked/differ=0 with XT-json-schema-1..5 passing, both probe records regenerated exactly, typecheck passed, lint passed after escalated retry of stalled sandbox lint. New test-only consuming rows were component-verified after lint; no claim of final full verification. Direct independent Bun reproduction stalled at import and was terminated (exit143); implementation agent's exact PHP-backed harness comparison established the discrepancy. Follow-up review recommendation: false while blocked.
