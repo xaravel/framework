@@ -175,7 +175,7 @@ development_status:
 
   epic-16: in-progress
   16-1-schema-types-and-serializer: done
-  16-2-schema-deserializer: blocked  # ESC-16.2-1 (divergence, open): Upstream does not round-trip a one-member union, so XT-json-schema-2's AC holds only under option 1; Fidelity reviewer 2 rejects on it. Everything else built and verified (47/47, XT-2/3 pass, full harness differ=0).
+  16-2-schema-deserializer: in-progress  # ESC-16.2-1 approved by the Maintainer, option 1 (no divergence; the one-member union is checked against Upstream's bytes); finish XT-json-schema-2 and close the Story
   epic-16-retrospective: optional
 
   epic-17: backlog
