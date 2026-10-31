@@ -8,8 +8,8 @@
 // And (action item epic-15-item-1-runtime-phpdotenv-builtins, ESC-15.2-1 part a) `strpos`, `str_replace`, `ltrim`,
 // `rtrim`, `ord`, `strtok`, `addcslashes` and `stripcslashes`, over UTF-8 bytes too; `strtok`'s remembered string and
 // position live in a Scope Frame slot (AD-5).
-// A result or input JS cannot hold (a result that splits a UTF-8 sequence, an input holding a lone surrogate) throws a
-// JS `TypeError` naming the limit, as the codecs do.
+// A result or input JS cannot hold (a result that splits a UTF-8 sequence, DIV-9.18; an input holding a lone surrogate)
+// throws a JS `TypeError` naming the limit, as the codecs do.
 import { LONE_SURROGATE, utf8 } from "./mangle";
 import { isContractToken } from "../registry/registry";
 import { currentFrame, frameSlot } from "../scope/scope";

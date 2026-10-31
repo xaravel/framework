@@ -1,7 +1,8 @@
 // `Dotenv\Parser\Lexer` (vlucas/phpdotenv v5.7.0), ported line for line. The token regex keeps Upstream's PCRE
 // source (bracket delimiters and the `A` modifier) and is matched by the runtime's `preg_match` at a byte `offset`
 // (PORTING.md § PCRE conversion, DIV-10.1, ESC-15.2-5), so `{1,1000}` counts bytes, as in PHP. `isset($content[$offset])`
-// is `$offset < strlen($content)`, a byte length.
+// is `$offset < strlen($content)`, a byte length. A token whose 1,000-byte cap ends inside a multibyte character
+// cannot be held as a JS string, so `preg_match` throws its `TypeError` where PHP rejoins the tokens (DIV-9.18).
 import { registerClass } from "@xaravel/runtime";
 import { Error as PhpError, implode, preg_match, Ref, sprintf, strlen, substr } from "@xaravel/runtime/php";
 

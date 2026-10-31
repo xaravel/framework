@@ -23,4 +23,6 @@ Xaravel is an independent open-source project. It is not affiliated with, sponso
 - `phpoption/phpoption` 1.10.0 (`src/PhpOption/`): phpdotenv is built on its `Option` type, and ESC-15.2-4 gives it to this package.
 - `graham-campbell/result-type` 1.2.0 (`src/GrahamCampbell/ResultType/`): phpdotenv is built on its `Result` type, and ESC-15.2-4 gives it to this package.
 
+A `.env` file that is not valid UTF-8, or an unquoted value or comment whose 1,000-byte Lexer token ends inside a multibyte character, throws a `TypeError` naming the runtime's UTF-8 limit, where PHP keeps the bytes (DIV-9.18).
+
 Each class is registered under its Upstream FQCN. Their licenses are in `NOTICE`.
