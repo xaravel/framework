@@ -73,3 +73,11 @@
 {"component":"config","fqcn":"PhpOption\\None","member":null,"citation":"FR-20"}
 {"component":"config","fqcn":"PhpOption\\Option","member":null,"citation":"FR-20"}
 {"component":"config","fqcn":"PhpOption\\Some","member":null,"citation":"FR-20"}
+{"component":"json-schema","fqcn":"Illuminate\\JsonSchema\\JsonSchema","member":"anyOf","citation":"DIV-12.22"}
+{"component":"json-schema","fqcn":"Illuminate\\JsonSchema\\JsonSchema","member":"array","citation":"DIV-12.22"}
+{"component":"json-schema","fqcn":"Illuminate\\JsonSchema\\JsonSchema","member":"boolean","citation":"DIV-12.22"}
+{"component":"json-schema","fqcn":"Illuminate\\JsonSchema\\JsonSchema","member":"integer","citation":"DIV-12.22"}
+{"component":"json-schema","fqcn":"Illuminate\\JsonSchema\\JsonSchema","member":"number","citation":"DIV-12.22"}
+{"component":"json-schema","fqcn":"Illuminate\\JsonSchema\\JsonSchema","member":"object","citation":"DIV-12.22"}
+{"component":"json-schema","fqcn":"Illuminate\\JsonSchema\\JsonSchema","member":"string","citation":"DIV-12.22"}
+{"component":"json-schema","fqcn":"Illuminate\\JsonSchema\\JsonSchema","member":"union","citation":"DIV-12.22"}
