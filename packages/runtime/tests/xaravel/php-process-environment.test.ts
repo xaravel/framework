@@ -3,7 +3,10 @@
 // vlucas/phpdotenv v5.7.0 uses. XT-runtime-139: getenv and putenv. XT-runtime-140: the seeding of `superglobals`
 // (`$_SERVER`, `$_ENV`) in a fresh process with a fixed environment, never re-read. XT-runtime-141: file_get_contents.
 // XT-runtime-142: the registry's counts, the root and subpath exports, and the limits. None needs an Oracle fixture:
-// each expected value is what PHP 8.5.11 gives for the same call, probed with the host's `php`.
+// each expected value is what PHP 8.5.11 gives for the same call, probed with the host's `php`. XT-runtime-146
+// (action item epic-15-retro-item-5-getenv-equals-name): getenv for a name holding `=`, which libc decides, so its
+// expected values are the Oracle image's (glibc) results in decisions/MAINT-2026-10-30-epic-15-items-2-5.md (Item 5),
+// not the host's.
 // `php-process-environment.probe.php` prints each label as `<label>\t<argument lists>\t<results>` and
 // `php-process-environment.probe.txt` is its output (`php -d error_reporting=0 php-process-environment.probe.php >
 // php-process-environment.probe.txt`). Every recorded argument list is run through the runtime and its results
@@ -285,7 +288,7 @@ xaravelTest(
     Assert.assertTrue(p.superglobals.env instanceof p.PhpArray);
     Assert.assertTrue(p.superglobals.server instanceof p.PhpArray);
     Assert.assertFalse(p.superglobals.env === p.superglobals.server);
-    // A name holding = is no entry (glibc's getenv, the Oracle image's).
+    // No entry starts with XP_F=1=, so glibc's getenv (the Oracle image's) finds none (XT-runtime-146).
     keepingEnvironment(() => {
       p.putenv("XP_F=1");
       Assert.assertFalse(p.getenv("XP_F=1"));
@@ -322,6 +325,27 @@ xaravelTest(
       Assert.assertStringContainsString("lone surrogate", jsTypeError(() => p.putenv("XP_N=\ud800")));
       Assert.assertStringContainsString("lone surrogate", jsTypeError(() => p.getenv("\udc00")));
       Assert.assertFalse(p.getenv("XP_N"));
+    });
+  },
+);
+
+xaravelTest(
+  "XT-runtime-146",
+  "after putenv(\"FOO=bar=baz\"), getenv gives PHP 8.5.11's results on the Oracle image (glibc): \"baz\" for FOO=bar, false for FOO=b, \"bar=baz\" for FOO and false for FOO=bar=baz (decisions/MAINT-2026-10-30-epic-15-items-2-5.md); by the glibc getenv rule that record confirms (the text after <name>= in the first entry starting with it), not by a recorded Oracle result, getenv(\"FOO=bar\") is \"\" after putenv(\"FOO=bar=\") and false with no FOO set",
+  () => {
+    keepingEnvironment(() => {
+      // The four Oracle results recorded in decisions/MAINT-2026-10-30-epic-15-items-2-5.md, Item 5.
+      Assert.assertTrue(p.putenv("FOO=bar=baz"));
+      Assert.assertSame("baz", p.getenv("FOO=bar"));
+      Assert.assertFalse(p.getenv("FOO=b"));
+      Assert.assertSame("bar=baz", p.getenv("FOO"));
+      Assert.assertFalse(p.getenv("FOO=bar=baz"));
+      // Xaravel-only: no Oracle record; glibc's rule returns the empty text after FOO=bar=.
+      Assert.assertTrue(p.putenv("FOO=bar="));
+      Assert.assertSame("", p.getenv("FOO=bar"));
+      // Xaravel-only: no Oracle record; by glibc's rule, with no FOO set nothing starts with FOO=bar=.
+      Assert.assertTrue(p.putenv("FOO"));
+      Assert.assertFalse(p.getenv("FOO=bar"));
     });
   },
 );
