@@ -113,8 +113,8 @@ epic-15:
   # Items 1 and 2 (epic-15-item-*) were ruled in decisions/MAINT-2026-10-30-story-15-2.md: XT-conformance-269's fixture
   # no longer names builtins item 1 adds, and ESC-15.2-5 extends PORTING.md's PCRE rule for item 2.
   # Retro items 1 and 6 were ruled in decisions/MAINT-2026-10-30-epic-15-items.md; item 8 (config's pre-sealed base write) waits on Story 17.4.
-  # Item 2 waits on the Maintainer: every part needs a DIV clause or a runtime contract (finding S2 in the retro doc).
-  # Item 5 waits on the Maintainer: no in-scope route records its Oracle (glibc) probe row (finding L3 in the retro doc).
+  # Items 2 and 5 were ruled in decisions/MAINT-2026-10-30-epic-15-items-2-5.md: item 2 keeps (b)/(c) under DIV-9.18, (a) moves to
+  # Story 17.4 and (d) to item 10; item 5's Oracle-image probe is recorded there.
   verdict: accepted-with-open-items
   attempts: 1
   doc: _bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md
@@ -122,5 +122,3 @@ epic-15:
   checkpoint_approved: false
   waiting_on_maintainer:
     - epic-15-retro-item-8-config-presealed-base-write
-    - epic-15-retro-item-2-untargeted-deferrals
-    - epic-15-retro-item-5-getenv-equals-name
