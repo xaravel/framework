@@ -70,6 +70,7 @@ import {
   type PhpFloat,
   Ref,
   registerClass,
+  registerTrait,
   reset,
   round,
   spaceship,
@@ -874,4 +875,5 @@ export class EnumeratesValues extends mixin(null, Conditionable) {
   }
 }
 
+registerTrait("Illuminate\\Support\\Traits\\EnumeratesValues", EnumeratesValues);
 registerClass("Illuminate\\Support\\Traits\\EnumeratesValues", EnumeratesValues);

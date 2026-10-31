@@ -19,9 +19,17 @@ registerClass("App\\Models\\Post", Post);
 - `registerClass(fqcn, X)` stores the class. Registering the same class under the same name again does nothing.
   Registering a different class under a taken name throws, and so does registering a class under a second FQCN. It
   also sets the grader's class-name brand, `X[Symbol.for('xaravel.class.fqcn')]`.
+- `registerTrait(fqcn, X)` registers a PHP trait: it stores the class exactly as `registerClass` does and marks it
+  with the own, non-enumerable, non-writable, non-configurable `Symbol.for('xaravel.traits.trait')`, so
+  `class_exists` is false and `trait_exists` true for it before anything composes it. It throws as `registerClass`
+  does, its messages naming `registerTrait()`. A trait file calls it just before its trailing `registerClass`, which
+  is then the same-class, same-name no-op (AD-10.3: the file still ends with `registerClass`). `mixin` sets the same
+  mark on each trait it composes.
 - `registerTestClass(fqcn, X)` registers a test fixture in the nearest `test` frame up the chain. It is resolvable
   there, in that frame's children and in the `interleave` units opened from it, and it is discarded when the test
-  ends. Outside a test frame it throws `ScopeFrameException`.
+  ends. Outside a test frame it throws `ScopeFrameException`. A test fixture registered this way cannot be declared a
+  trait (there is no test-frame `registerTrait`), so `class_exists` and `trait_exists` tell it apart as a trait only
+  once `mixin` composes it.
 - A test class's brand is an own accessor, so concurrent test frames that register one class under different names
   each read their own. It reads the name the nearest test frame up the active chain holds the class under, else the
   brand the class inherits, else `null`, so no test's name outlives the test. A subclass shows its parent's name. A

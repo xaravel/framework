@@ -42,7 +42,7 @@
 // `BadMethodCallException`; such a call goes through `__callStatic` / `__call` instead (DIV-12.10). The four names a
 // class owns in JavaScript, its static `prototype`, `name` and `length` and its prototype's `constructor`, cannot hold a
 // dispatcher without breaking the class, so `macro()` throws `InvalidArgumentException` for them (DIV-12.11).
-import { BadMethodCallException, Error as PhpError, fqcn, InvalidArgumentException, registerClass } from "@xaravel/runtime";
+import { BadMethodCallException, Error as PhpError, fqcn, InvalidArgumentException, registerClass, registerTrait } from "@xaravel/runtime";
 import { frameKinds, type FrameSlot, frameStatic, ScopeFrameException } from "@xaravel/runtime/scope";
 
 /** Any class, abstract or not. */
@@ -358,4 +358,5 @@ export class Macroable {
   }
 }
 
+registerTrait("Illuminate\\Support\\Traits\\Macroable", Macroable);
 registerClass("Illuminate\\Support\\Traits\\Macroable", Macroable);

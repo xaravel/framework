@@ -1,0 +1,4 @@
+class_exists	[false,false,false,false,true,true,true,false,false,false,false,false,"TypeError: class_exists(): Argument #1 ($class) must be of type string, array given","TypeError: class_exists(): Argument #2 ($autoload) must be of type bool, array given","TypeError: class_exists(): Argument #2 ($autoload) must be of type bool, array given",false]
+trait_exists	[true,true,true,true,false,false,false,false,false,false,false,false,"TypeError: trait_exists(): Argument #1 ($trait) must be of type string, array given","TypeError: trait_exists(): Argument #2 ($autoload) must be of type bool, array given","TypeError: trait_exists(): Argument #2 ($autoload) must be of type bool, array given",false]
+reflection	["trait_exists",1,2,false,[]]
+counts	["ArgumentCountError: trait_exists() expects at least 1 argument, 0 given","ArgumentCountError: trait_exists() expects at most 2 arguments, 3 given"]

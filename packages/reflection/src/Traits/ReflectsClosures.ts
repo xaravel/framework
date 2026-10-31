@@ -9,7 +9,7 @@
 // Upstream builds its results with `Collection`, which does not exist before Epic 14, so this port uses plain arrays
 // and objects: `closureParameterTypes` returns a plain object keyed by parameter name (the form PHP's all-string-keyed
 // array takes, DIV-9.2), and the list results are JS arrays. Everything is sync.
-import { Error as PhpError, registerClass, RuntimeException } from "@xaravel/runtime";
+import { Error as PhpError, registerClass, registerTrait, RuntimeException } from "@xaravel/runtime";
 import { ReflectionFunction, ReflectionIntersectionType, ReflectionNamedType, ReflectionUnionType } from "@xaravel/runtime/php";
 import { Reflector } from "../Reflector";
 
@@ -112,4 +112,5 @@ function namedTypeOf(type: ReflectionNamedType | ReflectionIntersectionType): Re
   throw new PhpError("Call to undefined method ReflectionIntersectionType::isBuiltin()");
 }
 
+registerTrait("Illuminate\\Support\\Traits\\ReflectsClosures", ReflectsClosures);
 registerClass("Illuminate\\Support\\Traits\\ReflectsClosures", ReflectsClosures);
