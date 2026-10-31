@@ -279,7 +279,7 @@ xaravelTest("XT-conformance-270", "scan:builtins collections on the real snapsho
       expect(exports).not.toContain(construct![5]!);
     }
   }
-});
+}, 60_000); // The real-snapshot scan exceeds bun test's 5 s default under the CI harness (#582).
 
 // ---------------------------------------------------------------------------
 // XT-conformance-274
@@ -668,6 +668,7 @@ xaravelTest(
       rmSync(remote, { recursive: true, force: true });
     }
   },
+  60_000, // git init, fetch and checkout from local repositories
 );
 
 // ---------------------------------------------------------------------------
