@@ -1,6 +1,6 @@
-{"id":"Illuminate\\Tests\\JsonSchema\\IntegerTypeTest::test_it_may_combine_multiple_of_with_min_and_max","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\IntegerTypeTest::test_it_may_set_default_value","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\IntegerTypeTest::test_it_may_set_enum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\IntegerTypeTest::test_it_may_set_max_value","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\IntegerTypeTest::test_it_may_set_min_value","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\IntegerTypeTest::test_it_may_set_multiple_of","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\IntegerTypeTest::test_it_may_combine_multiple_of_with_min_and_max","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\IntegerTypeTest::test_it_may_set_default_value","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\IntegerTypeTest::test_it_may_set_enum","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\IntegerTypeTest::test_it_may_set_max_value","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\IntegerTypeTest::test_it_may_set_min_value","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\IntegerTypeTest::test_it_may_set_multiple_of","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}

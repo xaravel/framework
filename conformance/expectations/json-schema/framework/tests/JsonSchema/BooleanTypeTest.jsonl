@@ -1,4 +1,4 @@
-{"id":"Illuminate\\Tests\\JsonSchema\\BooleanTypeTest::test_may_set_default_false_via_default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\BooleanTypeTest::test_may_set_default_true_via_default","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\BooleanTypeTest::test_may_set_enum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\BooleanTypeTest::test_serializes_as_boolean_with_metadata","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\BooleanTypeTest::test_may_set_default_false_via_default","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\BooleanTypeTest::test_may_set_default_true_via_default","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\BooleanTypeTest::test_may_set_enum","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\BooleanTypeTest::test_serializes_as_boolean_with_metadata","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}

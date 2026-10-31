@@ -1,5 +1,5 @@
-{"id":"Illuminate\\Tests\\JsonSchema\\StringTypeTest::test_it_sets_enum","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\StringTypeTest::test_it_sets_format","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\StringTypeTest::test_it_sets_max_length","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\StringTypeTest::test_it_sets_min_length","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\StringTypeTest::test_it_sets_pattern","variant":"none","status":"skip","reason":"not-ported-yet","adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\StringTypeTest::test_it_sets_enum","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\StringTypeTest::test_it_sets_format","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\StringTypeTest::test_it_sets_max_length","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\StringTypeTest::test_it_sets_min_length","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
+{"id":"Illuminate\\Tests\\JsonSchema\\StringTypeTest::test_it_sets_pattern","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
