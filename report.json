@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "commit": "d95b30e3ab0bf3262d7203cf6e436adc264c86b9",
+  "commit": "e7585e507da318ff3fbf80c03a8b1102b101ea70",
   "pin": {
     "tag": "v13.37.0",
     "commit": "685f8d6c2ab4547287500bc80ccdf2ca12635109"
@@ -12,17 +12,17 @@
   },
   "overall": {
     "pairs": 23291,
-    "passing": 1074,
-    "rate": 0.046112232192692455,
+    "passing": 1306,
+    "rate": 0.05607316130694259,
     "statuses": {
-      "pass": 1074,
-      "fail-known": 0,
-      "skip": 22217,
+      "pass": 1306,
+      "fail-known": 1,
+      "skip": 21984,
       "quarantined": 0
     },
-    "failKnown": 0,
+    "failKnown": 1,
     "reasons": {
-      "not-ported-yet": 18800,
+      "not-ported-yet": 18567,
       "blocked-by": 36,
       "intentional-divergence": 0,
       "php-only": 0,
@@ -36,7 +36,7 @@
       "blocked-by:mail": 2,
       "blocked-by:support": 27,
       "deferred:ai-sdk": 3381,
-      "not-ported-yet": 18800
+      "not-ported-yet": 18567
     },
     "adapted": 358
   },
@@ -567,17 +567,17 @@
     },
     "json-schema": {
       "pairs": 280,
-      "passing": 0,
-      "rate": 0,
+      "passing": 232,
+      "rate": 0.8285714285714286,
       "statuses": {
-        "pass": 0,
-        "fail-known": 0,
-        "skip": 280,
+        "pass": 232,
+        "fail-known": 1,
+        "skip": 47,
         "quarantined": 0
       },
-      "failKnown": 0,
+      "failKnown": 1,
       "reasons": {
-        "not-ported-yet": 280,
+        "not-ported-yet": 47,
         "blocked-by": 0,
         "intentional-divergence": 0,
         "php-only": 0,
@@ -586,7 +586,7 @@
         "out-of-scope": 0
       },
       "reasonsDetail": {
-        "not-ported-yet": 280
+        "not-ported-yet": 47
       },
       "adapted": 0
     },
@@ -1043,8 +1043,8 @@
   },
   "alpha": {
     "applicable": 18395,
-    "passing": 1074,
-    "rate": 0.05838543082359337,
+    "passing": 1306,
+    "rate": 0.07099755368306605,
     "target": 0.9,
     "variants": [
       "none",
@@ -1109,7 +1109,7 @@
     "perVariant": {
       "none": {
         "applicable": 17690,
-        "passing": 1074
+        "passing": 1306
       },
       "pgsql": {
         "applicable": 92,
@@ -1137,7 +1137,7 @@
       }
     },
     "remaining": {
-      "not-ported-yet": 18148,
+      "not-ported-yet": 17915,
       "blocked-by": 36
     },
     "noAlphaLine": 294,
