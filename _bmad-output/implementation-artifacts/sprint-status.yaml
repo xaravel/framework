@@ -175,7 +175,7 @@ development_status:
 
   epic-16: in-progress
   16-1-schema-types-and-serializer: done
-  16-2-schema-deserializer: backlog
+  16-2-schema-deserializer: in-progress
   epic-16-retrospective: optional
 
   epic-17: backlog
