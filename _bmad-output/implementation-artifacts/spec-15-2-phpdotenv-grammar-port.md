@@ -32,6 +32,8 @@ deferred:
       Deferred here by action item epic-15-item-3-runtime-process-environment (its spec's deferred list). The bytes
       limit is the runtime's rule for every PHP string. Decide whether a non-UTF-8 env file must load; if so, raise
       an Escalation (the runtime has no byte-string form).
+      Settled 2026-10-30 by DIV-9.18 (MAINT-2026-10-30-epic-15-items-2-5 item 2.1): the TypeError is the ruled
+      behaviour, asserted by XT-config-8 (packages/config/tests/xaravel/dotenv-utf8.test.ts) with the Lexer-cap case.
     location: >-
       packages/runtime/src/php/fileFunctions.ts (decodeResult call); phpdotenv Store/File/Reader.php:73, Util/Str.php
     severity: medium
@@ -160,7 +162,7 @@ Blocking condition: ESC-15.2-6 (contract: `DIRECTORY_SEPARATOR`, `array_reduce` 
 - **Matrix note:** the port returns `[]` for the unterminated `A="x` (phpdotenv's `Lines::process` drops an unclosed multiline buffer), where the matrix row expects `InvalidFileException`. The XT compares to the Oracle, not to the matrix, so the signed fixture settles it; if PHP agrees with the port, the matrix row is wrong, not the code.
 - **Verification (2026-10-30):** `typecheck`, `lint`, `registration:check` (117 registrations), `escalations:check` (153 records), `oracle:story check 15.2` (2 accepted) clean; `harness --component config` 33 checked, 0 differ; `harness --xaravel --id 'XT-config-*'` 2 of 4 pass, XT-config-3 and XT-config-4 fail on `missing signed fixture` only. After the signed fixtures landed: 4 of 4 pass, so the Oracle agrees with the port on every case, `A="x` giving `[]` included (the matrix row's `InvalidFileException` is wrong for phpdotenv v5.7.0). Not run against local PHP (the classifier refused running downloaded phpdotenv code).
 - **Review:** not run in this iteration. The reviewed tree changes again when ESC-15.2-6 lands and the signed fixtures arrive, and the Fidelity Review rejects a missing fixture under F-7 (Story 14.4), so all five layers run when the Story resumes.
-- **Residual risks:** an unquoted value over 1000 bytes whose cap falls inside a multibyte character throws the runtime's UTF-8 limit where PHP does not; a non-UTF-8 env file still cannot load (second deferred item).
+- **Residual risks:** an unquoted value over 1000 bytes whose cap falls inside a multibyte character throws the runtime's UTF-8 limit where PHP does not; a non-UTF-8 env file still cannot load (second deferred item) (settled 2026-10-30 by DIV-9.18; asserted by XT-config-8).
 
 ### 2026-10-30 — Resumed after ESC-15.2-6 and epic-15-item-4 (#569)
 
@@ -184,7 +186,7 @@ Status: done
   - `fidelity:review status --story 15.2`: current, with 2 passes at tree 6095fb1a2c8bfa261d8479268c9224dbbae76fee.
   - `harness --story 15.2` exits non-zero by design: the manifest has no Upstream `test_ids`, only Xaravel Tests.
   - `story:check 15.2` passes manifest, tests, xaravel-tests, fixtures, api-surface and escalations. Its full-run gate needs the pushed PR's CI run, so it is checked after the push.
-- **Residual risks:** unchanged from the entry above (the multibyte cap and non-UTF-8 env files). `filePaths`' name order across several names is still not exercised; Laravel passes one name.
+- **Residual risks:** unchanged from the entry above (the multibyte cap and non-UTF-8 env files) (settled 2026-10-30 by DIV-9.18; asserted by XT-config-8). `filePaths`' name order across several names is still not exercised; Laravel passes one name.
 
 ## Fidelity Review
 

@@ -1,6 +1,8 @@
 // `Dotenv\Store\File\Reader` (vlucas/phpdotenv v5.7.0, `@internal`), ported line for line over the runtime's sync
 // `file_get_contents` (AD-6, ESC-15.2-3). PHP's `@` silences warnings, which the runtime does not raise (DIV-9.17).
-// `$output` is a `PhpArray` keyed by path; the result takes the PHP array form AD-9 gives its keys.
+// `$output` is a `PhpArray` keyed by path; the result takes the PHP array form AD-9 gives its keys. A file that is not
+// valid UTF-8 (a Latin-1 `.env`, whatever `$fileEncoding` says) cannot be held as a JS string, so `file_get_contents`
+// throws its `TypeError` before `Str::utf8` runs (DIV-9.18).
 import type { PhpArrayLike } from "@xaravel/contracts/config";
 import { registerClass } from "@xaravel/runtime";
 import { arrayFromEntries, file_get_contents, PhpArray, Error as PhpError } from "@xaravel/runtime/php";

@@ -7,7 +7,7 @@
 // The runtime has no resources and no stream wrappers, so a registered wrapper's path (`php://`, `http://`, `file://`,
 // `data:`),
 // `$use_include_path` true or a non-null `$context` throws a JS `TypeError` naming the limit, as do contents JS cannot
-// hold (bytes that are no valid UTF-8).
+// hold (bytes that are not valid UTF-8; DIV-9.18).
 import { readFileSync } from "node:fs";
 import { boolParameter, intParameter, nullableIntParameter, stringParameter } from "./phpArguments";
 import { decodeResult, wellFormed } from "./stringFunctions";
