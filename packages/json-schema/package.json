@@ -21,6 +21,8 @@
   },
   "devDependencies": {
     "@xaravel/assert": "workspace:*",
-    "@xaravel/mockery": "workspace:*"
+    "@xaravel/mockery": "workspace:*",
+    "ajv": "8.17.1",
+    "ajv-formats": "3.0.1"
   }
 }
