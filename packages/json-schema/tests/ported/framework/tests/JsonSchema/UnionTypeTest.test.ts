@@ -1,7 +1,8 @@
 // Ported from Laravel v13.37.0 framework/tests/JsonSchema/UnionTypeTest.php.
 //
 // `test_it_round_trips_a_union` and `test_it_round_trips_a_nullable_union` call `JsonSchema::fromArray`, the
-// Deserializer Story 16.2 ports; they wait on ESC-16.1-4 and are not ported here.
+// Deserializer; they belong to Story 16.2 (decisions/ESC-16.1-4.md) and are not ported here. Their Expectations lines
+// stay `skip: not-ported-yet` until Story 16.2 ports them with DeserializerTest.
 import { portedTest, TestCase } from "@xaravel/assert";
 import { InvalidArgumentException } from "@xaravel/runtime";
 import { JsonSchema } from "../../../../../src";

@@ -5,8 +5,9 @@
 // `assertValidOnJsonSchema` and `assertNotValidOnJsonSchema` helpers (decisions/ESC-16.1-1.md). The schema is
 // `jsonDecode((string) $schema)`; the data is the PHP value the row holds, a `(object) [...]` as the runtime's
 // `stdClass`, with an integral float's marker (DIV-9.4) read as the number it marks, as Opis reads a PHP float. Every
-// assertion, expected value and dataset row is Upstream's. A row where ajv's verdict differs from the Oracle's Opis
-// verdict is recorded `fail-known` with its own Escalation (ESC-16.1-5), never adapted.
+// assertion, expected value and dataset row is Upstream's. ajv runs with `strict: false` and `multipleOfPrecision: 12`
+// (decisions/ESC-16.1-5.md), validator settings under which every one of the 172 rows matches the Oracle's Opis
+// verdict; a row where ajv's verdict still differed would raise its own Escalation, never be adapted.
 import { portedTest, TestCase } from "@xaravel/assert";
 import { float, InvalidArgumentException, jsonDecode, PhpFloat, registerTestClass, stdClass, toPhpString } from "@xaravel/runtime";
 import Ajv2020 from "ajv/dist/2020";
@@ -327,9 +328,9 @@ class TypeTest extends TestCase {
     ];
   }
 
-  /** Upstream's Opis `Validator` with its schema loader is ajv's draft 2020-12 validator with the formats; no row loads a remote schema. */
+  /** Upstream's Opis `Validator` with its schema loader is ajv's draft 2020-12 validator with the formats; no row loads a remote schema. `multipleOfPrecision: 12` matches Opis's `multipleOf` verdicts on floats (decisions/ESC-16.1-5.md). */
   makeValidator(): Ajv2020 {
-    const validator = new Ajv2020({ strict: false });
+    const validator = new Ajv2020({ strict: false, multipleOfPrecision: 12 });
     addFormats(validator);
 
     return validator;

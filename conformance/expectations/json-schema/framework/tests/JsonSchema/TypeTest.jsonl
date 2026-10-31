@@ -112,7 +112,7 @@
 {"id":"Illuminate\\Tests\\JsonSchema\\TypeTest::test_produces_valid_json_schemas#34","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\JsonSchema\\TypeTest::test_produces_valid_json_schemas#35","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\JsonSchema\\TypeTest::test_produces_valid_json_schemas#36","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
-{"id":"Illuminate\\Tests\\JsonSchema\\TypeTest::test_produces_valid_json_schemas#37","variant":"none","status":"fail-known","reason":null,"adapted":null,"escalation":"ESC-16.1-5"}
+{"id":"Illuminate\\Tests\\JsonSchema\\TypeTest::test_produces_valid_json_schemas#37","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\JsonSchema\\TypeTest::test_produces_valid_json_schemas#38","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\JsonSchema\\TypeTest::test_produces_valid_json_schemas#39","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
 {"id":"Illuminate\\Tests\\JsonSchema\\TypeTest::test_produces_valid_json_schemas#4","variant":"none","status":"pass","reason":null,"adapted":null,"escalation":null}
