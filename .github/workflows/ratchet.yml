@@ -10,7 +10,10 @@
 # come from the base. The base is checked out at `.` and the PR head at `pr/`.
 # `scope` first compares the two trees and writes the AD-2 reverse-dependency
 # closure of what the PR changed (before the overlay, so a PR's change to a
-# grader package still widens the scope). `overlay` then restores every
+# grader package still widens the scope). `lockfile` then fails a PR whose
+# bun.lock differs from the base's with a plain "can't ratchet a dependency
+# change" error, since the run installs from the base's lockfile and a person
+# reviews that change instead. `overlay` then restores every
 # Protected Path (the harness, tools/, the grader packages, stories/, the root
 # bunfig.toml, package.json and bun.lock) and the sprint status from the base
 # into `pr/`. So the check's workflow, tool and Protected Paths are the base's
@@ -118,6 +121,9 @@ jobs:
       - name: Scope the PR
         if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
         run: bun tools/ratchet/ratchet.ts scope --base . --head pr --out "$RUNNER_TEMP/ratchet-scope.json"
+      - name: Refuse a dependency change
+        if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
+        run: bun tools/ratchet/ratchet.ts lockfile --base . --head pr
       - name: Restore the grader from the base
         if: github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository
         run: bun tools/ratchet/ratchet.ts overlay --base . --head pr

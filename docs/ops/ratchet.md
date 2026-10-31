@@ -79,9 +79,10 @@ On a same-repository PR:
 
 1. It checks out the base commit at `.` and the PR head at `pr/`.
 2. `bun tools/ratchet/ratchet.ts scope --base . --head pr --out "$RUNNER_TEMP/ratchet-scope.json"`, before anything changes `pr/`.
-3. `overlay --base . --head pr`, then `bun install --frozen-lockfile --ignore-scripts` in `pr/`.
-4. `run --root pr --ref <head ref> --scope "$RUNNER_TEMP/ratchet-scope.json"`.
-5. `story --root pr --ref <head ref>`.
+3. `lockfile --base . --head pr`: when the PR's `bun.lock` differs from the base's, the run stops with `::error::can't ratchet a dependency change`. The overlay restores the base's `bun.lock` but not a package's `package.json`, so a PR that adds a dependency could not be installed from the base lockfile and would fail later with a misleading "lockfile had changes". A person reviews the lockfile change instead (`protected-paths`), and the PR merges with `--admin` (#590).
+4. `overlay --base . --head pr`, then `bun install --frozen-lockfile --ignore-scripts` in `pr/`.
+5. `run --root pr --ref <head ref> --scope "$RUNNER_TEMP/ratchet-scope.json"`.
+6. `story --root pr --ref <head ref>`.
 
 The head ref reaches the shell only through env.
 

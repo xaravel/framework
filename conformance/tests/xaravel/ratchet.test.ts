@@ -267,11 +267,12 @@ xaravelTest("XT-conformance-246", "the ratchet workflow runs the PR's code under
     }
     return run;
   };
-  // Story 5.7: scope before the overlay, the PR graded over its scope, then the Story's tests in full; the merge
+  // Story 5.7: scope before the overlay, a dependency change refused (#590), the PR graded over its scope, then the Story's tests in full; the merge
   // group's full run; main's full run.
   expect(runs.map(([condition, run, dir]) => [condition, label(run), dir])).toEqual([
     [FORK, "<refuse a fork>", null],
     [SAME_REPO, 'bun tools/ratchet/ratchet.ts scope --base . --head pr --out "$RUNNER_TEMP/ratchet-scope.json"', null],
+    [SAME_REPO, "bun tools/ratchet/ratchet.ts lockfile --base . --head pr", null],
     [SAME_REPO, "bun tools/ratchet/ratchet.ts overlay --base . --head pr", null],
     [SAME_REPO, "bun install --frozen-lockfile --ignore-scripts", "pr"],
     [SAME_REPO, 'bun tools/ratchet/ratchet.ts run --root pr --ref "$HEAD_REF" --scope "$RUNNER_TEMP/ratchet-scope.json"', null],

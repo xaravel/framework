@@ -14,7 +14,7 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { main as benchMain, runBenchmarks } from "../../../tools/bench/bench";
 import { reverseClosure } from "../../../tools/graph/graph";
-import { computeScope, main as ratchetMain, readScope, runRatchet, runStoryTests } from "../../../tools/ratchet/ratchet";
+import { computeScope, lockfileChange, main as ratchetMain, readScope, runRatchet, runStoryTests } from "../../../tools/ratchet/ratchet";
 import { ACTIONS_INTEGRATION_ID, policyViolations, REQUIRED_CHECKS } from "../../../tools/ruleset/ruleset";
 import type { Difference } from "../../harness/compare";
 import { portedTestFiles, type HarnessResult } from "../../harness/harness";
@@ -168,11 +168,12 @@ xaravelTest("XT-conformance-119", "every PR runs lint, typecheck, the protected-
   expect((job as Job & { "timeout-minutes"?: number })["timeout-minutes"]).toBe(60);
   expect(Object.fromEntries(Object.entries(job.services!).map(([name, service]) => [name, service.image]))).toEqual({ postgres: "postgres:18", redis: "redis:8.10.2" });
   expect(job.env).toMatchObject(SERVICE_ENV);
-  // The PR flow, in order: scope (before the overlay), overlay, install, run --scope, story.
+  // The PR flow, in order: scope (before the overlay), lockfile, overlay, install, run --scope, story.
   // Retro 5 item 1: only a same-repository PR's code runs (a fork PR fails closed, XT-conformance-246).
   const pr = job.steps.filter((step) => step.if === "github.event_name == 'pull_request_target' && github.event.pull_request.head.repo.full_name == github.repository" && step.run !== undefined).map((step) => step.run);
   expect(pr).toEqual([
     'bun tools/ratchet/ratchet.ts scope --base . --head pr --out "$RUNNER_TEMP/ratchet-scope.json"',
+    "bun tools/ratchet/ratchet.ts lockfile --base . --head pr",
     "bun tools/ratchet/ratchet.ts overlay --base . --head pr",
     "bun install --frozen-lockfile --ignore-scripts",
     'bun tools/ratchet/ratchet.ts run --root pr --ref "$HEAD_REF" --scope "$RUNNER_TEMP/ratchet-scope.json"',
@@ -190,6 +191,56 @@ xaravelTest("XT-conformance-119", "every PR runs lint, typecheck, the protected-
   const scripts = (JSON.parse(readFileSync(join(root, "package.json"), "utf8")) as { scripts: Record<string, string> }).scripts;
   expect(scripts["graph:check"]).toBe("bun --no-env-file tools/graph/graph.ts");
   expect(scripts["bench"]).toBe("bun --no-env-file tools/bench/bench.ts");
+});
+
+// XT-conformance-278
+
+xaravelTest("XT-conformance-278", "lockfile refuses a PR whose bun.lock differs from the base's with a plain can't-ratchet-a-dependency-change error before the overlay, and passes an unchanged lockfile (#590)", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "xaravel-ratchet-lockfile-"));
+  try {
+    const tree = (name: string, lock: string | null): string => {
+      const at = join(dir, name);
+      mkdirSync(at, { recursive: true });
+      if (lock !== null) {
+        writeFileSync(join(at, "bun.lock"), lock);
+      }
+      return at;
+    };
+    const base = tree("base", "{ \"lockfileVersion\": 1 }\n");
+    expect(lockfileChange(base, tree("same", "{ \"lockfileVersion\": 1 }\n"))).toBeNull();
+    expect(lockfileChange(base, tree("added", "{ \"lockfileVersion\": 1, \"ajv\": 1 }\n"))).toBe("the PR's bun.lock differs from the base's");
+    expect(lockfileChange(base, tree("none", null))).toBe("only the base has a bun.lock");
+    expect(lockfileChange(tree("bare", null), tree("bare-head", null))).toBeNull();
+    // The CLI: exit 0 with a match line, exit 1 with the message (and an ::error:: under GitHub Actions), exit 2 on usage.
+    const capture = async (argv: string[], actions: boolean): Promise<{ code: number; out: string; err: string }> => {
+      const [out, err] = [[] as string[], [] as string[]];
+      const [stdout, stderr] = [process.stdout.write.bind(process.stdout), process.stderr.write.bind(process.stderr)];
+      const previous = process.env["GITHUB_ACTIONS"];
+      process.env["GITHUB_ACTIONS"] = actions ? "true" : "false";
+      process.stdout.write = ((chunk: string) => (out.push(String(chunk)), true)) as typeof process.stdout.write;
+      process.stderr.write = ((chunk: string) => (err.push(String(chunk)), true)) as typeof process.stderr.write;
+      try {
+        return { code: await ratchetMain(argv), out: out.join(""), err: err.join("") };
+      } finally {
+        process.stdout.write = stdout;
+        process.stderr.write = stderr;
+        if (previous === undefined) {
+          delete process.env["GITHUB_ACTIONS"];
+        } else {
+          process.env["GITHUB_ACTIONS"] = previous;
+        }
+      }
+    };
+    expect(await capture(["lockfile", "--base", base, "--head", join(dir, "same")], true)).toEqual({ code: 0, out: "Ratchet lockfile: the PR's bun.lock matches the base.\n", err: "" });
+    const refused = await capture(["lockfile", "--base", base, "--head", join(dir, "added")], true);
+    expect(refused.code).toBe(1);
+    expect(refused.out).toStartWith("::error::can't ratchet a dependency change: the PR's bun.lock differs from the base's.");
+    expect(refused.err).toContain("Ratchet lockfile: can't ratchet a dependency change");
+    expect((await capture(["lockfile", "--base", base, "--head", join(dir, "added")], false)).out).toBe("");
+    expect((await capture(["lockfile", "--base", base], false)).code).toBe(2);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
 });
 
 xaravelTest("XT-conformance-201", "scope is the AD-2 reverse-dependency closure of the changed packages that has Expectations; data-only paths add nothing, any other path makes it full (AD-2, AD-28.1)", async () => {
