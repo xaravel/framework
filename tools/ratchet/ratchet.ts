@@ -55,6 +55,19 @@
 //       (as with any test runner): the Ratchet's outcome comparison and review
 //       guard that. The top-level `.git` and `node_modules` are skipped.
 //
+//   bun tools/ratchet/ratchet.ts lockfile --base <dir> --head <dir>
+//       refuses a dependency change before the overlay. `overlay` restores the
+//       base's `bun.lock` (a Protected Path) but not a package's
+//       `package.json`, so a PR that adds or changes a dependency cannot be
+//       installed from the base lockfile, and `bun install --frozen-lockfile`
+//       would fail with a misleading "lockfile had changes". When the head's
+//       `bun.lock` differs from the base's (or only one tree has one), it
+//       prints `Ratchet lockfile: can't ratchet a dependency change: …` on
+//       stderr (and, under `GITHUB_ACTIONS=true`, as an `::error::`
+//       annotation) and exits 1: the lockfile change is reviewed by a person
+//       instead (`protected-paths`). Otherwise it prints `Ratchet lockfile:
+//       the PR's bun.lock matches the base.` and exits 0.
+//
 //   bun tools/ratchet/ratchet.ts scope --base <dir> --head <dir> --out <file>
 //       (Story 5.7) compares the file contents of the two trees (the top-level
 //       `.git`, every `node_modules` at any depth, and either tree nested
@@ -543,12 +556,26 @@ function isLink(path: string): boolean {
 // ---------------------------------------------------------------------------
 // CLI
 
+/** Why the head's `bun.lock` differs from the base's, or null when the two texts are identical (`lockfile`). */
+export function lockfileChange(base: string, head: string): string | null {
+  const read = (root: string): string | null => (existsSync(join(root, "bun.lock")) ? readFileSync(join(root, "bun.lock"), "utf8") : null);
+  const [baseLock, headLock] = [read(base), read(head)];
+  if (baseLock === null && headLock === null) {
+    return null;
+  }
+  if (baseLock === null || headLock === null) {
+    return `only the ${baseLock === null ? "head" : "base"} has a bun.lock`;
+  }
+  return baseLock === headLock ? null : "the PR's bun.lock differs from the base's";
+}
+
 const USAGE = [
   "Usage:",
   "  bun tools/ratchet/ratchet.ts run [--root <dir>] --ref <head-ref> [--scope <file>]",
   "  bun tools/ratchet/ratchet.ts scope --base <dir> --head <dir> --out <file>",
   "  bun tools/ratchet/ratchet.ts story [--root <dir>] --ref <head-ref>",
   "  bun tools/ratchet/ratchet.ts overlay --base <dir> --head <dir>",
+  "  bun tools/ratchet/ratchet.ts lockfile --base <dir> --head <dir>",
 ].join("\n");
 
 function print(result: RatchetRun): number {
@@ -624,6 +651,25 @@ export async function main(argv: readonly string[]): Promise<number> {
       const result = overlay(base, head);
       process.stdout.write(`Ratchet overlay: ${result.copied.length} graded file(s) restored from the base, ${result.removed.length} removed from the head.\n`);
       return 0;
+    }
+    if (command === "lockfile") {
+      const flags = parseFlags(rest, ["--base", "--head"]);
+      const base = flags.get("--base");
+      const head = flags.get("--head");
+      if (base === undefined || head === undefined) {
+        throw new UsageError("lockfile needs --base <dir> and --head <dir>");
+      }
+      const change = lockfileChange(base, head);
+      if (change === null) {
+        process.stdout.write("Ratchet lockfile: the PR's bun.lock matches the base.\n");
+        return 0;
+      }
+      const message = `can't ratchet a dependency change: ${change}. The Ratchet installs the PR from the base's bun.lock, so a person reviews the lockfile change instead (protected-paths).`;
+      if (process.env["GITHUB_ACTIONS"] === "true") {
+        process.stdout.write(`::error::${message}\n`);
+      }
+      process.stderr.write(`Ratchet lockfile: ${message}\n`);
+      return 1;
     }
     throw new UsageError(command === undefined ? "Missing command" : `Unknown command: ${command}`);
   } catch (error) {
