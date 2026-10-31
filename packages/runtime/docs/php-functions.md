@@ -750,8 +750,10 @@ with PHP's `ReflectionFunction` counts. All are sync.
   and writes the superglobals. `superglobals.server` holds the environment entries only (see Not ported).
 - `getenv(name = null, local_only = false)`: the value of `name` in `process.env` at the call (`""` when set empty), or
   `false` when it is not set or `name` is `""`; with `name` null, a `PhpArray` of every entry, filtered and keyed as
-  `$_ENV` is. `local_only` changes nothing in the CLI. A name holding `=` is no entry, as glibc's `getenv` (the Oracle
-  image's) gives.
+  `$_ENV` is. `local_only` changes nothing in the CLI. A name holding `=` matches as glibc's `getenv` (the Oracle
+  image's) does: the text after `<name>=` in the first entry, in `process.env` order, whose `<entry name>=<value>`
+  starts with `<name>=`, else `false`; after `putenv("FOO=bar=baz")`, `getenv("FOO=bar")` is `"baz"` and
+  `getenv("FOO=b")` is `false` (`decisions/MAINT-2026-10-30-epic-15-items-2-5.md`, Item 5).
 - `putenv(assignment)`: `"NAME=value"` sets `NAME` to everything after the first `=` (`""` included), `"NAME"` unsets
   it; `true` either way. It writes `process.env` only. An empty assignment or one starting with `=` throws PHP's
   `ValueError` `putenv(): Argument #1 ($assignment) must have a valid syntax`.

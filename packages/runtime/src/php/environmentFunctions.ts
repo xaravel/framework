@@ -57,7 +57,10 @@ export const superglobals: { readonly server: PhpArray; readonly env: PhpArray }
  * set empty), or `false` when it is not set; with `name` null, a `PhpArray` of every environment entry, filtered and
  * keyed as `$_ENV` is. Read from `process.env` at the call, so a `putenv` is seen. `local_only` changes nothing in the
  * CLI. `name` is coerced as PHP's `?string` parameter and `local_only` as its `bool`; anything else throws PHP's
- * `TypeError`. A name holding a NUL byte or a lone surrogate throws a JS `TypeError` naming the limit.
+ * `TypeError`. A name holding a NUL byte or a lone surrogate throws a JS `TypeError` naming the limit. A name holding
+ * `=` matches as glibc's `getenv` (the Oracle image's libc) does: the text after `<name>=` in the first entry, in
+ * `process.env` order, whose `<entry name>=<value>` starts with `<name>=`, else `false`
+ * (`decisions/MAINT-2026-10-30-epic-15-items-2-5.md`, Item 5).
  */
 export function getenv(name: unknown = null, local_only: unknown = false): string | false | PhpArray {
   let key: string | null = null;
@@ -73,10 +76,22 @@ export function getenv(name: unknown = null, local_only: unknown = false): strin
     return importEnvironment();
   }
   noNul("getenv", wellFormed("getenv", key));
-  if (key === "" || !Object.hasOwn(process.env, key)) {
+  if (key === "") {
     return false;
   }
-  return process.env[key] ?? false;
+  if (Object.hasOwn(process.env, key)) {
+    return process.env[key] ?? false;
+  }
+  if (key.includes("=")) {
+    const prefix = `${key}=`;
+    for (const [entryName, value] of Object.entries(process.env)) {
+      const entry = `${entryName}=${value ?? ""}`;
+      if (entry.startsWith(prefix)) {
+        return entry.slice(prefix.length);
+      }
+    }
+  }
+  return false;
 }
 
 /**

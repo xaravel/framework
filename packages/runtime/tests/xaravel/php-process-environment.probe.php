@@ -40,7 +40,8 @@ function cleanup(array $assignments): void
 }
 
 // XT-runtime-139: getenv after the assignments, then the names unset. A name holding `=` is left out: libc decides it
-// (glibc, the Oracle image's, finds no entry; macOS's matches the name before the `=`).
+// (glibc, the Oracle image's, returns the text after `<name>=` in the first entry starting with it; macOS's matches
+// the name before the `=`). The Oracle row is in decisions/MAINT-2026-10-30-epic-15-items-2-5.md (XT-runtime-146).
 record('getenv', [
     [['XP_Q=a=b'], 'XP_Q'], [[], 'XP_UNSET'], [[], ''], [['XP.D=1'], 'XP.D'], [['XP S=2'], 'XP S'], [['XP[=3'], 'XP['],
     [['XP_E='], 'XP_E'], [['XP_Q=a=b'], 'XP_Q', true], [['XP_Q=a=b'], 'XP_Q', 0], [['5=five'], 5],
