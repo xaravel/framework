@@ -5,9 +5,10 @@
 //
 // And PHP's `class_exists` (ESC-15.2-1 part d; action item epic-15-item-1-runtime-phpdotenv-builtins), named and
 // coerced as PHP's own: true for a registered class or enum, false for a contract token (an interface), a trait and
-// a name nothing holds. A trait is a registered class too (AD-26); it is told apart once `mixin` has composed it,
-// which marks it with the non-enumerable `Symbol.for('xaravel.traits.trait')`.
-import { isContractToken, lookUpName } from "../registry/registry";
+// a name nothing holds. A trait is a registered class too (AD-26); it is told apart by the Registry's trait mark, which
+// `registerTrait` sets at declaration and `mixin` at composition (`isTraitClass`). And PHP's `trait_exists`, true for
+// exactly such a class (action item epic-15-retro-item-10-runtime-trait-registry).
+import { isContractToken, isTraitClass, lookUpName } from "../registry/registry";
 import { boolParameter, stringParameter } from "./phpArguments";
 import { phpTypeName } from "./phpType";
 import { TypeError as PhpTypeError } from "./TypeError";
@@ -57,19 +58,28 @@ export function enumExists(name: string): boolean {
   return isEnumClass(lookUpName(name));
 }
 
-/** The mark `mixin` (`traits/mixin.ts`) sets on each class it composes as a trait. */
-const TRAIT = Symbol.for("xaravel.traits.trait");
-
 /**
  * PHP's `class_exists($class, $autoload = true)`: whether `class` names a registered class, an enum included as PHP
  * counts one (case-insensitive, one leading `\` ignored, a test class up the active frame chain first, as
- * `lookUpName` reads), and not a contract token (an interface) or a trait `mixin` has composed. Nothing is ever
- * autoloaded (AD-10.4), so `$autoload` is read and ignored. Coerced as PHP's `string` and `bool` parameters
- * (`class_exists(5)` is false); anything else throws PHP's `TypeError`.
+ * `lookUpName` reads), and not a contract token (an interface) or a trait (`registerTrait`, or composed by `mixin`).
+ * Nothing is ever autoloaded (AD-10.4), so `$autoload` is read and ignored. Coerced as PHP's `string` and `bool`
+ * parameters (`class_exists(5)` is false); anything else throws PHP's `TypeError`.
  */
 export function class_exists(klass: unknown, autoload: unknown = true): boolean {
   const name = stringParameter("class_exists", 1, "class", klass);
   boolParameter("class_exists", 2, "autoload", autoload);
   const found = lookUpName(name);
-  return typeof found === "function" && !isContractToken(found) && !Object.hasOwn(found, TRAIT);
+  return typeof found === "function" && !isContractToken(found) && !isTraitClass(found);
+}
+
+/**
+ * PHP's `trait_exists($trait, $autoload = true)`: whether `trait` names a registered class carrying the trait mark
+ * (`registerTrait`, or composed by `mixin`), looked up as `class_exists` looks up. Nothing is ever autoloaded
+ * (AD-10.4), so `$autoload` is read and ignored. Coerced as PHP's `string` and `bool` parameters; anything else throws
+ * PHP's `TypeError`.
+ */
+export function trait_exists(trait: unknown, autoload: unknown = true): boolean {
+  const name = stringParameter("trait_exists", 1, "trait", trait);
+  boolParameter("trait_exists", 2, "autoload", autoload);
+  return isTraitClass(lookUpName(name));
 }

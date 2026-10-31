@@ -1,13 +1,16 @@
 // Xaravel Tests for Story 12.1: `Conditionable` as a runtime trait with Upstream's closure values and higher-order proxy
 // (XT-conditionable-1), its AD-6 dual-helper behaviour and DIV-1.6's thenable conditions (XT-conditionable-2), the
-// package's close gate (XT-conditionable-3), and invokable objects as callbacks (XT-conditionable-4, Epic 12 retro item
-// 1). Registrations into the Class Registry are process-wide, so every FQCN here is used by this file only.
+// package's close gate (XT-conditionable-3), invokable objects as callbacks (XT-conditionable-4, Epic 12 retro item
+// 1), and its declaration as a PHP trait (XT-conditionable-5, epic-15-retro-item-10-runtime-trait-registry).
+// Registrations into the Class Registry are process-wide, so every FQCN here is used by this file only.
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Conditionable, HigherOrderWhenProxy } from "@xaravel/conditionable";
 import { classUsesRecursive, Error as PhpError, fqcn, looseEquals, mixin, registerClass, TypeError as PhpTypeError } from "@xaravel/runtime";
+import { class_exists, trait_exists } from "@xaravel/runtime/php";
+import { resolveClass } from "@xaravel/runtime/registry";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
 const PACKAGE = join(REPO, "packages", "conditionable");
@@ -606,4 +609,29 @@ xaravelTest(
     Assert.assertSame({ viaCallback: "mocked", viaDefault: "logger", viaUnless: "unless", verify: null }, JSON.parse(fixture.stdout) as unknown, outputOf(fixture));
   },
   120000,
+);
+
+xaravelTest(
+  "XT-conditionable-5",
+  "Conditionable is declared a PHP trait with registerTrait: class_exists is false and trait_exists true for its Upstream FQCN, in any case and with a leading \\, while fqcn and resolveClass give the FQCN and the class as before (epic-15-retro-item-10-runtime-trait-registry)",
+  () => {
+    const name = "Illuminate\\Support\\Traits\\Conditionable";
+    Assert.assertFalse(class_exists(name));
+    Assert.assertTrue(trait_exists(name));
+    Assert.assertFalse(class_exists(`\\${name.toUpperCase()}`));
+    Assert.assertTrue(trait_exists(`\\${name.toLowerCase()}`));
+    Assert.assertSame(name, fqcn(Conditionable));
+    Assert.assertSame(Conditionable, resolveClass(name));
+    // A fresh process that loads only the trait's own file, so no `mixin` call has composed it: the mark is
+    // registerTrait's. The child runs in the package directory, where `@xaravel/runtime` resolves.
+    const code = [
+      'import "./src/Traits/Conditionable.ts";',
+      'import { class_exists, trait_exists } from "@xaravel/runtime/php";',
+      'const name = "Illuminate\\\\Support\\\\Traits\\\\Conditionable";',
+      "console.log(JSON.stringify([class_exists(name), trait_exists(name)]));",
+    ].join("\n");
+    const child = spawnSync(process.execPath, ["--no-env-file", "-e", code], { cwd: PACKAGE, encoding: "utf8", timeout: 60000 });
+    Assert.assertSame(0, child.status, outputOf(child));
+    Assert.assertSame("[false,true]", child.stdout.trim(), outputOf(child));
+  },
 );

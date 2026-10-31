@@ -32,7 +32,7 @@ import { range } from "./range";
 import { Ref } from "./Ref";
 import { sprintf } from "./sprintf";
 import { addcslashes, chunk_split, explode, implode, lcfirst, ltrim, ord, rtrim, str_contains, str_replace, str_starts_with, stripcslashes, strlen, strpos, strtok, strtoupper, substr, trim } from "./stringFunctions";
-import { class_exists } from "./classExistence";
+import { class_exists, trait_exists } from "./classExistence";
 import { ctype_digit, ctype_space } from "./ctypeFunctions";
 import { filter_var } from "./filterFunctions";
 import { mb_convert_encoding, mb_encoding_aliases, mb_list_encodings, mb_strlen, mb_strpos, mb_substr } from "./mbstringFunctions";
@@ -230,6 +230,7 @@ export const PHP_FUNCTIONS: Readonly<Record<string, PhpFunction>> = Object.freez
       entry("stripcslashes", stripcslashes, 1, 1),
       entry("strpos", strpos, 2, 3),
       entry("strtok", strtok, 1, 2),
+      entry("trait_exists", trait_exists, 1, 2),
       entry("preg_last_error", preg_last_error, 0, 0),
       entry("preg_last_error_msg", preg_last_error_msg, 0, 0),
       entry("preg_match", preg_match, 2, 5, false, [2]),

@@ -5,10 +5,10 @@ and the `Symbol.metadata` polyfill (AD-4). Everything here is exported from the 
 
 ## Writing a trait
 
-A trait is a registered class:
+A trait is a registered class, declared a trait with `registerTrait` just before its trailing `registerClass`:
 
 ```ts
-import { registerClass } from "@xaravel/runtime";
+import { registerClass, registerTrait } from "@xaravel/runtime";
 
 export class SoftDeletes {
   forceDeleting = false;
@@ -17,8 +17,14 @@ export class SoftDeletes {
   forceDelete(): void {}
 }
 
+registerTrait("Illuminate\\Database\\Eloquent\\SoftDeletes", SoftDeletes);
 registerClass("Illuminate\\Database\\Eloquent\\SoftDeletes", SoftDeletes);
 ```
+
+`registerTrait` registers the class as `registerClass` does and marks it a PHP trait, so `class_exists` is false and
+`trait_exists` true for it from the moment its file loads. The trailing `registerClass` is still required (AD-10.3)
+and is then a no-op. `mixin` sets the same mark on each trait it composes, so a trait registered with `registerClass`
+alone is told apart only once something composes it.
 
 A trait that uses traits extends a layer with no base: `class HasA extends mixin(null, Inner) { … }`.
 

@@ -38,15 +38,19 @@
 // Both the `merge()` and `union()` results are compared with the signed Oracle output. XT-collections-8 also checks, inline and with no Oracle request, members this Story adds that no ported
 // test runs: `implode` (testImplode is `blocked-by:support`), `Arr.dot`'s AD-26 options form and prefix, and
 // `combine`'s `ValueError` (LazyCollection's only when enumerated, with Laravel's message).
+//
+// Action item epic-15-retro-item-10-runtime-trait-registry adds XT-collections-23: once the package is loaded,
+// `class_exists` is false and `trait_exists` true for `EnumeratesValues`' Upstream FQCN.
 import { cpSync, mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, relative, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
-import { Arr, Collection, collect, data_get, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
+import { Arr, Collection, collect, data_get, EnumeratesValues, ItemNotFoundException, LazyCollection, MultipleItemsFoundException } from "@xaravel/collections";
 import { TestBackedEnum, TestStringBackedEnum, FIXTURES as ENUM_FIXTURES } from "../ported/framework/tests/Support/Fixtures/Enums";
 import { ArgumentCountError, ArrayIterator, BlockedByComponentError, Generator, Iterator, Traversable } from "@xaravel/runtime";
 import { SupportLazyCollectionBlockedBySupportTest } from "../support/SupportClockBoundary";
 import { Arrayable } from "@xaravel/contracts/support";
+import { class_exists, trait_exists } from "@xaravel/runtime/php";
 import { array_values, arrayEntries, Error as PhpError, fqcn, InvalidArgumentException, JSON_PRESERVE_ZERO_FRACTION, jsonDecode, jsonEncode, keyed, looseEquals, minus, PHP_INT_MAX, PhpArray, TypeError as PhpTypeError, registerClass, resolveClass, RuntimeException, SORT_NUMERIC, SORT_NATURAL, SORT_REGULAR, SORT_STRING, stdClass, UnhandledMatchError, ValueError } from "@xaravel/runtime";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
@@ -2558,5 +2562,21 @@ xaravelTest(
       Assert.assertSame(json, jsonEncode(cases[label]!(), JSON_PRESERVE_ZERO_FRACTION), label);
     }
     Assert.assertSame(jsonEncode(Object.keys(cases).sort()), jsonEncode(LAZY_RANGE.map(([label]) => label).sort()));
+  },
+);
+
+xaravelTest(
+  "XT-collections-23",
+  "EnumeratesValues reads as a PHP trait once @xaravel/collections is loaded: class_exists is false and trait_exists true for its Upstream FQCN, in any case and with a leading \\, while fqcn and resolveClass give the FQCN and the class as before (epic-15-retro-item-10-runtime-trait-registry)",
+  () => {
+    const name = "Illuminate\\Support\\Traits\\EnumeratesValues";
+    // No fresh-process check: `EnumeratesValues.ts` imported alone fails on its import cycle with `Collection.ts`, and it
+    // loads only through `Collection.ts`, whose `mixin` composes it, so no process holds it uncomposed.
+    Assert.assertFalse(class_exists(name));
+    Assert.assertTrue(trait_exists(name));
+    Assert.assertFalse(class_exists(`\\${name.toUpperCase()}`));
+    Assert.assertTrue(trait_exists(`\\${name.toLowerCase()}`));
+    Assert.assertSame(name, fqcn(EnumeratesValues));
+    Assert.assertSame(EnumeratesValues, resolveClass(name));
   },
 );

@@ -20,7 +20,7 @@
 // Positional form only (DIV-12.13): a lone object argument is always the condition. `default` is a reserved word, so
 // the parameter is `defaultValue`.
 import type { NotPromise } from "@xaravel/contracts/async";
-import { Error as PhpError, TypeError as PhpTypeError, isContractToken, isFloat, registerClass, toBool } from "@xaravel/runtime";
+import { Error as PhpError, TypeError as PhpTypeError, isContractToken, isFloat, registerClass, registerTrait, toBool } from "@xaravel/runtime";
 import { type CapturingWhenProxy, type ConditionedWhenProxy, HigherOrderWhenProxy } from "../HigherOrderWhenProxy";
 import { classNameOf, isThenable } from "../support/values";
 
@@ -212,4 +212,5 @@ export class Conditionable {
   }
 }
 
+registerTrait("Illuminate\\Support\\Traits\\Conditionable", Conditionable);
 registerClass("Illuminate\\Support\\Traits\\Conditionable", Conditionable);

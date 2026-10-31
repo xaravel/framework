@@ -6,7 +6,8 @@
 // classifies every Test ID from the Expectations shards, and XT-reflection-4 is the close gate (api-surface, docs).
 // XT-reflection-5 is action item epic-13-retro-item-5-reflector-own-type: isParameterSubclassOf reads the parameter's
 // own token (finding L1), a bare unregistered class (L4), a parameter typed with one (L5), and PHP 8's static rule for
-// a 'Class::method' string (item 6 (b) of decisions/MAINT-2026-10-25-epic-13-items.md).
+// a 'Class::method' string (item 6 (b) of decisions/MAINT-2026-10-25-epic-13-items.md). XT-reflection-6 is action item
+// epic-15-retro-item-10-runtime-trait-registry: `ReflectsClosures` is declared a PHP trait with `registerTrait`.
 // FR-26 lists Reflection among its Upstream Components. Every FQCN here is registered under `Xaravel\Tests\Reflection\…` with `registerClass`, so it
 // is used by this file only.
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
@@ -31,7 +32,8 @@ import {
   static as static_,
   variadic,
 } from "@xaravel/runtime";
-import { Attribute, attribute, ReflectionClass, ReflectionException, ReflectionFunction, type ReflectionParameter } from "@xaravel/runtime/php";
+import { Attribute, attribute, class_exists, ReflectionClass, ReflectionException, ReflectionFunction, type ReflectionParameter, trait_exists } from "@xaravel/runtime/php";
+import { resolveClass } from "@xaravel/runtime/registry";
 
 const NS = "Xaravel\\Tests\\Reflection";
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
@@ -626,4 +628,29 @@ xaravelTest(
     Assert.assertStringContainsString("(docs/reflection.md)", readme, "README.md links docs/reflection.md");
   },
   300000,
+);
+
+xaravelTest(
+  "XT-reflection-6",
+  "ReflectsClosures is declared a PHP trait with registerTrait: class_exists is false and trait_exists true for its Upstream FQCN, in any case and with a leading \\, while fqcn and resolveClass give the FQCN and the class as before (epic-15-retro-item-10-runtime-trait-registry)",
+  () => {
+    const name = "Illuminate\\Support\\Traits\\ReflectsClosures";
+    Assert.assertFalse(class_exists(name));
+    Assert.assertTrue(trait_exists(name));
+    Assert.assertFalse(class_exists(`\\${name.toUpperCase()}`));
+    Assert.assertTrue(trait_exists(`\\${name.toLowerCase()}`));
+    Assert.assertSame(name, fqcn(ReflectsClosures));
+    Assert.assertSame(ReflectsClosures, resolveClass(name));
+    // A fresh process that loads only the trait's own file, so no `mixin` call has composed it: the mark is
+    // registerTrait's. The child runs in the package directory, where `@xaravel/runtime` resolves.
+    const code = [
+      'import "./src/Traits/ReflectsClosures.ts";',
+      'import { class_exists, trait_exists } from "@xaravel/runtime/php";',
+      'const name = "Illuminate\\\\Support\\\\Traits\\\\ReflectsClosures";',
+      "console.log(JSON.stringify([class_exists(name), trait_exists(name)]));",
+    ].join("\n");
+    const child = spawnSync(process.execPath, ["--no-env-file", "-e", code], { cwd: PACKAGE, encoding: "utf8", timeout: 60000 });
+    Assert.assertSame(0, child.status, outputOf(child));
+    Assert.assertSame("[false,true]", child.stdout.trim(), outputOf(child));
+  },
 );

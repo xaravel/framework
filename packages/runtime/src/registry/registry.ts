@@ -8,6 +8,11 @@
 //   never the brand, save for one case: a `contract<T>()` token, a frozen non-function object carrying the key as an
 //   own, non-writable string data property, gives that string (ESC-10.1-3, Story 9.14). No token is registered, so
 //   `resolveClass` never resolves a token's name.
+// - `registerTrait(fqcn, X)` registers `X` exactly as `registerClass` does and marks it as a PHP trait at declaration
+//   time with the own, non-enumerable, non-writable, non-configurable `Symbol.for('xaravel.traits.trait')` (action item
+//   epic-15-retro-item-10-runtime-trait-registry). The Registry owns the mark and its predicate (`markTrait`,
+//   `isTraitClass`); `mixin` sets the same mark at composition and `class_exists` / `trait_exists` read it. A trait file
+//   still ends with `registerClass` (AD-10.3), which follows `registerTrait` as the same-class, same-FQCN no-op.
 // - `registerContractToken(token)` records a token under its FQCN in a separate table (ESC-13.1-7), first one wins;
 //   `resolveContractToken` and `lookUpName` (classes first, then tokens) read it for reflection, `interfaceExists` and
 //   the grader's `Symbol.for('xaravel.class.lookup')`.
@@ -51,6 +56,8 @@ const byClass = new WeakMap<RegisteredClass, string>();
 
 /** The grader's class-name brand (ESC-4.3-1 item 1), read by `@xaravel/assert` without importing the runtime. */
 const CLASS_FQCN = Symbol.for("xaravel.class.fqcn");
+/** The mark of a PHP trait: set by `registerTrait` at declaration and by `mixin` at composition. */
+const TRAIT = Symbol.for("xaravel.traits.trait");
 
 /** A PHP FQCN without a leading `\`: identifier segments joined by single `\`. */
 const FQCN_SHAPE = /^[A-Za-z_\x80-￿][A-Za-z0-9_\x80-￿]*(?:\\[A-Za-z_\x80-￿][A-Za-z0-9_\x80-￿]*)*$/;
@@ -69,11 +76,41 @@ function normalise(fqcn: string): string {
  * a different class under a taken FQCN, or a registered class under a second FQCN, throws.
  */
 export function registerClass(fqcn: string, klass: RegisteredClass): void {
+  register("registerClass", fqcn, klass);
+}
+
+/**
+ * Registers `klass` under the PHP FQCN `fqcn` as `registerClass` does, and marks it as a PHP trait, so `class_exists`
+ * is false and `trait_exists` true for it before anything composes it. Throws as `registerClass` does, naming
+ * `registerTrait()`; a trait file still ends with `registerClass` (AD-10.3), then a no-op.
+ */
+export function registerTrait(fqcn: string, klass: RegisteredClass): void {
+  register("registerTrait", fqcn, klass);
+  markTrait(klass);
+}
+
+/**
+ * Marks `klass` as a PHP trait: the own, non-enumerable, non-writable, non-configurable `true` under
+ * `Symbol.for('xaravel.traits.trait')`, once, and only on an extensible class. Internal (`mixin`, `registerTrait`).
+ */
+export function markTrait(klass: object): void {
+  if (!Object.hasOwn(klass, TRAIT) && Object.isExtensible(klass)) {
+    Object.defineProperty(klass, TRAIT, { value: true, enumerable: false, writable: false, configurable: false });
+  }
+}
+
+/** Whether `value` is a class carrying the trait mark as its own property. Internal (`class_exists`, `trait_exists`). */
+export function isTraitClass(value: unknown): boolean {
+  return typeof value === "function" && Object.hasOwn(value, TRAIT);
+}
+
+/** `registerClass` and `registerTrait`'s shared body; `caller` names the function in each thrown message. */
+function register(caller: string, fqcn: string, klass: RegisteredClass): void {
   if (typeof fqcn !== "string" || normalise(fqcn) === "") {
-    throw new TypeError("registerClass(): the FQCN must be a non-empty string");
+    throw new TypeError(`${caller}(): the FQCN must be a non-empty string`);
   }
   if (typeof klass !== "function") {
-    throw new TypeError(`registerClass(): ${fqcn} must be registered with a class`);
+    throw new TypeError(`${caller}(): ${fqcn} must be registered with a class`);
   }
   const name = normalise(fqcn);
   const key = name.toLowerCase();
@@ -83,19 +120,19 @@ export function registerClass(fqcn: string, klass: RegisteredClass): void {
     return;
   }
   if (taken !== undefined) {
-    throw new TypeError(`registerClass(): ${name} is already registered to another class`);
+    throw new TypeError(`${caller}(): ${name} is already registered to another class`);
   }
   if (previous !== undefined) {
-    throw new TypeError(`registerClass(): the class registered as ${previous} cannot also be registered as ${name}`);
+    throw new TypeError(`${caller}(): the class registered as ${previous} cannot also be registered as ${name}`);
   }
   for (const maps of liveTestMaps()) {
     const held = maps.byKey.get(key);
     if (held !== undefined && held.klass !== klass) {
-      throw new TypeError(`registerClass(): ${name} is already registered to another class in a running test`);
+      throw new TypeError(`${caller}(): ${name} is already registered to another class in a running test`);
     }
     const as = maps.byClass.get(klass);
     if (as !== undefined && as.toLowerCase() !== key) {
-      throw new TypeError(`registerClass(): the class registered as ${as} in a running test cannot also be registered as ${name}`);
+      throw new TypeError(`${caller}(): the class registered as ${as} in a running test cannot also be registered as ${name}`);
     }
   }
   Object.defineProperty(klass, CLASS_FQCN, { value: name, enumerable: false, writable: false, configurable: false });

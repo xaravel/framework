@@ -101,7 +101,7 @@ export { BadMethodCallException } from "./BadMethodCallException";
 export { CachingIterator } from "./CachingIterator";
 export { DivisionByZeroError } from "./DivisionByZeroError";
 export { EmptyIterator } from "./EmptyIterator";
-export { class_exists, enumExists, interfaceExists } from "./classExistence";
+export { class_exists, enumExists, interfaceExists, trait_exists } from "./classExistence";
 export { DomainException } from "./DomainException";
 export { Error } from "./Error";
 export { ErrorException } from "./ErrorException";

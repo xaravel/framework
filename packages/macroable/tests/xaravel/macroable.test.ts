@@ -1,6 +1,7 @@
 // Xaravel Tests for Story 11.1: `Macroable` as a runtime trait (XT-macroable-1), its Scope Frame write routing
 // (XT-macroable-2, DIV-11.2), the package's close gate (XT-macroable-3), and macro names JavaScript builds in with
-// static mixin methods (XT-macroable-4, DIV-12.11; Epic 11 retrospective item 5). Registrations into the Class Registry are
+// static mixin methods (XT-macroable-4, DIV-12.11; Epic 11 retrospective item 5), and its declaration as a PHP trait
+// (XT-macroable-5, epic-15-retro-item-10-runtime-trait-registry). Registrations into the Class Registry are
 // process-wide, so every FQCN here is used by this file only. A `xaravelTest` body runs outside any Scope Frame, so
 // each check that registers a macro opens its own `test` frame.
 import { spawnSync, type SpawnSyncReturns } from "node:child_process";
@@ -9,6 +10,8 @@ import { join, resolve } from "node:path";
 import { Assert, xaravelTest } from "@xaravel/assert";
 import { Macroable } from "@xaravel/macroable";
 import { BadMethodCallException, classUsesRecursive, fqcn, InvalidArgumentException, mixin, registerClass } from "@xaravel/runtime";
+import { class_exists, trait_exists } from "@xaravel/runtime/php";
+import { resolveClass } from "@xaravel/runtime/registry";
 import { interleave, runInFrame, runInNarrowFrame, runInRootFrame, ScopeFrameException } from "@xaravel/runtime/scope";
 
 const REPO = resolve(import.meta.dir, "..", "..", "..", "..");
@@ -908,5 +911,30 @@ xaravelTest(
       Assert.assertSame("[object Object]", String(new Nested() as unknown as ObjectNamed), "after the nested test frame ends, the outer frame falls back");
       Assert.assertFalse(Nested.hasMacro("toString"));
     });
+  },
+);
+
+xaravelTest(
+  "XT-macroable-5",
+  "Macroable is declared a PHP trait with registerTrait: class_exists is false and trait_exists true for its Upstream FQCN, in any case and with a leading \\, while fqcn and resolveClass give the FQCN and the class as before (epic-15-retro-item-10-runtime-trait-registry)",
+  () => {
+    const name = "Illuminate\\Support\\Traits\\Macroable";
+    Assert.assertFalse(class_exists(name));
+    Assert.assertTrue(trait_exists(name));
+    Assert.assertFalse(class_exists(`\\${name.toUpperCase()}`));
+    Assert.assertTrue(trait_exists(`\\${name.toLowerCase()}`));
+    Assert.assertSame(name, fqcn(Macroable));
+    Assert.assertSame(Macroable, resolveClass(name));
+    // A fresh process that loads only the trait's own file, so no `mixin` call has composed it: the mark is
+    // registerTrait's. The child runs in the package directory, where `@xaravel/runtime` resolves.
+    const code = [
+      'import "./src/Traits/Macroable.ts";',
+      'import { class_exists, trait_exists } from "@xaravel/runtime/php";',
+      'const name = "Illuminate\\\\Support\\\\Traits\\\\Macroable";',
+      "console.log(JSON.stringify([class_exists(name), trait_exists(name)]));",
+    ].join("\n");
+    const child = spawnSync(process.execPath, ["--no-env-file", "-e", code], { cwd: PACKAGE, encoding: "utf8", timeout: 60000 });
+    Assert.assertSame(0, child.status, outputOf(child));
+    Assert.assertSame("[false,true]", child.stdout.trim(), outputOf(child));
   },
 );

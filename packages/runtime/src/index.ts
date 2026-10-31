@@ -262,7 +262,7 @@ export {
   valueCopy,
   yieldFrom,
 } from "./php/index";
-export { fqcn, isContractToken, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerContractToken, registerTestClass, resolveClass, resolveClassAsync, writeClassmap } from "./registry/index";
+export { fqcn, isContractToken, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerContractToken, registerTestClass, registerTrait, resolveClass, resolveClassAsync, writeClassmap } from "./registry/index";
 export { inject, type InjectDecorator, type InjectMap, readInjectMetadata } from "./metadata/inject";
 export { readReturnMetadata, returns } from "./metadata/returns";
 export { allOf, oneOf, parent, primitive, self, static, variadic } from "./metadata/specs";
@@ -296,6 +296,7 @@ export {
   stripcslashes,
   strpos,
   strtok,
+  trait_exists,
 } from "./php/index";
 
 export {

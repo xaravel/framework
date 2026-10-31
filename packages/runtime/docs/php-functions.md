@@ -613,7 +613,7 @@ host whose PHP runs in Darwin's `C.UTF-8` locale classifies byte 0xA0 as a space
   aliases of any of them (`["utf8"]` for UTF-8, `[]` for none), each a new list. Both read a frozen table generated
   from PHP 8.5.11 (each encoding's name, `mb_preferred_mime_name` and aliases), which the probe re-checks in full.
 
-### `function_exists` and `class_exists`
+### `function_exists`, `class_exists` and `trait_exists`
 
 - `function_exists(function)` is true when the [registry](#callables-php-function-names) holds the name (one leading
   `\` dropped, ASCII case-insensitive), as PHP reads its function table: `function_exists("\\STRLEN")` is true, a
@@ -622,9 +622,12 @@ host whose PHP runs in Darwin's `C.UTF-8` locale classifies byte 0xA0 as a space
   up as `lookUpName` reads the Class Registry: case-insensitive, one leading `\` ignored, a test class up the active
   frame chain first), and false for a contract token (an interface: `Stringable`, `ArrayAccess`), a trait and a name
   nothing holds. Nothing is autoloaded (AD-10.4); `autoload` is coerced as PHP's `bool` and ignored. A trait is a
-  registered class too (AD-26): it is told apart once `mixin` has composed it, which marks it with the
-  non-enumerable `Symbol.for('xaravel.traits.trait')`.
-- Both take PHP's `string` parameter: `5` is `"5"` (false), an array throws PHP's `TypeError`.
+  registered class too (AD-26): it is told apart by the trait mark, the non-enumerable
+  `Symbol.for('xaravel.traits.trait')`, which `registerTrait` sets when the trait's file loads and `mixin` sets on
+  each trait it composes (see [the Class Registry](class-registry.md#registering)).
+- `trait_exists(trait, autoload = true)` is true for a registered class carrying the trait mark, looked up as
+  `class_exists` looks up, and false for a class, an enum, an interface and a name nothing holds.
+- All three take PHP's `string` parameter: `5` is `"5"` (false), an array throws PHP's `TypeError`.
 
 ### `filter_var`
 
@@ -827,7 +830,10 @@ byte of 0x80 or more on its own), and a string holding a lone surrogate passed t
 - `preg_replace`, `preg_replace_callback_array`, `preg_quote`, `preg_grep` and `preg_filter`, and the constants
   `PREG_GREP_INVERT`, `PCRE_VERSION`, `PCRE_VERSION_MAJOR`, `PCRE_VERSION_MINOR` and `PCRE_JIT_SUPPORT`; `(*MARK)` names; PCRE's
   backtrack, recursion and JIT stack limits (a pattern that would exhaust one in PHP runs to its end in JS).
-- A trait no `mixin` call has composed yet: `class_exists` cannot tell it from a class and gives `true`.
+- A trait registered with `registerClass` alone, which no `mixin` call has composed yet: `class_exists` cannot tell
+  it from a class and gives `true`, and `trait_exists` gives `false`. `registerTrait` declares it a trait. A test
+  fixture registered with `registerTestClass` cannot be declared a trait, so it is told apart only once `mixin`
+  composes it.
 - A ctype locale other than C, and the ctype functions other than `ctype_space` and `ctype_digit`.
 - `callMethod`'s visibility checks, and Closure's `bind`, `bindTo`, `call`, `fromCallable` and `getCurrent` through it
   (see [`callMethod`](#callmethod)).
