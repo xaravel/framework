@@ -13,9 +13,9 @@
 // schema the test checks that the port's second serialization is Upstream's, byte for byte, and, where Upstream's own
 // round trip is the identity, that the port's is too: `Serializer.serialize(fromArray(serialize(s)))` is `===`
 // (`identical`) to `serialize(s)`. A schema whose round trip Upstream itself changes is never dropped: it must be in
-// `NOT_ROUND_TRIPPED_BY_UPSTREAM`, which must be exactly that set and is listed in conformance/escalations/ESC-16.2-1.md,
-// and the test still checks it against Upstream's bytes. `fromArray` and `Deserializer.deserialize` return
-// synchronously, never a Promise or thenable (AD-6.2).
+// `NOT_ROUND_TRIPPED_BY_UPSTREAM`, which must be exactly that set and is named in decisions/ESC-16.2-1.md (the
+// Maintainer's ruling, option 1: no divergence), and the test still checks it against Upstream's bytes. `fromArray`
+// and `Deserializer.deserialize` return synchronously, never a Promise or thenable (AD-6.2).
 //
 // It also checks Deserializer cases that no Upstream test reaches, against Upstream's own results on PHP 8.5.11
 // (`round-trip.errors.probe.php`, recorded in `round-trip.errors.probe.txt`): a `$ref` to a non-array target, a schema
@@ -34,12 +34,11 @@ import type { RoundTripRecord } from "./round-trip.capture";
 const PACKAGE_DIR = resolve(import.meta.dir, "..", "..");
 const REPO = resolve(PACKAGE_DIR, "..", "..");
 const PORTED = join(PACKAGE_DIR, "tests", "ported", "framework", "tests", "JsonSchema");
-const ESCALATION = join(REPO, "conformance", "escalations", "ESC-16.2-1.md");
+const RULING = join(REPO, "decisions", "ESC-16.2-1.md");
 
 /**
- * The serialized schemas whose round trip Upstream's own Deserializer changes (round-trip.probe.txt), each listed in
- * ESC-16.2-1. Accepting them on Upstream's bytes alone is conditional on ESC-16.2-1's ruling: option 1 (recommended)
- * is not yet ruled, and if the Maintainer rules otherwise XT-json-schema-2 changes.
+ * The serialized schemas whose round trip Upstream's own Deserializer changes (round-trip.probe.txt): the set
+ * ESC-16.2-1's ruling (decisions/ESC-16.2-1.md, option 1: no divergence) accepts on Upstream's bytes, each named in it.
  */
 const NOT_ROUND_TRIPPED_BY_UPSTREAM: readonly string[] = ['{"type":["string"]}'];
 
@@ -132,7 +131,7 @@ function isThenable(value: unknown): boolean {
 
 xaravelTest(
   "XT-json-schema-2",
-  "every schema Story 16.1's tests build or serialize (the TypeTest dataset schemas, every fluent schema in its other Ported Test files and XT-json-schema-1's cases, replayed by running those files, not copied) round-trips through Serializer.serialize, JsonSchema.fromArray and Serializer.serialize again to Upstream's own result byte for byte, which is identical (===) to the first serialization wherever Upstream's round trip is the identity, the captured set equals the probe's both ways, and the schemas Upstream itself does not round-trip are exactly the test's list, each named in ESC-16.2-1 (accepted pending its ruling); Deserializer.deserialize agrees with fromArray, and both return synchronously, never a Promise or thenable (AD-6.2); it also compares with Upstream's recorded results cases Upstream's tests do not reach: a $ref to a non-array target and a schema expanding past MAX_NODES (Upstream's InvalidArgumentException class and message), JSON-pointer unescaping (~1, ~0, %20), a list-index segment, one $ref used twice, numeric-string bounds and an integral-float integer bound (exact toString bytes and float encoding); and fromArray copies an array or object default by value",
+  "every schema Story 16.1's tests build or serialize (the TypeTest dataset schemas, every fluent schema in its other Ported Test files and XT-json-schema-1's cases, replayed by running those files, not copied) round-trips through Serializer.serialize, JsonSchema.fromArray and Serializer.serialize again to Upstream's own result byte for byte, which is identical (===) to the first serialization wherever Upstream's round trip is the identity, the captured set equals the probe's both ways, and the schemas Upstream itself does not round-trip are exactly the test's list, each named in ESC-16.2-1's ruling, which accepts them on Upstream's bytes (no divergence); Deserializer.deserialize agrees with fromArray, and both return synchronously, never a Promise or thenable (AD-6.2); it also compares with Upstream's recorded results cases Upstream's tests do not reach: a $ref to a non-array target and a schema expanding past MAX_NODES (Upstream's InvalidArgumentException class and message), JSON-pointer unescaping (~1, ~0, %20), a list-index segment, one $ref used twice, numeric-string bounds and an integral-float integer bound (exact toString bytes and float encoding); and fromArray copies an array or object default by value",
   () => {
     const files = storyFiles();
     Assert.assertTrue(files.some((file) => file.endsWith("/TypeTest.test.ts")), "16.1's files include TypeTest");
@@ -192,12 +191,12 @@ xaravelTest(
         notRoundTripped.push(record.first);
       }
     }
-    // Conditional on ESC-16.2-1's ruling (option 1, recommended, not yet ruled); a different ruling changes this test.
+    // The set ESC-16.2-1's ruling (option 1: no divergence) accepts on Upstream's bytes, each named in the ruling.
     Assert.assertSame([...NOT_ROUND_TRIPPED_BY_UPSTREAM].sort(), notRoundTripped.sort(), "the schemas Upstream itself does not round-trip are exactly NOT_ROUND_TRIPPED_BY_UPSTREAM");
-    Assert.assertTrue(existsSync(ESCALATION), "conformance/escalations/ESC-16.2-1.md exists");
-    const escalation = readFileSync(ESCALATION, "utf8");
+    Assert.assertTrue(existsSync(RULING), "decisions/ESC-16.2-1.md exists");
+    const ruling = readFileSync(RULING, "utf8");
     for (const first of NOT_ROUND_TRIPPED_BY_UPSTREAM) {
-      Assert.assertStringContainsString(`\`${first}\``, escalation, `ESC-16.2-1 names ${first}`);
+      Assert.assertStringContainsString(`\`${first}\``, ruling, `ESC-16.2-1's ruling names ${first}`);
     }
 
     // Cases Upstream's tests do not reach, against Upstream's recorded results.
