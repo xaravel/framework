@@ -733,8 +733,11 @@ group's capture where PCRE keeps it).
 A captured value JS cannot hold, bytes that split a UTF-8 sequence (a pattern without `u` capturing one byte of `é`, as
 phpdotenv's Lexer does in a group it never reads), stays in its slot of a list and throws the JS `TypeError` limit when
 the slot is read; in a keyed array (a named group) it throws at once. A subject or pattern holding a lone surrogate,
-and a `preg_replace_callback` result that is no valid UTF-8, throw the limit. Each call compiles its pattern; nothing
-is cached.
+and a `preg_replace_callback` result that is no valid UTF-8, throw the limit. Each pattern string's conversion is
+cached in a process-wide LRU of 4096 entries (PHP's `PCRE_CACHE_SIZE`) keyed only by the pattern string, a compile
+failure included (unobservable: the error code is still recorded on every call); a limit is not cached, so its message
+names each caller. Every call gets its own `RegExp`, so calls nested in a `preg_replace_callback` callback never share
+`lastIndex` (decisions/MAINT-2026-10-30-epic-15-items.md).
 
 ## Process environment and file read
 
