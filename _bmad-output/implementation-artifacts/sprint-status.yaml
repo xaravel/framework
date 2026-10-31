@@ -174,7 +174,7 @@ development_status:
   epic-15-retrospective: done
 
   epic-16: in-progress
-  16-1-schema-types-and-serializer: in-progress
+  16-1-schema-types-and-serializer: blocked  # ESC-16.1-1 (no owner for the Opis validator), ESC-16.1-2 (runtime array_column; rawurldecode for 16.2), ESC-16.1-3 (no json-schema consequence row); spec planned, implementation waits on the rulings
   16-2-schema-deserializer: backlog
   epic-16-retrospective: optional
 
