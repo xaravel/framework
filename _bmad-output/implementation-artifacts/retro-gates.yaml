@@ -128,5 +128,4 @@ epic-16:
   doc: _bmad-output/implementation-artifacts/epic-16-retro-2026-10-31.md
   blocked: false
   checkpoint_approved: false
-  waiting_on_maintainer:
-    - epic-16-retro-item-1-callstatic-and-ref-utf8
+  waiting_on_maintainer: []
