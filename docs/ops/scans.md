@@ -11,7 +11,7 @@ Five static scans turn Upstream source into committed data that later work reads
 
 The scans are TypeScript. They read only the snapshot in `conformance/upstream/` (see [upstream.md](upstream.md)), run no PHP and start no container, and never fetch anything. `scan:test-api` also reads the committed Inventory, and `scan:singletons` the committed `conformance/scans/facades.jsonl` (so regenerate facades first when both change). These five share a small PHP lexer in `tools/scans/php.ts` and one CLI (`runScan` in `tools/scans/facades.ts`).
 
-A sixth, separate scan is report-only: `bun run scan:builtins <component>` uses the same lexer but commits no output, does not use `runScan` and has no `--check`. It prints the PHP functions and constructs an Upstream Component calls that `@xaravel/runtime/php` does not export yet, to run before an Upstream Component epic's first Story. See [builtin-scan.md](builtin-scan.md).
+A sixth, separate scan is report-only: `bun run scan:builtins <component>` uses the same lexer but commits no output, does not use `runScan` and has no `--check`. It prints the PHP functions, constructs, global constants and builtin classes an Upstream Component (and the vendor libraries it ports) names that `@xaravel/runtime/php` does not export yet, and the PCRE pattern literals the runtime's converter refuses, to run before an Upstream Component epic's first Story. Only `--sync` writes, filling the git-ignored vendor cache under `.cache/vendor/`. See [builtin-scan.md](builtin-scan.md).
 
 ## Commands
 
@@ -24,7 +24,7 @@ A sixth, separate scan is report-only: `bun run scan:builtins <component>` uses 
 | `bun run scan:closures` | Writes `conformance/scans/allowed-identifiers.json`. |
 | `bun run scan:div12` | Writes `conformance/scans/div12-pairs.jsonl`. |
 | `bun run scan:test-api` | Writes `conformance/scans/phpunit-assertions.jsonl` and `conformance/scans/mockery-api.jsonl`. |
-| `bun run scan:builtins <component>` | Prints the PHP builtins the Component's Upstream code calls that the runtime lacks; writes nothing and has no `--check` ([builtin-scan.md](builtin-scan.md)). |
+| `bun run scan:builtins <component>` | Prints the PHP builtins, constants, classes and refused patterns the Component's Upstream and vendor code uses that the runtime lacks; writes only the vendor cache under `--sync`, and has no `--check` ([builtin-scan.md](builtin-scan.md)). |
 | `bun run scan:<name> --check` | The same check for each of them, with `closures drift:`, `div12 drift:` or `test-api drift:` lines. |
 
 All take `--root <dir>` to scan another checkout. Exit codes: 0 pass, 1 any failure, 2 usage error. If a scan fails, it writes nothing, and the message names the file and line, or the facade.
