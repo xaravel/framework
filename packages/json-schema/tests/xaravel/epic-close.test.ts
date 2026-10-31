@@ -172,7 +172,7 @@ function keysOf(value: unknown): string[] {
 xaravelTest(
   "XT-json-schema-3",
   "Epic 16 closes only when the json-schema package meets every Epic-close check: bun run api-surface:gate json-schema exits 0; docs/json-schema.md exists, is linked from the README, names every export of src/index.ts in backticks and has a Divergences section naming every DIV clause the package's tests and src/ cite, and only clauses decisions/ records; every exported declaration and public method under src/ has a docblock; async-surface.json is committed and current (AD-6.13); the README gives a reason for each package.json dependency and devDependency; the dependencies are exactly Upstream composer.json's illuminate/* require entries as @xaravel/* workspace packages plus @xaravel/runtime (AD-2.1, AD-2.2), with no third-party require entry on either side (AD-2.3) and the grader packages only as devDependencies (AD-2.7); LICENSE keeps Laravel's MIT notice beside Xaravel's; and no Expectations line is blocked-by:json-schema",
-  () => {
+  async () => {
     // Docs: the page exists, the README links it, and it names every root export.
     Assert.assertTrue(existsSync(join(DOCS, "json-schema.md")), "docs/json-schema.md exists");
     const readme = readFileSync(join(PACKAGE_DIR, "README.md"), "utf8");
@@ -214,8 +214,26 @@ xaravelTest(
 
     // AD-6.13: async-surface.json is committed, and what the generator gives today.
     Assert.assertTrue(existsSync(join(PACKAGE_DIR, "async-surface.json")), "packages/json-schema/async-surface.json exists");
-    const surface = bun([join(REPO, "tools", "async-surface", "async-surface.ts"), "--check", "json-schema"]);
-    Assert.assertSame(0, surface.exitCode, `async-surface --check json-schema\n${surface.output}`);
+    // Run the complete API gate once in a bounded child, including its citation validation. It emits fresh
+    // declarations; reuse those for the async check instead of compiling the package a second time.
+    const gate = bun(["run", "api-surface:gate", "json-schema"]);
+    Assert.assertSame(0, gate.exitCode, `api-surface:gate json-schema\n${gate.output}`);
+    Assert.assertStringContainsString("api-surface:gate json-schema: 0 unexplained", gate.output, "the gate reports zero unexplained");
+    // Absolute runtime imports keep repository tools outside this package's composite TypeScript project.
+    const { diff, packageDeclarations, render, surfaceOf, thenableTypes } = await import(join(REPO, "tools/async-surface/async-surface.ts")) as {
+      diff(this: void, committed: string, regenerated: string): string[];
+      packageDeclarations(this: void, root: string, pkg: string): { file: string; text: string }[];
+      render(this: void, entries: readonly unknown[]): string;
+      surfaceOf(this: void, files: readonly { file: string; text: string }[], thenables: readonly string[], resolver: (file: string, specifier: string | null, name: string) => string | null): { entries: unknown[]; errors: { file: string; message: string }[] };
+      thenableTypes(this: void, root: string): Promise<readonly string[]>;
+    };
+    const { registeredFqcn } = await import(join(REPO, "tools/lint-rules/thenables.ts")) as {
+      registeredFqcn(this: void, file: string, specifier: string | null, name: string): string | null;
+    };
+    const { entries, errors } = surfaceOf(packageDeclarations(REPO, "json-schema"), await thenableTypes(REPO), (file, specifier, name) => registeredFqcn(join(PACKAGE_DIR, file), specifier, name));
+    const drift = diff(readFileSync(join(PACKAGE_DIR, "async-surface.json"), "utf8"), render(entries));
+    const output = [...errors.map((error) => `async-surface: packages/json-schema/${error.file}: ${error.message}`), ...drift].join("\n");
+    Assert.assertSame(0, errors.length > 0 || drift.length > 0 ? 1 : 0, `async-surface --check json-schema\n${output}`);
 
     // README: a reason for each dependency and devDependency.
     const dependenciesSection = section(readme, "Dependencies");
@@ -263,11 +281,6 @@ xaravelTest(
       });
     }
     Assert.assertSame("", blocked.join("\n"), `no Expectations line is blocked-by:json-schema; found: ${blocked.join(", ")}`);
-
-    // The API surface gate: zero unexplained members.
-    const gate = bun(["run", "api-surface:gate", "json-schema"]);
-    Assert.assertSame(0, gate.exitCode, `api-surface:gate json-schema\n${gate.output}`);
-    Assert.assertStringContainsString("api-surface:gate json-schema: 0 unexplained", gate.output, "the gate reports zero unexplained");
   },
   300_000,
 );
