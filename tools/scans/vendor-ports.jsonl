@@ -1,0 +1,23 @@
+{"component":"config","package":"graham-campbell/result-type","source":"decisions/ESC-15.2-4.md"}
+{"component":"config","package":"phpoption/phpoption","source":"decisions/ESC-15.2-4.md"}
+{"component":"config","package":"vlucas/phpdotenv","source":"epics.md Epic 15, AD-22"}
+{"component":"console","package":"dragonmantank/cron-expression","source":"epics.md Epic 54, AD-22"}
+{"component":"console","package":"laravel/prompts","source":"epics.md Epic 54, AD-22"}
+{"component":"console","package":"nunomaduro/termwind","source":"epics.md Epic 54, AD-22"}
+{"component":"console","package":"symfony/console","source":"epics.md Epic 54, AD-22"}
+{"component":"filesystem","package":"league/flysystem","source":"epics.md Epic 27, AD-22"}
+{"component":"foundation","package":"symfony/error-handler","source":"epics.md Epic 52, AD-22"}
+{"component":"log","package":"monolog/monolog","source":"epics.md Epic 29, AD-22"}
+{"component":"mail","package":"symfony/mailer","source":"epics.md Epic 56, AD-22"}
+{"component":"mail","package":"tijsverkoyen/css-to-inline-styles","source":"epics.md Epic 56, AD-22"}
+{"component":"process","package":"symfony/process","source":"epics.md Epic 28, AD-22"}
+{"component":"support","package":"brick/math","source":"epics.md Epic 20, AD-22"}
+{"component":"support","package":"doctrine/inflector","source":"epics.md Epic 18, AD-22"}
+{"component":"support","package":"league/commonmark","source":"epics.md Epic 18, AD-22"}
+{"component":"support","package":"league/uri","source":"epics.md Epic 20, AD-22"}
+{"component":"support","package":"nesbot/carbon","source":"epics.md Epic 19, AD-22"}
+{"component":"support","package":"ramsey/uuid","source":"epics.md Epic 18, AD-22"}
+{"component":"support","package":"symfony/uid","source":"epics.md Epic 18, AD-22"}
+{"component":"support","package":"symfony/var-dumper","source":"epics.md Epic 20, AD-22"}
+{"component":"support","package":"voku/portable-ascii","source":"epics.md Epic 18, AD-22"}
+{"component":"validation","package":"egulias/email-validator","source":"epics.md Epic 43, AD-22"}
