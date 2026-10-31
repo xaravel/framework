@@ -5,6 +5,23 @@
 # Cross-epic lessons from retrospectives, kept by the orchestrator.
 persistent_facts = ["file:_bmad-output/implementation-artifacts/lessons.md"]
 
+# Foreseeable Escalations, reported in the epic context before a Story's first build
+# (epic-16-retro-item-3-foreseeable-escalations-precheck, finding P1 of
+# _bmad-output/implementation-artifacts/epic-16-retro-2026-10-31.md).
+activation_steps_append = ["""
+Foreseeable-Escalations pre-check. Do this only when the intent is a Story (`<N>.<s>`) with a manifest `stories/<N>.<s>.md`; skip it for every other kind of work. Carry it out in step 01, right after the epic context `_bmad-output/implementation-artifacts/epic-<N>-context.md` is loaded or compiled and before you plan.
+
+When that file has no `## Foreseeable Escalations` section (a recompile drops it, so check every time), add one at its end, built from what the repository says now, before the Story is planned:
+
+1. **APIs a later Story owns.** For each Story of epic N that is not `done`, and each Test ID in its manifest's `test_ids`, read the Upstream test method's body under `conformance/upstream/framework/tests/`, with the data providers it names and the test-class helpers it calls. List each Upstream class or method it calls that a later Story of the same epic delivers, judged from `epics.md`'s Story text and the later manifests (as `UnionTypeTest` called Story 16.2's `JsonSchema::fromArray` from Story 16.1, ESC-16.1-4). One line per Test ID: the Test ID, the call, the Story that owns it.
+2. **Consequence row.** Say whether the epic's Component has its consequence row, both in `tools/xt-coverage/consequences.ts` and as `conformance/xaravel-consequences/<component>.jsonl` (`decisions/MAINT-2026-10-22-consequence-rows.md`). Both paths are Protected: when the row is missing, name it as missing; never add it.
+3. **Non-framework Composer dependencies.** List each Composer package outside `illuminate/*` and `laravel/framework` that the Story Test IDs' Upstream test files import (their `use` lines and any class they name), with its entry in `conformance/upstream/framework/composer.json` (as `TypeTest` used `opis/json-schema`, ESC-16.1-1).
+
+Write `None found.` under a heading with nothing in it. Commit the section with the Story's work; `epic-<N>-context.md` is not a Protected Path, and this step edits none.
+
+Then act on it for the Story you are building: each line under 1 that names one of this Story's Test IDs, a missing row under 2 when this Story adds the Component's first Xaravel Tests, and each dependency under 3 that this Story's Test IDs need, is raised as an Escalation before the first build, all in one round, with the trigger AGENTS.md gives it (a Test ID whose call a later Story owns is first checked against the epics.md ordering and AD-16's `blocked-by:` rule). These stop work only on their own Test IDs; carry on with the rest.
+"""]
+
 # The Fidelity Review (ESC-8.5-1, AD-15.8, FR-111; docs/ops/fidelity-review.md):
 # two fresh-context reviewer subprocesses, reviewer 1 on the other agent CLI,
 # whose verdicts are recorded in the Story's spec and counted by story:check.
