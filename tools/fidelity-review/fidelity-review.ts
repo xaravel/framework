@@ -1042,7 +1042,13 @@ export function upstreamTraitPaths(path: string, text: string, exists: (path: st
  * (`scriptRuns`; epic-15-retro-item-3, E3), and a changed data file a changed test, or an unchanged test file beside it, reads, as `changed; read by <test>`
  * (epic-14-retro-item-3, E1); the Upstream counterpart of each listed Ported Test fixture or support module under
  * `packages/<c>/tests/ported/` (`upstreamCounterpart`, E3); and the
- * Upstream sources they read through a computed path, of the classes a changed file names (ESC-10.2-7). A file another
+ * Upstream sources they read through a computed path, of the classes a changed file names (ESC-10.2-7). With them come
+ * (epic-16-retro-item-2): for a changed `packages/<c>/tests/` test citing an `AD-2.<k>` clause, `packages/<c>/package.json`
+ * and the snapshot `composer.json` named `illuminate/<c>` (`upstreamComposerFor`; E2); for a changed test that runs
+ * `bun test` in a child process and names a Story manifest, that manifest and each test file it selects
+ * (`manifestTestFiles`; E3); for a changed `*.probe.php`, the Upstream sources it loads (`probeSources`; E3); and, for
+ * `upstreamRanges` (the Inventory rows' lines), one `<file> § <methods>` excerpt per Upstream test file not listed
+ * whole, holding the data providers and test-class helpers those rows use (`phpTestSupportMethods`; E1). A file another
  * section already shows in full (`shown`, path → section) is named, not repeated. The entries fill `budget` characters
  * in this order: the cited records and `PORTING.md` sections, and the files changed test files read, run or import (their data, changed data files
  * included, Upstream sources, helpers and fixtures) with the Upstream counterparts, which no other section shows; then the changed TypeScript and Markdown, whose diff is above;
@@ -1051,7 +1057,7 @@ export function upstreamTraitPaths(path: string, text: string, exists: (path: st
  * never dropped silently; an Upstream source so omitted shows its declaration lines when they fit, and a data file that
  * does not fit what is left shows the lines its reader's string literals select when they fit (`dataFileExcerpt`, E1).
  */
-export function wholeFileEvidence(root: string, files: readonly ChangedFile[], shown: ReadonlyMap<string, string>, budget: number, inScope: (path: string) => boolean = () => true, upstreamTests: readonly string[] = []): WholeFileEntry[] {
+export function wholeFileEvidence(root: string, files: readonly ChangedFile[], shown: ReadonlyMap<string, string>, budget: number, inScope: (path: string) => boolean = () => true, upstreamTests: readonly string[] = [], upstreamRanges: readonly UpstreamTestRange[] = []): WholeFileEntry[] {
   const read = (path: string): string | null => {
     try {
       const full = join(root, path);
@@ -1280,6 +1286,61 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
       }
     }
   }
+  // epic-16-retro-item-2, E2: a changed test of `packages/<c>/tests/` that cites an AD-2 clause (the dependency set)
+  // checks the package's dependencies against Upstream's, so both manifests come with it. Only the Story's own test
+  // brings them (ESC-9.10-3), and a changed manifest is listed as changed.
+  for (const [path, text] of changedTexts) {
+    const component = /^packages\/([^/]+)\/tests\//.exec(path)?.[1];
+    if (component === undefined || !TS_FILE.test(path) || !inScope(path) || !/(?<![\w./-])AD-2\.[1-9]\d*(?![\w-])/.test(text)) {
+      continue;
+    }
+    const manifest = `packages/${component}/package.json`;
+    if (!changed.some((file) => file.filename === manifest)) {
+      add(1, manifest, `the package's dependency set, which AD-2 rules, cited by ${path}`);
+    }
+    const composer = upstreamComposerFor(root, component);
+    if (composer === null) {
+      const label = `${UPSTREAM_SNAPSHOT_DIR} (composer.json of illuminate/${component})`;
+      if (!listed.has(label)) {
+        listed.add(label);
+        tiers[1]!.push({ path: label, reason: `Upstream's dependency set, which AD-2 rules, cited by ${path}`, text: null, note: `unavailable: no composer.json under ${UPSTREAM_SNAPSHOT_DIR}/ names illuminate/${component}` });
+      }
+    } else if (!changed.some((file) => file.filename === composer)) {
+      add(1, composer, `Upstream's dependency set for illuminate/${component}, which AD-2 rules, cited by ${path}`);
+    }
+  }
+  // epic-16-retro-item-2, E3: a changed test that runs another Story's test files in a child `bun test`, chosen through
+  // that Story's manifest, depends on those files: the manifest and each file it selects come with it.
+  for (const [path, text] of changedTexts) {
+    if (!TS_FILE.test(path) || !isTestPath(path) || !inScope(path) || !spawnsBunTest(text)) {
+      continue;
+    }
+    for (const manifest of namedManifests(text)) {
+      if (!exists(manifest)) {
+        continue;
+      }
+      // A changed manifest is listed as changed; the files it selects still come here.
+      if (!changed.some((file) => file.filename === manifest)) {
+        add(1, manifest, `read by ${path} to select the test files it runs in a child bun test`);
+      }
+      for (const target of manifestTestFiles(root, manifest)) {
+        if (target !== path && !changed.some((file) => file.filename === target)) {
+          add(1, target, `run by ${path} in a child bun test, selected by ${manifest}`);
+        }
+      }
+    }
+  }
+  // epic-16-retro-item-2, E3: a changed host-PHP probe loads Upstream sources, whose behaviour its record holds.
+  for (const [path, text] of changedTexts) {
+    if (!path.endsWith(".probe.php") || !inScope(path)) {
+      continue;
+    }
+    for (const source of probeSources(root, path, text)) {
+      if (!changed.some((file) => file.filename === source.path)) {
+        add(1, source.path, `loaded by ${path}: the Upstream source of ${source.fqcn}${source.via === null ? "" : `, which ${source.via} uses`}`);
+      }
+    }
+  }
   // A Ported Test's fixture or support module is checked against the Upstream file it ports: each one (h) lists, under
   // `packages/<c>/tests/ported/` and not a `*.test.ts`, brings `conformance/upstream/<sub-path>.php` when the snapshot
   // has it (epic-14-retro-item-3, E3).
@@ -1306,6 +1367,32 @@ export function wholeFileEvidence(root: string, files: readonly ChangedFile[], s
       add(1, target, `Upstream trait used by ${path}`);
       pending.push(target);
     }
+  }
+  // epic-16-retro-item-2, E1: an Inventory row holds only its test method's lines, so the data providers it names and
+  // the test-class helpers it calls come as one excerpt per Upstream test file, labelled `<file> § <methods>`, unless
+  // the file is already listed whole.
+  const rangesByFile = new Map<string, UpstreamTestRange[]>();
+  for (const range of upstreamRanges) {
+    rangesByFile.set(range.path, [...(rangesByFile.get(range.path) ?? []), range]);
+  }
+  for (const [file, ranges] of rangesByFile) {
+    const text = listed.has(file) ? null : read(file);
+    const methods = text === null ? [] : phpTestSupportMethods(text, ranges);
+    const label = `${file} § ${methods.join(", ")}`;
+    if (methods.length === 0 || listed.has(label)) {
+      continue;
+    }
+    listed.add(label);
+    // The reason names each test whose own lines reach one of the methods; dataset rows of one test share its lines.
+    const reaching = new Map<string, boolean>();
+    const tests = [...new Set(ranges.filter((range) => {
+      const key = `${range.from}-${range.to}`;
+      if (!reaching.has(key)) {
+        reaching.set(key, phpTestSupportMethods(text!, [range]).length > 0);
+      }
+      return reaching.get(key)!;
+    }).map((range) => (range.id === undefined ? `${file}:${range.from}-${range.to}` : range.id.replace(/#[\s\S]*$/, ""))))];
+    tiers[1]!.push({ path: label, reason: `the data providers and helpers of the Inventory test${tests.length === 1 ? "" : "s"} ${tests.join(", ")}`, text: phpMethodBodies(text!, methods), note: null });
   }
   const entries = tiers.flat();
   // Every entry renders a heading and, without its text, a note: reserve room for those before any file's text.
@@ -1981,11 +2068,13 @@ export function withWholeFiles(root: string, input: PromptInput, inScope: (path:
   const rest = buildPrompt({ ...input, evidence: { ...input.evidence, wholeFiles: [] } }).length;
   // Room for the section's heading and its per-file headings beyond the text `wholeFileEvidence` counts.
   const budget = PROMPT_CAP - rest - 2_000;
-  const upstreamTests = input.inventory.flatMap((entry) => {
+  const upstreamRanges = input.inventory.flatMap((entry): UpstreamTestRange[] => {
     const source = entry.row === null ? null : parseSource(entry.row.source);
-    return source === null ? [] : [`${UPSTREAM_SNAPSHOT_DIR}/${source.name}/${source.rel}`];
+    return source === null ? [] : [{ path: `${UPSTREAM_SNAPSHOT_DIR}/${source.name}/${source.rel}`, from: source.from, to: source.to, id: entry.id }];
   });
-  return fitWholeFiles(input, wholeFileEvidence(root, input.files, shown, budget, inScope, upstreamTests));
+  const upstreamTests = upstreamRanges.map((range) => range.path);
+  // Each row's lines, so (h) adds the data providers and helpers they use (epic-16-retro-item-2, E1).
+  return fitWholeFiles(input, wholeFileEvidence(root, input.files, shown, budget, inScope, upstreamTests, upstreamRanges));
 }
 
 /** The most characters of file paths (h)'s summary entry lists before it says how many more there are. */
@@ -2738,6 +2827,32 @@ export function scriptRuns(path: string, text: string, exists: (path: string) =>
   return [...out].sort((a, b) => compareUnits(a[0], b[0])).map(([target, script]) => ({ target, script }));
 }
 
+/**
+ * Whether a test file runs `bun test` in a child process (epic-16-retro-item-2, E3): an array literal (a spawn's argument
+ * list) whose first element is `process.execPath` or `"bun"` and that holds the element `"test"`.
+ */
+function spawnsBunTest(text: string): boolean {
+  return arrayLiteralElements(text).some((elements) => /^(?:process\.execPath|(["'])bun\1)$/.test(elements[0] ?? "") && elements.some((element) => stringLiteral(element) === "test"));
+}
+
+/**
+ * The Story manifests a test file names in its code (epic-16-retro-item-2, E3), each once: a string literal
+ * holding `stories/<id>.md`, or the path segments `"stories", "<id>.md"`.
+ */
+function namedManifests(text: string): string[] {
+  const code = withoutComments(text);
+  const out = new Set<string>();
+  for (const literal of stringLiteralTexts(code)) {
+    for (const match of literal.matchAll(/(?<![\w.-])stories\/([1-9]\d*\.[1-9]\d*)\.md(?![\w-])/g)) {
+      out.add(`${STORIES_DIR}/${match[1]!}.md`);
+    }
+  }
+  for (const match of code.matchAll(/(["'])stories\1\s*,\s*(["'])([1-9]\d*\.[1-9]\d*)\.md\2/g)) {
+    out.add(`${STORIES_DIR}/${match[3]!}.md`);
+  }
+  return [...out];
+}
+
 /** Where `bun run upstream:sync` puts the Upstream snapshot (gitignored): one directory per package, each with its `src/`. */
 export const UPSTREAM_SNAPSHOT_DIR = "conformance/upstream";
 
@@ -3033,6 +3148,279 @@ export function phpMethodBodies(text: string, methods: readonly string[]): strin
     i = to;
   }
   return out.length === 0 ? "" : `${out.join("\n\n")}\n`;
+}
+
+/** A PHP method declaration line: its indentation and name. */
+const PHP_METHOD_DECLARATION = /^(\s*)(?:(?:public|protected|private|static|final|abstract)\s+)*function\s+&?(\w+)\s*\(/;
+
+/** A call of a method on the test itself: `$this->name(`, `self::name(` or `static::name(`. */
+const PHP_SELF_CALL = /(?:\$this->|\bself::|\bstatic::)(\w+)\s*\(/g;
+
+/** The Inventory lines of one Upstream test (1-based, inclusive), for evidence (h)'s data providers and helpers (E1). */
+export interface UpstreamTestRange {
+  /** The Upstream test file, `conformance/upstream/<name>/<rel>`. */
+  readonly path: string;
+  readonly from: number;
+  readonly to: number;
+  /** The Inventory row's Test ID, when known. */
+  readonly id?: string;
+}
+
+/**
+ * The data providers and helper methods the Upstream tests at `ranges` (1-based line ranges of one PHP test file, as
+ * Inventory rows give them) use, in file order (epic-16-retro-item-2, E1): each provider a `#[DataProvider('<name>')]`
+ * attribute or an `@dataProvider <name>` docblock tag above, or within, a range names, and each method the file declares
+ * that a range calls as `$this-><name>(`, `self::<name>(` or `static::<name>(`; closed over the bodies of those methods,
+ * so a helper reached only through another helper counts (`assertValidOnJsonSchema` → `makeValidator`). The ranges' own
+ * methods are left out, and so is a call of a method the file does not declare (PHPUnit's `assertTrue`).
+ */
+export function phpTestSupportMethods(text: string, ranges: readonly { readonly from: number; readonly to: number }[]): string[] {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const declared: { name: string; line: number }[] = [];
+  lines.forEach((line, i) => {
+    const declaration = PHP_METHOD_DECLARATION.exec(line);
+    if (declaration !== null) {
+      declared.push({ name: declaration[2]!, line: i + 1 });
+    }
+  });
+  const names = new Set(declared.map((method) => method.name));
+  const own = new Set<string>();
+  const queue: string[] = [];
+  const calls = (code: string): void => {
+    for (const match of code.matchAll(PHP_SELF_CALL)) {
+      queue.push(match[1]!);
+    }
+  };
+  for (const range of ranges) {
+    const inside = declared.filter((method) => method.line >= range.from && method.line <= range.to);
+    const before = declared.filter((method) => method.line < range.from).at(-1);
+    for (const method of inside.length > 0 ? inside : before === undefined ? [] : [before]) {
+      own.add(method.name);
+    }
+    // The attributes and docblock directly above the range, then the range itself.
+    let top = range.from - 1;
+    while (top > 0 && /^\s*(?:#\[|\/\*\*|\*|\/\/)/.test(lines[top - 1]!)) {
+      top--;
+    }
+    const head = lines.slice(top, Math.max(top, range.from - 1)).join("\n");
+    const body = lines.slice(Math.max(range.from - 1, 0), range.to).join("\n");
+    for (const match of `${head}\n${body}`.matchAll(/\bDataProvider\s*\(\s*(?:methodName\s*:\s*)?["'](\w+)["']\s*\)|@dataProvider\s+(\w+)/g)) {
+      queue.push(match[1] ?? match[2]!);
+    }
+    calls(body);
+  }
+  const used = new Set<string>();
+  while (queue.length > 0) {
+    const name = queue.shift()!;
+    if (used.has(name) || own.has(name) || !names.has(name)) {
+      continue;
+    }
+    used.add(name);
+    calls(phpMethodBodies(text, [name]));
+  }
+  return [...new Set(declared.map((method) => method.name))].filter((name) => used.has(name));
+}
+
+/**
+ * The snapshot's `composer.json` whose `name` is `illuminate/<component>` (epic-16-retro-item-2, E2): Upstream's
+ * dependency set for the Component, which AD-2 mirrors. It looks at each snapshot package's own `composer.json` and
+ * those one and two directories under its `src/` (`framework/src/Illuminate/<Component>/composer.json`). Null when none
+ * names it.
+ */
+export function upstreamComposerFor(root: string, component: string): string | null {
+  const want = `illuminate/${component}`;
+  const list = (dir: string): string[] => {
+    try {
+      return readdirSync(join(root, dir), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => `${dir}/${entry.name}`).sort(compareUnits);
+    } catch {
+      return [];
+    }
+  };
+  for (const pkg of list(UPSTREAM_SNAPSHOT_DIR)) {
+    const candidates = [pkg, ...list(`${pkg}/src`), ...list(`${pkg}/src`).flatMap(list)].map((dir) => `${dir}/composer.json`);
+    for (const candidate of candidates) {
+      try {
+        const name = (JSON.parse(readFileSync(join(root, candidate), "utf8")) as { name?: unknown }).name;
+        if (name === want) {
+          return candidate;
+        }
+      } catch {
+        continue;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * The test files a Story manifest selects (epic-16-retro-item-2, E3): the Ported Test file of each `test_ids` row,
+ * `packages/<component>/tests/ported/<source sub-path>.test.ts` as its Inventory `source` gives it, in path order; then
+ * each TypeScript file under `packages/<component>/tests/` that declares one of its `xaravel_test_ids` in an
+ * `xaravelTest(` call, in id order. Only existing files count; an unreadable or invalid manifest, or no Inventory, selects none of
+ * the kind it needs.
+ */
+export function manifestTestFiles(root: string, manifestPath: string): string[] {
+  let text: string;
+  try {
+    text = readFileSync(join(root, manifestPath), "utf8");
+  } catch {
+    return [];
+  }
+  const manifest = parseManifest(manifestPath, text).manifest;
+  if (manifest === null) {
+    return [];
+  }
+  const isFile = (path: string): boolean => {
+    try {
+      return statSync(join(root, path)).isFile();
+    } catch {
+      return false;
+    }
+  };
+  let rows: InventoryEntry[] = [];
+  try {
+    rows = manifest.testIds.length === 0 ? [] : readWorkingInventory(root);
+  } catch {
+    rows = [];
+  }
+  const ported = new Set<string>();
+  for (const id of manifest.testIds) {
+    for (const row of rows.filter((entry) => entry.id === id || entry.id.startsWith(`${id}#`))) {
+      const source = parseSource(row.source);
+      const path = source === null ? null : `packages/${manifest.component}/tests/ported/${source.name}/${source.rel.replace(/\.php$/, "")}.test.ts`;
+      if (path !== null && isFile(path)) {
+        ported.add(path);
+      }
+    }
+  }
+  const out = [...ported].sort(compareUnits);
+  const testsDir = `packages/${manifest.component}/tests`;
+  let candidates: string[] = [];
+  try {
+    candidates = (readdirSync(join(root, testsDir), { recursive: true }) as string[]).map((rel) => `${testsDir}/${rel.split("\\").join("/")}`).filter((path) => TS_FILE.test(path) && isFile(path)).sort(compareUnits);
+  } catch {
+    candidates = [];
+  }
+  const texts = new Map<string, string>();
+  for (const id of manifest.xaravelTestIds) {
+    const literal = new RegExp(`\\bxaravelTest\\(\\s*(["'\`])${escapeRegExp(id)}\\1`);
+    for (const path of candidates) {
+      if (!texts.has(path)) {
+        let candidate = "";
+        try {
+          candidate = readFileSync(join(root, path), "utf8");
+        } catch {
+          // An unreadable file declares nothing.
+        }
+        texts.set(path, candidate);
+      }
+      if (literal.test(texts.get(path)!) && !out.includes(path)) {
+        out.push(path);
+      }
+    }
+  }
+  return out;
+}
+
+/** An Upstream snapshot source a changed probe loads (E3). */
+export interface ProbeSource {
+  readonly path: string;
+  readonly fqcn: string;
+  /** The level-one source that uses it, or null when the probe names it itself. */
+  readonly via: string | null;
+}
+
+/**
+ * The Upstream snapshot sources a host-PHP probe (`*.probe.php`) loads (epic-16-retro-item-2, E3): first the source of
+ * each class `text` imports with `use` or names fully qualified, in order; then, one level further, the source of each
+ * class those sources import with `use`, or reference in their own namespace without one (`new X`, `X::`,
+ * `instanceof X`, `extends X`, `implements X`), as `JsonSchema::fromArray` reaches `Deserializer`. A class resolves by
+ * the snapshot's PSR-4 layout, `conformance/upstream/<name>/src/<FQCN as a path>.php`; one with no snapshot file is
+ * skipped. Comment lines are not read.
+ */
+export function probeSources(root: string, path: string, text: string): ProbeSource[] {
+  let roots: string[];
+  try {
+    roots = readdirSync(join(root, UPSTREAM_SNAPSHOT_DIR), { withFileTypes: true }).filter((entry) => entry.isDirectory()).map((entry) => `${UPSTREAM_SNAPSHOT_DIR}/${entry.name}/src`).sort(compareUnits);
+  } catch {
+    return [];
+  }
+  const resolveClass = (fqcn: string): string | null => {
+    for (const src of roots) {
+      const candidate = `${src}/${fqcn.split("\\").join("/")}.php`;
+      try {
+        if (statSync(join(root, candidate)).isFile()) {
+          return candidate;
+        }
+      } catch {
+        continue;
+      }
+    }
+    return null;
+  };
+  const code = (source: string): string => source.replace(/\r\n/g, "\n").split("\n").filter((line) => !/^\s*(?:\/\/|#(?!\[)|\*|\/\*)/.test(line)).join("\n");
+  /** The classes a PHP source imports with a top-level `use`, by local name. */
+  const imports = (source: string): Map<string, string> => {
+    const out = new Map<string, string>();
+    for (const match of source.matchAll(/^use\s+(?!function\b|const\b)([^;]+);/gm)) {
+      const clause = match[1]!.trim();
+      const group = /^([\w\\]+)\\\s*\{([^}]*)\}$/.exec(clause);
+      const items = group === null ? clause.split(",").map((item) => ["", item] as const) : group[2]!.split(",").map((item) => [`${group[1]}\\`, item] as const);
+      for (const [prefix, item] of items) {
+        const binding = /^\s*\\?([\w\\]+)(?:\s+as\s+(\w+))?\s*$/i.exec(item);
+        if (binding !== null) {
+          const fqcn = `${prefix}${binding[1]!}`.replace(/^\\/, "");
+          out.set(binding[2] ?? fqcn.split("\\").at(-1)!, fqcn);
+        }
+      }
+    }
+    return out;
+  };
+  const out = new Map<string, ProbeSource>();
+  const take = (fqcn: string, via: string | null): void => {
+    const target = resolveClass(fqcn);
+    if (target !== null && target !== path && !out.has(target)) {
+      out.set(target, { path: target, fqcn, via });
+    }
+  };
+  const probe = code(text);
+  const firstLevel: { at: number; fqcn: string }[] = [];
+  for (const match of probe.matchAll(/^use\s+(?!function\b|const\b)[^;]+;/gm)) {
+    for (const fqcn of imports(match[0]).values()) {
+      firstLevel.push({ at: match.index, fqcn });
+    }
+  }
+  for (const match of probe.matchAll(/(?<![\w\\])\\{0,2}([A-Z][A-Za-z0-9_]*(?:\\{1,2}[A-Z][A-Za-z0-9_]*)+)/g)) {
+    firstLevel.push({ at: match.index, fqcn: match[1]!.replace(/\\\\/g, "\\") });
+  }
+  for (const { fqcn } of firstLevel.sort((a, b) => a.at - b.at)) {
+    take(fqcn, null);
+  }
+  // The level-one sources only: `take` below adds to `out`.
+  const levelOne = [...out.values()];
+  for (const source of levelOne) {
+    let sourceText: string;
+    try {
+      sourceText = code(readFileSync(join(root, source.path), "utf8"));
+    } catch {
+      continue;
+    }
+    const imported = imports(sourceText);
+    for (const fqcn of imported.values()) {
+      take(fqcn, source.path);
+    }
+    const namespace = /^namespace\s+([\w\\]+)\s*[;{]/m.exec(sourceText)?.[1] ?? "";
+    const shorts: string[] = [];
+    for (const match of sourceText.matchAll(/\b(?:new|instanceof|extends)\s+([A-Z]\w*)\b(?!\\)|\bimplements\s+([\w\\,\s]+?)\s*\{|(?<![\w\\$>:])([A-Z]\w*)::/g)) {
+      shorts.push(...(match[2] === undefined ? [match[1] ?? match[3]!] : match[2].split(",").map((name) => name.trim()).filter((name) => /^[A-Z]\w*$/.test(name))));
+    }
+    for (const short of shorts) {
+      if (!imported.has(short) && !["self", "static", "parent"].includes(short)) {
+        take(namespace === "" ? short : `${namespace}\\${short}`, source.path);
+      }
+    }
+  }
+  return [...out.values()];
 }
 
 /** A PHP class name with its namespace, as Upstream writes it or as a TypeScript string literal escapes it (`Illuminate\\Contracts\\…`). */
