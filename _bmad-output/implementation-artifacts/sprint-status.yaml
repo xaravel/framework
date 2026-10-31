@@ -174,7 +174,7 @@ development_status:
   epic-15-retrospective: done
 
   epic-16: in-progress
-  16-1-schema-types-and-serializer: blocked  # ESC-16.1-2 (runtime array_column, rawurldecode; item epic-16-item-1, done) and ESC-16.1-3 (json-schema consequence row, built) approved by the monitor; ESC-16.1-1 (the test validator for opis/json-schema) waits on the Maintainer
+  16-1-schema-types-and-serializer: in-progress  # ESC-16.1-1 (ajv devDependency, Maintainer), -2 (runtime array_column/rawurldecode, done in #589) and -3 (json-schema consequence row, #588) ruled; port TypeTest with ajv, rows checked against the Oracle's Opis verdicts
   16-2-schema-deserializer: backlog
   epic-16-retrospective: optional
 
