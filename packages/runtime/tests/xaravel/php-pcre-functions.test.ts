@@ -2,7 +2,9 @@
 // the monitor under decisions/MAINT-2026-10-26-runtime-builtins.md; the conversion forms of decisions/ESC-15.2-5.md):
 // the PCRE functions vlucas/phpdotenv v5.7.0 calls. XT-runtime-135: preg_match, the conversion forms, modifiers and
 // errors. XT-runtime-136: preg_match_all and preg_split. XT-runtime-137: preg_replace_callback. XT-runtime-138:
-// preg_last_error's Scope Frame state, the registry's counts, the root and subpath exports, and the limits. None needs
+// preg_last_error's Scope Frame state, the registry's counts, the root and subpath exports, and the limits.
+// XT-runtime-147 (action item epic-15-retro-item-9-runtime-pcre-pattern-cache, decisions/MAINT-2026-10-30-epic-15-items.md
+// Item 6): the compiled-pattern cache, under nested, sequential and failing calls with one pattern string. None needs
 // an Oracle fixture: each expected value is what PHP 8.5.11 gives for the same call, probed with the host's `php`.
 // `php-pcre-functions.probe.php` prints each label as `<label>\t<argument lists>\t<results>` and
 // `php-pcre-functions.probe.txt` is its output (`php -d error_reporting=0 php-pcre-functions.probe.php >
@@ -15,6 +17,7 @@ import * as root from "@xaravel/runtime";
 import * as p from "@xaravel/runtime/php";
 import { fqcn, registerClass } from "@xaravel/runtime/registry";
 import { runInFrame, runInNarrowFrame } from "@xaravel/runtime/scope";
+import { PATTERN_CACHE_SIZE, compilePattern, searchRegExp } from "../../src/php/pcre";
 import { PHP_FUNCTIONS } from "../../src/php/phpFunctions";
 
 /** Each label's argument lists (parsed) and results (as PHP's JSON). */
@@ -188,6 +191,62 @@ const RUNNERS: Readonly<Record<string, (...args: Args) => unknown>> = {
   "phpdotenv.occurrences": (pattern, subject) => [p.preg_match_all(pattern, subject), p.preg_last_error()],
   "preg_replace_callback": prc,
   "phpdotenv.resolver": prc,
+  "cache.interleaved": (kase) => {
+    const inner: unknown[] = [];
+    const count = new p.Ref<unknown>(null);
+    switch (kase) {
+      case "global": {
+        const outer = p.preg_replace_callback("/a/", () => {
+          const all = new p.Ref<unknown>(null);
+          const one = new p.Ref<unknown>(null);
+          inner.push([p.preg_match_all("/a/", "aaa", all), all.value, p.preg_split("/a/", "bab"), p.preg_match("/a/", "zza", one, 0, 1), one.value]);
+          return "X";
+        }, "xaya", -1, count);
+        return [outer, count.value, inner, p.preg_last_error()];
+      }
+      case "sticky": {
+        const outer = p.preg_replace_callback("/a/A", () => {
+          const one = new p.Ref<unknown>(null);
+          const all = new p.Ref<unknown>(null);
+          inner.push([p.preg_match("/a/A", "ba", one, 0, 1), one.value, p.preg_match_all("/a/A", "aaba", all), all.value]);
+          return "X";
+        }, "aab", -1, count);
+        return [outer, count.value, inner, p.preg_last_error()];
+      }
+      case "retry": {
+        const outer = p.preg_replace_callback("/x*/", (m: unknown) => {
+          inner.push(p.preg_split("/x*/", "axb"));
+          return `[${(m as unknown[])[0] as string}]`;
+        }, "axb", -1, count);
+        return [outer, count.value, inner, p.preg_last_error()];
+      }
+      case "offsets": {
+        const m1 = new p.Ref<unknown>(null);
+        const m2 = new p.Ref<unknown>(null);
+        const first = p.preg_match("/b/", "abcb", m1, p.PREG_OFFSET_CAPTURE, 3);
+        const second = p.preg_match("/b/", "abcb", m2, p.PREG_OFFSET_CAPTURE);
+        return [first, m1.value, second, m2.value, p.preg_last_error()];
+      }
+      case "nested-replace": {
+        const outer = p.preg_replace_callback("/a/", () => {
+          const c = new p.Ref<unknown>(null);
+          const result = p.preg_replace_callback("/a/", () => "Y", "aba", -1, c);
+          return `${result as string}${String(c.value)}`;
+        }, "xaya", -1, count);
+        return [outer, count.value, p.preg_last_error()];
+      }
+      default:
+        return [
+          [p.preg_match("/(/", "a"), p.preg_last_error()],
+          [p.preg_match("/(/", "a"), p.preg_last_error()],
+          [p.preg_match("/a/", "a"), p.preg_last_error()],
+          [p.preg_split("/(/", "a"), p.preg_last_error()],
+          [p.preg_match_all("/(/", "a"), p.preg_last_error()],
+          [p.preg_replace_callback("/(/", () => "x", "a"), p.preg_last_error()],
+          [p.preg_replace_callback(["/a/", "/(/"], () => "x", "a"), p.preg_last_error()],
+        ];
+    }
+  },
   "reflection": (name) => {
     const fn = PHP_FUNCTIONS[name as string]!;
     return [fn.name, fn.required, fn.total, fn.variadic, fn.byRef];
@@ -449,5 +508,57 @@ xaravelTest(
     // Xaravel-only: an undefined optional argument is omitted.
     Assert.assertSame(1, p.preg_match("/b/", "ab", undefined, undefined, undefined));
     Assert.assertSame('["a","c"]', json(p.preg_split("/b/", "abc", undefined, undefined)));
+  },
+);
+
+xaravelTest(
+  "XT-runtime-147",
+  "one pattern string's compiled-pattern cache entry gives PHP 8.5.11's results to global, sticky and empty-match-retry calls nested in a preg_replace_callback callback, to sequential calls with different offsets, and to a cached compile failure with its error code; an entry is frozen, each call gets its own RegExp, the JS TypeError limit still names each caller, and the cache keeps at most 4096 pattern strings (decisions/MAINT-2026-10-30-epic-15-items.md Item 6, AD-5)",
+  () => {
+    assertLabels(["cache.interleaved"]);
+    // Xaravel-only: the same pattern string gives the same frozen entry, and no RegExp is shared.
+    const entry = compilePattern("preg_match", "/c(a)c/u")!;
+    Assert.assertTrue(entry === compilePattern("preg_split", "/c(a)c/u"));
+    Assert.assertTrue(Object.isFrozen(entry) && Object.isFrozen(entry.names) && Object.isFrozen(entry.phpOf));
+    Assert.assertFalse("search" in entry);
+    const first = searchRegExp(entry);
+    const second = searchRegExp(entry);
+    Assert.assertTrue(first !== second);
+    Assert.assertSame(0, second.lastIndex);
+    Assert.assertTrue(first.global && !first.sticky);
+    Assert.assertTrue(searchRegExp(compilePattern("preg_match", "/a/A")!).sticky);
+    // Xaravel-only: a limit is not cached, so each caller's TypeError names it.
+    Assert.assertStringContainsString("preg_match()", jsTypeError(() => p.preg_match("/a/x", "a")));
+    Assert.assertStringContainsString("preg_split()", jsTypeError(() => p.preg_split("/a/x", "a")));
+    Assert.assertStringContainsString("preg_match_all()", jsTypeError(() => p.preg_match_all("/a++/", "a")));
+    Assert.assertStringContainsString("preg_replace_callback()", jsTypeError(() => p.preg_replace_callback("/a++/", () => "", "a")));
+    // Xaravel-only: after PATTERN_CACHE_SIZE other pattern strings the first is converted again.
+    Assert.assertSame(4096, PATTERN_CACHE_SIZE);
+    const oldest = compilePattern("preg_match", "/lru-first/")!;
+    Assert.assertTrue(oldest === compilePattern("preg_match", "/lru-first/"));
+    for (let i = 0; i < PATTERN_CACHE_SIZE - 1; i++) {
+      compilePattern("preg_match", `/lru-${i}/`);
+    }
+    // 4095 newer entries: the first is still held.
+    Assert.assertTrue(oldest === compilePattern("preg_match", "/lru-first/"));
+    // A hit made it the newest, so 4096 more evict it.
+    for (let i = 0; i < PATTERN_CACHE_SIZE; i++) {
+      compilePattern("preg_match", `/lru-again-${i}/`);
+    }
+    const again = compilePattern("preg_match", "/lru-first/")!;
+    Assert.assertTrue(oldest !== again);
+    Assert.assertSame(oldest.source, again.source);
+    Assert.assertSame(1, p.preg_match("/lru-first/", "lru-first"));
+    // Xaravel-only: a hit refreshes recency (LRU, not FIFO). With the cache full and `/lru-recent/` oldest, a hit then
+    // one new pattern string evicts `/lru-recent-0/`, inserted right after it, and keeps `/lru-recent/`.
+    const recent = compilePattern("preg_match", "/lru-recent/")!;
+    const next = compilePattern("preg_match", "/lru-recent-0/")!;
+    for (let i = 1; i < PATTERN_CACHE_SIZE - 1; i++) {
+      compilePattern("preg_match", `/lru-recent-${i}/`);
+    }
+    Assert.assertTrue(recent === compilePattern("preg_match", "/lru-recent/"));
+    compilePattern("preg_match", "/lru-recent-new/");
+    Assert.assertTrue(recent === compilePattern("preg_match", "/lru-recent/"));
+    Assert.assertTrue(next !== compilePattern("preg_match", "/lru-recent-0/"));
   },
 );

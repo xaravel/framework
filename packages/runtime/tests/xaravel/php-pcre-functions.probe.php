@@ -1,5 +1,5 @@
 <?php
-// The PHP 8.5.11 evidence for XT-runtime-135..138 (php-pcre-functions.test.ts), action item
+// The PHP 8.5.11 evidence for XT-runtime-135..138 and 147 (php-pcre-functions.test.ts), action item
 // epic-15-item-2-runtime-pcre-functions (ESC-15.2-1 part f, ESC-15.2-5): preg_match, preg_match_all, preg_split,
 // preg_replace_callback, preg_last_error and preg_last_error_msg, on the patterns vlucas/phpdotenv v5.7.0 passes them
 // and on every conversion form PORTING.md § PCRE conversion lists. Each line is
@@ -320,6 +320,52 @@ namespace {
     record('phpdotenv.resolver', array_map(fn ($s) => [$variable, $s, 1, 0, 'resolve'], array_merge($subjects, [
         '${A}', '${A}${A.B}', '${B}', '${A.B} ${A}', '$A', '${}', '${A-B}', '${A.B', "\${A}\n",
     ])), 'prc');
+
+    // XT-runtime-147: one pattern string used by calls nested in a preg_replace_callback callback, one after another,
+    // and failing twice, as the runtime's compiled-pattern cache serves them (decisions/MAINT-2026-10-30-epic-15-items.md).
+    record('cache.interleaved', [['global'], ['sticky'], ['retry'], ['offsets'], ['nested-replace'], ['failure']], function ($case) {
+        $inner = [];
+        switch ($case) {
+            case 'global':
+                $outer = preg_replace_callback('/a/', function ($m) use (&$inner) {
+                    $inner[] = [preg_match_all('/a/', 'aaa', $all), $all, preg_split('/a/', 'bab'), preg_match('/a/', 'zza', $one, 0, 1), $one];
+                    return 'X';
+                }, 'xaya', -1, $count);
+                return [$outer, $count, $inner, preg_last_error()];
+            case 'sticky':
+                $outer = preg_replace_callback('/a/A', function ($m) use (&$inner) {
+                    $inner[] = [preg_match('/a/A', 'ba', $one, 0, 1), $one, preg_match_all('/a/A', 'aaba', $all), $all];
+                    return 'X';
+                }, 'aab', -1, $count);
+                return [$outer, $count, $inner, preg_last_error()];
+            case 'retry':
+                $outer = preg_replace_callback('/x*/', function ($m) use (&$inner) {
+                    $inner[] = preg_split('/x*/', 'axb');
+                    return '[' . $m[0] . ']';
+                }, 'axb', -1, $count);
+                return [$outer, $count, $inner, preg_last_error()];
+            case 'offsets':
+                $first = preg_match('/b/', 'abcb', $m1, PREG_OFFSET_CAPTURE, 3);
+                $second = preg_match('/b/', 'abcb', $m2, PREG_OFFSET_CAPTURE);
+                return [$first, $m1, $second, $m2, preg_last_error()];
+            case 'nested-replace':
+                $outer = preg_replace_callback('/a/', function ($m) {
+                    $result = preg_replace_callback('/a/', fn ($m) => 'Y', 'aba', -1, $c);
+                    return $result . $c;
+                }, 'xaya', -1, $count);
+                return [$outer, $count, preg_last_error()];
+            default:
+                $out = [];
+                $out[] = [preg_match('/(/', 'a'), preg_last_error()];
+                $out[] = [preg_match('/(/', 'a'), preg_last_error()];
+                $out[] = [preg_match('/a/', 'a'), preg_last_error()];
+                $out[] = [preg_split('/(/', 'a'), preg_last_error()];
+                $out[] = [preg_match_all('/(/', 'a'), preg_last_error()];
+                $out[] = [preg_replace_callback('/(/', fn ($m) => 'x', 'a'), preg_last_error()];
+                $out[] = [preg_replace_callback(['/a/', '/(/'], fn ($m) => 'x', 'a'), preg_last_error()];
+                return $out;
+        }
+    });
 
     // XT-runtime-138: every new function's ReflectionFunction counts and its ArgumentCountErrors.
     $new = ['preg_last_error', 'preg_last_error_msg', 'preg_match', 'preg_match_all', 'preg_replace_callback', 'preg_split'];

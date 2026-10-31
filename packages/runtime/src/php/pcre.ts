@@ -13,7 +13,11 @@
 //   code points. Emitted JS always carries the `u` and `d` flags, `y` for the `A` modifier.
 // - A form the rule does not cover throws a JS `TypeError` naming it, and is never converted silently.
 //
-// No compiled pattern is cached (AD-5): each call compiles its own.
+// Each pattern string's conversion is cached (decisions/MAINT-2026-10-30-epic-15-items.md, Item 6): a process-wide LRU
+// of 4096 entries (PHP's `PCRE_CACHE_SIZE`) keyed only by the pattern string, which carries its modifiers. It is
+// memoization of a pure conversion, the same for every request, so AD-5 allows it. A compile failure (null) is cached;
+// a JS `TypeError` limit is not, as its message names the calling function. An entry is frozen and holds no `RegExp`:
+// `searchRegExp` builds a fresh one per call, so no two calls share `lastIndex`.
 import { utf8 } from "./mangle";
 import { decodeResult } from "./stringFunctions";
 
@@ -27,8 +31,6 @@ export interface PcrePattern {
   readonly source: string;
   /** The emitted `RegExp` flags, without `g` / `y`. */
   readonly flags: string;
-  /** The compiled `RegExp` that searches from an index (sticky under `A`), built once when the pattern is checked. */
-  readonly search: RegExp;
   /** PCRE's capture count (`PCRE2_INFO_CAPTURECOUNT`). */
   readonly groups: number;
   /** The name of each PHP group number, or null. */
@@ -931,11 +933,34 @@ function modifiers(fn: string, bytes: Uint8Array): Modifiers | null {
 
 const strictDecoder = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true });
 
+/** PHP's `PCRE_CACHE_SIZE`: the most pattern strings whose conversion is kept. */
+export const PATTERN_CACHE_SIZE = 4096;
+
+/** Each pattern string's conversion (null for a compile failure), oldest first (decisions/MAINT-2026-10-30-epic-15-items.md). */
+const patternCache = new Map<string, PcrePattern | null>();
+
 /**
  * PHP's pattern string converted to a `RegExp` source, or null when PHP cannot compile it (its warning is not raised,
- * DIV-9.17). A form PORTING.md § PCRE conversion does not cover throws a JS `TypeError` naming it.
+ * DIV-9.17). A form PORTING.md § PCRE conversion does not cover throws a JS `TypeError` naming it. The result is
+ * cached per pattern string (a frozen entry, or null); a throw is not.
  */
 export function compilePattern(fn: string, pattern: string): PcrePattern | null {
+  const cached = patternCache.get(pattern);
+  if (cached !== undefined) {
+    patternCache.delete(pattern);
+    patternCache.set(pattern, cached);
+    return cached;
+  }
+  const converted = convertPattern(fn, pattern);
+  if (patternCache.size >= PATTERN_CACHE_SIZE) {
+    patternCache.delete(patternCache.keys().next().value!);
+  }
+  patternCache.set(pattern, converted);
+  return converted;
+}
+
+/** The conversion `compilePattern` caches: it depends only on `pattern` (`fn` names the caller in a limit's throw). */
+function convertPattern(fn: string, pattern: string): PcrePattern | null {
   const parts = split(utf8.encode(pattern));
   if (parts === null) {
     return null;
@@ -960,12 +985,21 @@ export function compilePattern(fn: string, pattern: string): PcrePattern | null 
     const parser = new Parser(fn, cps, mods);
     const source = emitAlternation(parser.parse());
     const flags = `du${mods.caseless ? "i" : ""}`;
-    const search = new RegExp(source, `${flags}${mods.anchored ? "y" : "g"}`);
+    // Built to find a source the `RegExp` grammar refuses (a SyntaxError is a compile failure), then dropped.
+    new RegExp(source, flags);
     const names: (string | null)[] = [];
     for (let n = 0; n <= parser.groups; n++) {
       names.push(parser.names.get(n) ?? null);
     }
-    return { utf: mods.utf, anchored: mods.anchored, source, flags, search, groups: parser.groups, names, phpOf: parser.phpOf };
+    return Object.freeze({
+      utf: mods.utf,
+      anchored: mods.anchored,
+      source,
+      flags,
+      groups: parser.groups,
+      names: Object.freeze(names),
+      phpOf: Object.freeze([...parser.phpOf]),
+    });
   } catch (error) {
     if (error === COMPILE_FAILURE || error instanceof SyntaxError) {
       return null;
@@ -1049,10 +1083,9 @@ export function pcreSubject(fn: string, pattern: PcrePattern, subject: string): 
   };
 }
 
-/** The `RegExp` that searches from an index (sticky under `A`). */
+/** A fresh `RegExp` that searches from an index (sticky under `A`), shared with no other call. */
 export function searchRegExp(pattern: PcrePattern): RegExp {
-  pattern.search.lastIndex = 0;
-  return pattern.search;
+  return new RegExp(pattern.source, `${pattern.flags}${pattern.anchored ? "y" : "g"}`);
 }
 
 /**
