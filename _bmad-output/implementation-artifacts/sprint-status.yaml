@@ -173,9 +173,9 @@ development_status:
   15-3-bun-s-env-autoload-neutralised: done
   epic-15-retrospective: done
 
-  epic-16: in-progress
+  epic-16: done
   16-1-schema-types-and-serializer: done
-  16-2-schema-deserializer: in-progress  # ESC-16.2-1 approved by the Maintainer, option 1 (no divergence; the one-member union is checked against Upstream's bytes); finish XT-json-schema-2 and close the Story
+  16-2-schema-deserializer: done  # ESC-16.2-1 ruled (option 1); XT-json-schema-2 cites the ruling; Fidelity current at tree 3b755af6 (F-7 evidence gaps only); full harness differ=0.
   epic-16-retrospective: optional
 
   epic-17: backlog
