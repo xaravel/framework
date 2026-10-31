@@ -114,6 +114,7 @@ epic-15:
   # no longer names builtins item 1 adds, and ESC-15.2-5 extends PORTING.md's PCRE rule for item 2.
   # Retro items 1 and 6 were ruled in decisions/MAINT-2026-10-30-epic-15-items.md; item 8 (config's pre-sealed base write) waits on Story 17.4.
   # Item 2 waits on the Maintainer: every part needs a DIV clause or a runtime contract (finding S2 in the retro doc).
+  # Item 5 waits on the Maintainer: no in-scope route records its Oracle (glibc) probe row (finding L3 in the retro doc).
   verdict: accepted-with-open-items
   attempts: 1
   doc: _bmad-output/implementation-artifacts/epic-15-retro-2026-10-30.md
@@ -122,3 +123,4 @@ epic-15:
   waiting_on_maintainer:
     - epic-15-retro-item-8-config-presealed-base-write
     - epic-15-retro-item-2-untargeted-deferrals
+    - epic-15-retro-item-5-getenv-equals-name
