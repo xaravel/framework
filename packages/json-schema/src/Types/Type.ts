@@ -7,7 +7,8 @@
 //
 // `enum(class-string<BackedEnum>)` takes the enum's class-string or its class (`IntBackedEnum::class` is the class,
 // AD-26); `$values::cases()` resolves a string through the Class Registry. `__toString` is `toString()` plus
-// `[Symbol.toPrimitive]` (AD-26), and `json_encode` is the runtime's `jsonEncode` (AD-23).
+// `[Symbol.toPrimitive]` (AD-26), and `json_encode` is the runtime's `jsonEncode` (AD-23). `[ASSIGN_DEFAULT](value)` is
+// the Deserializer's `Closure::call` write of `$default` (package-internal, `internal/assignDefault.ts`).
 import {
   array_column,
   array_values,
@@ -25,6 +26,7 @@ import {
   valueCopy,
 } from "@xaravel/runtime";
 import type { PhpArrayLike } from "@xaravel/contracts/json-schema";
+import { ASSIGN_DEFAULT } from "../internal/assignDefault";
 import { OBJECT_VARS } from "../internal/objectVars";
 import { JsonSchema } from "../JsonSchema";
 import { Serializer } from "../Serializer";
@@ -123,6 +125,14 @@ export abstract class Type extends JsonSchema {
   /** The string representation for a string conversion (Upstream's `__toString`, AD-26). */
   [Symbol.toPrimitive](_hint: string): string {
     return this.toString();
+  }
+
+  /**
+   * Upstream's `$this->default = $value`, run in the type's scope by `Deserializer::applyCommon` through
+   * `Closure::call`: sets the default to a by-value copy of the value, whatever the concrete type (package-internal).
+   */
+  [ASSIGN_DEFAULT](value: unknown): void {
+    this.defaultProperty = valueCopy(value);
   }
 
   /** Upstream's `get_object_vars($this)`: the properties in PHP's declaration order (package-internal, DIV-12.2). */
