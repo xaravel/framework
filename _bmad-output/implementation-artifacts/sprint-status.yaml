@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-30-2026 17:37
+last_updated: 10-30-2026 18:25
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -2482,3 +2482,18 @@ action_items:
     owner: "orchestrator"
     status: open
     ref: "decisions/MAINT-2026-10-30-epic-15-items.md"
+  - id: "epic-15-retro-item-10-runtime-trait-registry"
+    epic: 15
+    action: "One Maintainer-approved Infrastructure change (decisions/MAINT-2026-10-30-epic-15-items-2-5.md),
+      in scope packages/runtime, packages/collections, packages/conditionable, packages/macroable
+      and packages/reflection: the Class Registry gains a declaration-time trait mark,
+      registerTrait(fqcn, X), beside registerClass; @xaravel/runtime/php exports trait_exists,
+      and class_exists returns false for a registered trait, as PHP 8.5.11 does. The
+      four existing traits (Illuminate Support Traits EnumeratesValues, Conditionable,
+      Macroable, and Reflection ReflectsClosures) register with registerTrait; fqcn()
+      and every existing lookup keep working for them. XT-runtime cases against PHP
+      for class_exists and trait_exists on a class, a trait and an unknown name; no
+      assertion weakened; no other behaviour changes"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-30-epic-15-items-2-5.md"

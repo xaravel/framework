@@ -3975,6 +3975,10 @@ So that concurrent requests never share container state (FR-19, NFR-4, AD-5).
 **Then** it lands in the Repository's base items through the same seam, and after `sealed` a write inside a unit frame still goes to that frame's overlay (`decisions/ESC-15.1-2.md`)
 **And** this Story's PR takes `epic-15-retro-item-8-config-presealed-base-write` out of epic 15's `waiting_on_maintainer`, so the orchestrator routes config's half, and XT-config-1 gains its full wording: `config([...])` on a sealed Application inside a unit frame (MAINT-2026-10-30-epic-15-items).
 
+**Given** nested unit frames, a parent and a child, that both write the config Repository
+**When** the child reads a key
+**Then** this Story settles and documents how a child's reads fall through to its parent's overlay, per key (AD-5), including the case where the child wrote `a.b` and the parent later writes `a`, adds the `@xaravel/runtime/scope` read that needs, and `packages/config` follows it through `epic-15-retro-item-8-config-presealed-base-write` (MAINT-2026-10-30-epic-15-items-2-5).
+
 **Given** a base singleton whose constructor resolves a frame-owned binding (a request-like fixture)
 **When** dev mode is on
 **Then** resolution throws, naming both bindings (AD-5).
