@@ -86,6 +86,10 @@ import {
   UPSTREAM_SNAPSHOT_DIR,
   importedPathConsts,
   phpMethodBodies,
+  phpTestSupportMethods,
+  upstreamComposerFor,
+  manifestTestFiles,
+  probeSources,
   portingSections,
   scriptRuns,
   upstreamTraitPaths,
@@ -108,6 +112,7 @@ import {
 } from "../../../tools/fidelity-review/fidelity-review";
 import { escalationDigest } from "../../../tools/escalations/escalations";
 import { approvalsClause, renderClause } from "../../../tools/story-check/story-check";
+import { parseManifest } from "../../../tools/ownership/ownership";
 import { SPINE_FILE, spineRules } from "../../../tools/xt-coverage/consequences";
 import { xaravelTest } from "../../../packages/assert/src/index";
 
@@ -2123,6 +2128,259 @@ class Real { use Concerns\CountsEnumerations; }
     expect(realTraitText).toContain("$this->assertEnumerations($count, $enumerated)");
     expect(realTraitText).toContain("$this->assertEquals(");
     expect(buildPrompt(realTraits).user).toContain(realTraitText!);
+    // epic-16-retro-item-2 (E1): an Inventory row holds only its test method's lines, so (h) adds, once per Upstream
+    // test file, the data providers its rows name (`#[DataProvider]`, `@dataProvider`) and the test-class helpers they
+    // call, transitively, in file order; a row that reaches none adds nothing, and a file listed whole gets no excerpt.
+    const e1Root = tempDir("fidelity-providers-");
+    const e1File = "conformance/upstream/framework/tests/Support/RowsTest.php";
+    const e1Text = [
+      "<?php",
+      "namespace Illuminate\\Tests\\Support;",
+      "class RowsTest {",
+      "    #[DataProvider('rowsProvider')]",
+      "    public function testRows($a) { $this->check($a); }",
+      "",
+      "    /**",
+      "     * @dataProvider legacyProvider",
+      "     */",
+      "    public function testLegacy($a) { self::assertSame(1, $a); }",
+      "",
+      "    public function testPlain() { $this->assertTrue(true); }",
+      "",
+      "    public static function rowsProvider(): array",
+      "    {",
+      "        return [[1]];",
+      "    }",
+      "",
+      "    public static function legacyProvider(): array",
+      "    {",
+      "        return [[static::one()]];",
+      "    }",
+      "",
+      "    protected static function one(): int",
+      "    {",
+      "        return 1;",
+      "    }",
+      "",
+      "    protected function check($a): void",
+      "    {",
+      "        $this->inner($a);",
+      "    }",
+      "",
+      "    protected function inner($a): void",
+      "    {",
+      "        $this->assertSame(1, $a);",
+      "    }",
+      "",
+      "    protected function unused(): void",
+      "    {",
+      "    }",
+      "}",
+      "",
+    ].join("\n");
+    write(e1Root, e1File, e1Text);
+    expect(phpTestSupportMethods(e1Text, [{ from: 5, to: 5 }, { from: 10, to: 10 }])).toEqual(["rowsProvider", "legacyProvider", "one", "check", "inner"]);
+    expect(phpTestSupportMethods(e1Text, [{ from: 4, to: 5 }])).toEqual(["rowsProvider", "check", "inner"]);
+    expect(phpTestSupportMethods(e1Text, [{ from: 12, to: 12 }])).toEqual([]);
+    const e1Id = "Illuminate\\Tests\\Support\\RowsTest";
+    const e1Ranges = [
+      { path: e1File, from: 5, to: 5, id: `${e1Id}::testRows#a` },
+      { path: e1File, from: 5, to: 5, id: `${e1Id}::testRows#b` },
+      { path: e1File, from: 10, to: 10, id: `${e1Id}::testLegacy` },
+      { path: e1File, from: 12, to: 12, id: `${e1Id}::testPlain` },
+    ];
+    const e1Whole = wholeFileEvidence(e1Root, [], new Map(), 400_000, () => true, [e1File], e1Ranges);
+    const e1Label = `${e1File} § rowsProvider, legacyProvider, one, check, inner`;
+    expect(e1Whole.map((entry) => [entry.path, entry.reason])).toEqual([[e1Label, `the data providers and helpers of the Inventory tests ${e1Id}::testRows, ${e1Id}::testLegacy`]]);
+    expect(e1Whole[0]!.text).toBe(phpMethodBodies(e1Text, ["rowsProvider", "legacyProvider", "one", "check", "inner"]));
+    expect(e1Whole[0]!.text).toContain("    protected function inner($a): void\n    {\n        $this->assertSame(1, $a);\n    }");
+    expect(e1Whole[0]!.text).not.toContain("function unused");
+    // A row that reaches no provider or helper adds nothing; without the new rows (h) is what it was.
+    expect(wholeFileEvidence(e1Root, [], new Map(), 400_000, () => true, [e1File], [e1Ranges[3]!])).toEqual([]);
+    expect(wholeFileEvidence(e1Root, [], new Map(), 400_000, () => true, [e1File])).toEqual([]);
+    // A file (h) already lists whole gets no excerpt.
+    expect(wholeFileEvidence(e1Root, [{ filename: e1File, status: "modified", patch: probePatch }], new Map(), 400_000, () => true, [e1File], e1Ranges).map((entry) => entry.path)).toEqual([e1File]);
+    // It is fenced as PHP, and fits the cap like any other entry.
+    expect(buildPrompt({ ...promptBase, files: [], evidence: { ...NO_EVIDENCE, wholeFiles: e1Whole } }).user).toContain(`#### ${e1Label} (the data providers and helpers of the Inventory tests ${e1Id}::testRows, ${e1Id}::testLegacy)\n\n\`\`\`php\n    public static function rowsProvider(): array`);
+    expect(wholeFileEvidence(e1Root, [], new Map(), 0, () => true, [e1File], e1Ranges)[0]!.note).toStartWith("omitted for size:");
+    // withWholeFiles passes each Inventory row's lines; the trait fixture above calls no method its file declares.
+    expect(traitPrompt.evidence.wholeFiles.some((entry) => entry.path.includes(" § "))).toBe(false);
+    // The real case: Story 16.1's TypeTest rows bring its providers and validator helpers.
+    const story161 = parseManifest("stories/16.1.md", read("stories/16.1.md")).manifest!;
+    const realProviders = withWholeFiles(root, { ...promptBase, files: [], inventory: inventoryContext(root, story161.testIds), evidence: NO_EVIDENCE });
+    const typeTest = "conformance/upstream/framework/tests/JsonSchema/TypeTest.php";
+    const typeEntry = realProviders.evidence.wholeFiles.find((entry) => entry.path.startsWith(`${typeTest} § `))!;
+    expect(typeEntry.path).toBe(`${typeTest} § validSchemasProvider, invalidSchemasProvider, makeValidator, assertValidOnJsonSchema, assertNotValidOnJsonSchema`);
+    expect(typeEntry.reason).toContain("Illuminate\\Tests\\JsonSchema\\TypeTest::test_produces_valid_json_schemas, ");
+    expect(typeEntry.reason).not.toContain("test_produces_valid_json_schemas#");
+    for (const method of ["validSchemasProvider", "invalidSchemasProvider", "makeValidator", "assertValidOnJsonSchema", "assertNotValidOnJsonSchema"]) {
+      expect(typeEntry.text).toContain(`function ${method}(`);
+    }
+    expect(buildPrompt(realProviders).user).toContain(typeEntry.text!);
+    expect(buildPrompt(realProviders).length).toBeLessThanOrEqual(PROMPT_CAP);
+
+    // epic-16-retro-item-2 (E2): a changed test of `packages/<c>/tests/` that cites an AD-2 clause brings the package's
+    // package.json and the snapshot composer.json named illuminate/<c>, or a note that none names it.
+    const e2Root = tempDir("fidelity-deps-");
+    const e2Composer = "conformance/upstream/framework/src/Illuminate/Deps/composer.json";
+    write(e2Root, e2Composer, '{\n    "name": "illuminate/deps"\n}\n');
+    write(e2Root, "conformance/upstream/framework/composer.json", '{\n    "name": "laravel/framework"\n}\n');
+    write(e2Root, "packages/deps/package.json", '{ "name": "@xaravel/deps" }\n');
+    write(e2Root, "packages/nodeps/package.json", '{ "name": "@xaravel/nodeps" }\n');
+    const e2Test = "packages/deps/tests/xaravel/deps.test.ts";
+    write(e2Root, e2Test, '// The dependencies mirror Upstream\'s require (AD-2.1).\nxaravelTest("XT-deps-1", "deps (AD-2.1)", () => {});\n');
+    write(e2Root, "packages/nodeps/tests/xaravel/deps.test.ts", 'xaravelTest("XT-nodeps-1", "deps (AD-2.2)", () => {});\n');
+    write(e2Root, "packages/deps/tests/xaravel/other.test.ts", 'xaravelTest("XT-deps-2", "other (AD-21.1, AD-2)", () => {});\n');
+    write(e2Root, "packages/deps/src/index.ts", "// AD-2.1\nexport const x = 1;\n");
+    expect(upstreamComposerFor(e2Root, "deps")).toBe(e2Composer);
+    expect(upstreamComposerFor(e2Root, "nodeps")).toBeNull();
+    const e2Change = (path: string) => [{ filename: path, status: "modified", patch: probePatch }];
+    expect(wholeFileEvidence(e2Root, e2Change(e2Test), new Map(), 400_000).map((entry) => [entry.path, entry.reason])).toEqual([
+      ["packages/deps/package.json", `the package's dependency set, which AD-2 rules, cited by ${e2Test}`],
+      [e2Composer, `Upstream's dependency set for illuminate/deps, which AD-2 rules, cited by ${e2Test}`],
+      [e2Test, "changed"],
+    ]);
+    const e2Missing = wholeFileEvidence(e2Root, e2Change("packages/nodeps/tests/xaravel/deps.test.ts"), new Map(), 400_000);
+    expect(e2Missing.map((entry) => [entry.path, entry.text, entry.note])).toEqual([
+      ["packages/nodeps/package.json", readFileSync(join(e2Root, "packages/nodeps/package.json"), "utf8"), null],
+      ["conformance/upstream (composer.json of illuminate/nodeps)", null, "unavailable: no composer.json under conformance/upstream/ names illuminate/nodeps"],
+      ["packages/nodeps/tests/xaravel/deps.test.ts", "xaravelTest(\"XT-nodeps-1\", \"deps (AD-2.2)\", () => {});\n", null],
+    ]);
+    // No AD-2.<k> cite (AD-21.1 and a bare AD-2 are not), a source file, or a test outside the Story's scope: nothing.
+    expect(wholeFileEvidence(e2Root, e2Change("packages/deps/tests/xaravel/other.test.ts"), new Map(), 400_000).map((entry) => entry.path)).toEqual(["packages/deps/tests/xaravel/other.test.ts"]);
+    expect(wholeFileEvidence(e2Root, e2Change("packages/deps/src/index.ts"), new Map(), 400_000).map((entry) => entry.path)).toEqual(["packages/deps/src/index.ts"]);
+    expect(wholeFileEvidence(e2Root, e2Change(e2Test), new Map(), 400_000, () => false).map((entry) => [entry.path, entry.reason])).toEqual([[e2Test, "changed, outside the Story's scope"]]);
+    // A changed package.json is listed as changed, not again as AD-2 evidence.
+    expect(wholeFileEvidence(e2Root, [...e2Change(e2Test), ...e2Change("packages/deps/package.json")], new Map(), 400_000).map((entry) => [entry.path, entry.reason])).toEqual([
+      [e2Composer, `Upstream's dependency set for illuminate/deps, which AD-2 rules, cited by ${e2Test}`],
+      [e2Test, "changed"],
+      ["packages/deps/package.json", "changed"],
+    ]);
+    // The real case: XT-json-schema-1 cites AD-2.1 and AD-2.2.
+    const serializerTest = "packages/json-schema/tests/xaravel/serializer.test.ts";
+    const realDeps = wholeFileEvidence(root, [{ filename: serializerTest, status: "modified", patch: probePatch }], new Map(), 400_000);
+    expect(realDeps.find((entry) => entry.path === "packages/json-schema/package.json")!.text).toBe(read("packages/json-schema/package.json"));
+    expect(realDeps.find((entry) => entry.path === "conformance/upstream/framework/src/Illuminate/JsonSchema/composer.json")!.reason).toBe(`Upstream's dependency set for illuminate/json-schema, which AD-2 rules, cited by ${serializerTest}`);
+
+    // epic-16-retro-item-2 (E3): a changed test that runs `bun test` in a child process over the files a Story manifest
+    // selects brings the manifest, each Ported Test file of its test_ids and each test file declaring one of its
+    // xaravel_test_ids.
+    const e3Root = tempDir("fidelity-child-tests-");
+    const e3Ported = "packages/kid/tests/ported/framework/tests/Kid/KidTest.test.ts";
+    const e3Xt = "packages/kid/tests/xaravel/one.test.ts";
+    write(e3Root, "stories/7.1.md", '---\nstory_id: "7.1"\nepic: 7\ncomponent: kid\nstatus: done\ntest_ids:\n  - "Illuminate\\\\Tests\\\\Kid\\\\KidTest::testA"\n  - "Illuminate\\\\Tests\\\\Kid\\\\KidTest::testRows"\n  - "Illuminate\\\\Tests\\\\Kid\\\\GoneTest::testB"\nxaravel_test_ids:\n  - XT-kid-1\n---\n\n# Story 7.1\n');
+    const kidRow = (id: string, source: string): string => JSON.stringify({ id, component: "kid", kind: "unit", backends: ["none"], source, hash: "0".repeat(64), assertions: { assertSame: 1 }, oracle: { none: "pass" } });
+    write(e3Root, "conformance/inventory/kid.jsonl", [kidRow("Illuminate\\Tests\\Kid\\GoneTest::testB", "framework/tests/Kid/GoneTest.php:1-2"), kidRow("Illuminate\\Tests\\Kid\\KidTest::testA", "framework/tests/Kid/KidTest.php:3-5"), kidRow("Illuminate\\Tests\\Kid\\KidTest::testRows#0", "framework/tests/Kid/KidTest.php:7-9"), ""].join("\n"));
+    write(e3Root, e3Ported, "portedTest('a', () => {});\n");
+    write(e3Root, e3Xt, 'xaravelTest("XT-kid-1", "one", () => {});\n');
+    write(e3Root, "packages/kid/tests/xaravel/mentions.test.ts", "// XT-kid-1 is declared in one.test.ts\n");
+    // A file that only quotes the id, without declaring it in an `xaravelTest(` call, is not selected.
+    write(e3Root, "packages/kid/tests/xaravel/lists.test.ts", 'Assert.assertSame("XT-kid-1", ids[0]);\n');
+    const e3Runner = "packages/kid/tests/xaravel/replay.test.ts";
+    const runnerText = (manifest: string, verb: string) => `import { readFileSync } from "node:fs";\nimport { join, resolve } from "node:path";\nconst REPO = resolve(import.meta.dir, "..", "..", "..", "..");\nconst manifest = readFileSync(join(REPO, ${manifest}), "utf8");\nBun.spawnSync([process.execPath, "--no-env-file", "${verb}", ...files(manifest)], { cwd: REPO });\n`;
+    write(e3Root, e3Runner, runnerText('"stories", "7.1.md"', "test"));
+    expect(manifestTestFiles(e3Root, "stories/7.1.md")).toEqual([e3Ported, e3Xt]);
+    expect(manifestTestFiles(e3Root, "stories/7.2.md")).toEqual([]);
+    const e3Change = (path: string) => [{ filename: path, status: "modified", patch: probePatch }];
+    const e3Whole = wholeFileEvidence(e3Root, e3Change(e3Runner), new Map(), 400_000);
+    expect(e3Whole.map((entry) => entry.path)).toEqual(["stories/7.1.md", e3Ported, e3Xt, e3Runner]);
+    expect(e3Whole.filter((entry) => entry.path !== "stories/7.1.md" && entry.path !== e3Runner).map((entry) => entry.reason)).toEqual([e3Ported, e3Xt].map(() => `run by ${e3Runner} in a child bun test, selected by stories/7.1.md`));
+    // The literal path form names it too; the manifest the test does not read as data comes with its own reason.
+    write(e3Root, e3Runner, `const manifest = "stories/7.1.md";\nBun.spawnSync(["bun", "test", ...files(manifest)]);\n`);
+    expect(wholeFileEvidence(e3Root, e3Change(e3Runner), new Map(), 400_000).map((entry) => [entry.path, entry.reason])).toEqual([
+      ["stories/7.1.md", `read by ${e3Runner} to select the test files it runs in a child bun test`],
+      [e3Ported, `run by ${e3Runner} in a child bun test, selected by stories/7.1.md`],
+      [e3Xt, `run by ${e3Runner} in a child bun test, selected by stories/7.1.md`],
+      [e3Runner, "changed"],
+    ]);
+    // No child `bun test`, an unreadable manifest, or a test outside the Story's scope: nothing is added for it.
+    write(e3Root, e3Runner, runnerText('"stories", "7.1.md"', "run"));
+    expect(wholeFileEvidence(e3Root, e3Change(e3Runner), new Map(), 400_000).map((entry) => entry.path)).toEqual(["stories/7.1.md", e3Runner]);
+    write(e3Root, e3Runner, `const manifest = "stories/7.2.md";\nBun.spawnSync(["bun", "test", ...files(manifest)]);\n`);
+    expect(wholeFileEvidence(e3Root, e3Change(e3Runner), new Map(), 400_000).map((entry) => entry.path)).toEqual([e3Runner]);
+    write(e3Root, e3Runner, `const manifest = "stories/7.1.md";\nBun.spawnSync(["bun", "test", ...files(manifest)]);\n`);
+    expect(wholeFileEvidence(e3Root, e3Change(e3Runner), new Map(), 400_000, () => false).map((entry) => entry.path)).toEqual([e3Runner]);
+    // A selected file the change also modifies is listed as changed.
+    expect(wholeFileEvidence(e3Root, [...e3Change(e3Runner), ...e3Change(e3Xt)], new Map(), 400_000).map((entry) => entry.path)).toEqual(["stories/7.1.md", e3Ported, e3Runner, e3Xt]);
+    // A changed manifest is listed as changed, and the files it selects still come with the test.
+    expect(wholeFileEvidence(e3Root, [...e3Change(e3Runner), ...e3Change("stories/7.1.md")], new Map(), 400_000).map((entry) => [entry.path, entry.reason])).toEqual([
+      [e3Ported, `run by ${e3Runner} in a child bun test, selected by stories/7.1.md`],
+      [e3Xt, `run by ${e3Runner} in a child bun test, selected by stories/7.1.md`],
+      [e3Runner, "changed"],
+      ["stories/7.1.md", "changed"],
+    ]);
+
+    // epic-16-retro-item-2 (E3): a changed `*.probe.php` brings the Upstream sources it loads: those it imports or names
+    // fully qualified, then their own imports and same-namespace references, one level further; a class with no
+    // snapshot file is skipped.
+    const fooSrc = "conformance/upstream/framework/src/Illuminate/Foo";
+    const fooFiles: Record<string, string> = {
+      "Api.php": "<?php\n\nnamespace Illuminate\\Foo;\n\nuse Illuminate\\Foo\\Support\\Helper as H;\nuse RuntimeException;\n\nclass Api\n{\n    public static function run()\n    {\n        $v = Worker::go(H::x());\n\n        return $v instanceof Marker ? $v : null;\n    }\n}\n",
+      "Marker.php": "<?php\n\nnamespace Illuminate\\Foo;\n\ninterface Marker {}\n",
+      "Grouped.php": "<?php\n\nnamespace Illuminate\\Foo;\n\nclass Grouped {}\n",
+      "Worker.php": "<?php\n\nnamespace Illuminate\\Foo;\n\nclass Worker\n{\n    public static function go($x) { return $x; }\n}\n",
+      "Support/Helper.php": "<?php\n\nnamespace Illuminate\\Foo\\Support;\n\nclass Helper\n{\n    public static function x() { return Leaf::y(); }\n}\n",
+      "Support/Leaf.php": "<?php\n\nnamespace Illuminate\\Foo\\Support;\n\nclass Leaf {}\n",
+      "Other.php": "<?php\n\nnamespace Illuminate\\Foo;\n\nclass Other extends Base implements Shape\n{\n    public static function y() { return new Deep; }\n}\n",
+      "Base.php": "<?php\n\nnamespace Illuminate\\Foo;\n\nabstract class Base {}\n",
+      "Shape.php": "<?php\n\nnamespace Illuminate\\Foo;\n\ninterface Shape {}\n",
+      "Deep.php": "<?php\n\nnamespace Illuminate\\Foo;\n\nclass Deep\n{\n    public function z() { return Deeper::z(); }\n}\n",
+      "Deeper.php": "<?php\n\nnamespace Illuminate\\Foo;\n\nclass Deeper {}\n",
+      "Commented.php": "<?php\n\nnamespace Illuminate\\Foo;\n\nclass Commented {}\n",
+    };
+    for (const [rel, text] of Object.entries(fooFiles)) {
+      write(e3Root, `${fooSrc}/${rel}`, text);
+    }
+    const e3Probe = "packages/kid/tests/xaravel/kid.probe.php";
+    const kidProbeText = "<?php\n// use Illuminate\\Foo\\Commented;\nuse Illuminate\\Foo\\Api;\nuse Illuminate\\Foo\\Missing;\nuse Illuminate\\Foo\\{Grouped, Absent as Gone};\n\necho Api::run(), \\Illuminate\\Foo\\Other::y();\n";
+    write(e3Root, e3Probe, kidProbeText);
+    expect(probeSources(e3Root, e3Probe, kidProbeText).map((source) => [source.path.slice(fooSrc.length + 1), source.fqcn, source.via === null ? null : source.via.slice(fooSrc.length + 1)])).toEqual([
+      ["Api.php", "Illuminate\\Foo\\Api", null],
+      ["Grouped.php", "Illuminate\\Foo\\Grouped", null],
+      ["Other.php", "Illuminate\\Foo\\Other", null],
+      ["Support/Helper.php", "Illuminate\\Foo\\Support\\Helper", "Api.php"],
+      ["Worker.php", "Illuminate\\Foo\\Worker", "Api.php"],
+      ["Marker.php", "Illuminate\\Foo\\Marker", "Api.php"],
+      ["Base.php", "Illuminate\\Foo\\Base", "Other.php"],
+      ["Shape.php", "Illuminate\\Foo\\Shape", "Other.php"],
+      ["Deep.php", "Illuminate\\Foo\\Deep", "Other.php"],
+    ]);
+    const probeWhole = wholeFileEvidence(e3Root, e3Change(e3Probe), new Map(), 400_000);
+    expect(probeWhole.map((entry) => [entry.path, entry.reason])).toEqual([
+      [`${fooSrc}/Api.php`, `loaded by ${e3Probe}: the Upstream source of Illuminate\\Foo\\Api`],
+      [`${fooSrc}/Grouped.php`, `loaded by ${e3Probe}: the Upstream source of Illuminate\\Foo\\Grouped`],
+      [`${fooSrc}/Other.php`, `loaded by ${e3Probe}: the Upstream source of Illuminate\\Foo\\Other`],
+      [`${fooSrc}/Support/Helper.php`, `loaded by ${e3Probe}: the Upstream source of Illuminate\\Foo\\Support\\Helper, which ${fooSrc}/Api.php uses`],
+      [`${fooSrc}/Worker.php`, `loaded by ${e3Probe}: the Upstream source of Illuminate\\Foo\\Worker, which ${fooSrc}/Api.php uses`],
+      [`${fooSrc}/Marker.php`, `loaded by ${e3Probe}: the Upstream source of Illuminate\\Foo\\Marker, which ${fooSrc}/Api.php uses`],
+      [`${fooSrc}/Base.php`, `loaded by ${e3Probe}: the Upstream source of Illuminate\\Foo\\Base, which ${fooSrc}/Other.php uses`],
+      [`${fooSrc}/Shape.php`, `loaded by ${e3Probe}: the Upstream source of Illuminate\\Foo\\Shape, which ${fooSrc}/Other.php uses`],
+      [`${fooSrc}/Deep.php`, `loaded by ${e3Probe}: the Upstream source of Illuminate\\Foo\\Deep, which ${fooSrc}/Other.php uses`],
+      [e3Probe, "changed"],
+    ]);
+    expect(probeWhole[0]!.text).toBe(fooFiles["Api.php"]!);
+    // A probe outside the Story's scope, or a PHP file that is not a probe, brings nothing.
+    expect(wholeFileEvidence(e3Root, e3Change(e3Probe), new Map(), 400_000, () => false).map((entry) => entry.path)).toEqual([e3Probe]);
+    write(e3Root, "packages/kid/tests/xaravel/kid.php", kidProbeText);
+    expect(wholeFileEvidence(e3Root, e3Change("packages/kid/tests/xaravel/kid.php"), new Map(), 400_000).map((entry) => entry.path)).toEqual(["packages/kid/tests/xaravel/kid.php"]);
+    // The real case: XT-json-schema-2 replays Story 16.1's tests in a child bun test, and its probe runs Upstream's
+    // JsonSchema, Serializer and, through JsonSchema::fromArray, Deserializer.
+    const roundTrip = "packages/json-schema/tests/xaravel/round-trip.test.ts";
+    const roundTripProbe = "packages/json-schema/tests/xaravel/round-trip.probe.php";
+    const realChild = wholeFileEvidence(root, [roundTrip, roundTripProbe].map((filename) => ({ filename, status: "modified", patch: probePatch })), new Map(), 600_000);
+    const realPaths = realChild.map((entry) => entry.path);
+    const portedDir = "packages/json-schema/tests/ported/framework/tests/JsonSchema";
+    const story161Files = [...new Set(story161.testIds.map((id) => `${portedDir}/${/\\(\w+)::/.exec(id)![1]!}.test.ts`))].sort();
+    expect(story161Files).toContain(`${portedDir}/TypeTest.test.ts`);
+    for (const path of ["stories/16.1.md", ...story161Files, serializerTest]) {
+      expect(`${path}: ${realPaths.includes(path)}`).toBe(`${path}: true`);
+    }
+    expect(realChild.find((entry) => entry.path === serializerTest)!.reason).toBe(`run by ${roundTrip} in a child bun test, selected by stories/16.1.md`);
+    for (const name of ["JsonSchema", "Serializer", "Deserializer"]) {
+      const path = `conformance/upstream/framework/src/Illuminate/JsonSchema/${name}.php`;
+      expect(realChild.find((entry) => entry.path === path)!.reason).toStartWith(`loaded by ${roundTripProbe}: the Upstream source of Illuminate\\JsonSchema\\${name}`);
+      expect(realChild.find((entry) => entry.path === path)!.text).toBe(read(path));
+    }
     const filled = withWholeFiles(root, { ...promptBase, evidence: { ...NO_EVIDENCE, decisions: gatherEvidence(root, registryPatch(registryPath), none).decisions } });
     expect(filled.evidence.wholeFiles.find((item) => item.path === "decisions/ESC-9.4-1.md")!.note).toBe("shown in full above, in (f)");
     const wholeUser = buildPrompt(filled).user;
