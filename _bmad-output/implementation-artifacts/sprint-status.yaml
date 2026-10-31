@@ -174,7 +174,7 @@ development_status:
   epic-15-retrospective: done
 
   epic-16: in-progress
-  16-1-schema-types-and-serializer: in-progress  # ESC-16.1-4 (two UnionTypeTest IDs moved to 16.2), -5 (ajv multipleOfPrecision 12) and -6 (8 additions, DIV-12.22) approved by the Maintainer; finish row #37 and the gate, then close the Story
+  16-1-schema-types-and-serializer: done
   16-2-schema-deserializer: backlog
   epic-16-retrospective: optional
 
