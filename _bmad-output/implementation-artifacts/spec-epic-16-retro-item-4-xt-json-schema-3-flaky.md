@@ -2,9 +2,9 @@
 title: 'Epic 16 retro item 4: settle XT-json-schema-3 flakiness'
 type: bugfix
 created: '2026-10-31'
-status: in-review
+status: done
 baseline_revision: 376d85d1eadddcad03032d734f754404e3d462c0
-review_loop_iteration: 0
+review_loop_iteration: 1
 followup_review_recommended: false
 context:
   - /Users/ea/repos/xaravel/AGENTS.md
@@ -43,7 +43,7 @@ deferred: []
 **Execution:**
 - [x] Collect three full harness results with concurrent typecheck and lint, retain all output, and record exact revision and summaries here.
 - [x] On inconsistent XT-json-schema-3 results raise the flaky Escalation on story/16.2 and record the pending ruling. Otherwise bound the child checks in packages/json-schema/tests/xaravel/epic-close.test.ts, using existing exported functions where possible while retaining every assertion.
-- [ ] Run relevant checks and, for code changes, full harness, typecheck, lint and current item Fidelity Review before merge. The parent handles sprint status, branch routing and PRs.
+- [x] Run relevant checks and, for code changes, full harness, typecheck, lint and current item Fidelity Review before merge. The parent handles sprint status, branch routing and PRs.
 
 **Acceptance Criteria:**
 - Given the unchanged baseline, when three full harness runs execute each with concurrent typecheck and lint, then all results and failures are retained and XT-json-schema-3's consistency is recorded.
@@ -53,6 +53,16 @@ deferred: []
 ## Spec Change Log
 
 ## Review Triage Log
+
+### 2026-10-31 — Review pass 3
+- verdicts: 0 findings — high 0, medium 0, low 0, false 0, maybe-false 0
+- Final Fidelity review: both reviewers passed tree `ce202be4b537eceb0de18a39bb332e5fee7b6805`; status prints `current`. Evidence-only #605 resolved all four first-pass evidence findings. The loaded post-change run resolved the remaining medium finding. No deferred findings remain.
+
+
+### 2026-10-31 — Review pass 2
+- verdicts: 0 findings — high 0, medium 0, low 0, false 0, maybe-false 0
+- Fidelity reviewer 1 (Claude) and reviewer 2 (Codex) both passed tree `0452a94282680e2db8ac3fe37f69ea98fc3b1b9d`. Finalize found the binding stale because the retrospective execution record changed during the run. That record is now finalized; rerun this layer for the final tree with no concurrent bound-file edits. No package code changed and no reject was bypassed.
+
 
 ### 2026-10-31 — Review pass 1
 - verdicts: 12 findings — high 0, medium 5, low 0, false 7, maybe-false 0
@@ -91,7 +101,7 @@ The test now runs the complete API surface CLI gate once with the existing 120-s
 - `bun run lint`: exit 0, `lint disables: ok (1065 files)`.
 - `git diff --check`: exit 0.
 - Final `bun run harness`: exit 0, `XARAVEL tests=546 passed=541 failed=0 skipped=5`; `SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0`. Full output retained in orchestrator state `tmp/retro16-item4-final-harness.log`.
-- Current item Fidelity Review remains pending before merge.
+- Current item Fidelity Review: two pass verdicts at tree `ce202be4b537eceb0de18a39bb332e5fee7b6805`; status prints `current`.
 
 ## Fidelity Review
 
@@ -147,8 +157,134 @@ Findings:
 {"kind":"fidelity-verdict","reviewer":2,"verdict":"reject","tree":"26e7e5574a343a9b5accb4b2c74b26b821b7eef6","base":"376d85d1eadddcad03032d734f754404e3d462c0","cli":"codex","model":"gpt-6.1-sol","loop_cli":"codex","fallback":null,"date":"2026-10-31T23:52:51.322Z","items":[{"id":"F-1","result":"n/a","note":"The change modifies one Xaravel Test and no Ported Test; no Upstream assertion mapping applies.","findings":[]},{"id":"F-2","result":"fail","note":"The gate assertions retain their expected values, but equivalence of the replaced async-surface CLI check cannot be confirmed from the supplied sources.","findings":[{"path":"packages/json-schema/tests/xaravel/epic-close.test.ts","detail":"Supply tools/async-surface/async-surface.ts and tools/lint-rules/thenables.ts, including the former CLI check path, so the new in-process check can be compared with the removed command for preserved validation and failure conditions.","kind":"missing-evidence"}]},{"id":"F-3","result":"n/a","note":"No Ported Test changes, so there are no Upstream assertions whose removal requires a DIV clause.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is added or changed to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"The change adds no adapted assertion marker or Expectations adapted field.","findings":[]},{"id":"F-6","result":"n/a","note":"The action item relies on no Oracle error fixture.","findings":[]},{"id":"F-7","result":"fail","note":"The supplied test body checks the declared documentation, dependency, license and gate conditions, but the new async-surface verification depends on omitted implementations.","findings":[{"path":"packages/json-schema/tests/xaravel/epic-close.test.ts","detail":"Provide the implementations of packageDeclarations, surfaceOf, thenableTypes, render, diff and registeredFqcn from the dynamically imported tools. Their asserted signatures alone do not establish that the test verifies current emitted async surface and qualified thenable resolution as AD-6.13 requires.","kind":"missing-evidence"}]},{"id":"F-8","result":"pass","note":"The sole changed file is within the assigned json-schema component's tests; it reuses repository tools and introduces no implementation of another component.","findings":[]},{"id":"F-9","result":"n/a","note":"No framework source file or @asyncRoot tag changes; the async test callback is outside the framework API check.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file changes.","findings":[]}],"prior":[]}
 ```
 
+### Reviewer 1: pass at tree 0452a94282680e2db8ac3fe37f69ea98fc3b1b9d
+
+Reviewed by `claude` (model `claude-sonnet-5-5`) for a `codex` loop, against base `376d85d1eadddcad03032d734f754404e3d462c0`, on 2026-11-01T00:04:43.603Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | No Ported Test is changed; the change touches only an Xaravel Test. |
+| F-2: No expected value is weakened | pass | No expected value changed. The async-surface check now runs in-process with the same pieces as the CLI --check path: thenableTypes(root), packageDeclarations, surfaceOf with registeredFqcn resolved from the package file, then render and diff against the committed file. It fails on errors or drift, as the CLI does. The gate assertions are kept unchanged. |
+| F-3: No assertion is removed without a DIV clause | pass | No assertion is removed. The gate's exit-code and 'zero unexplained' assertions are moved earlier, and the async check keeps its assertion. The CLI's tsc -b step is not repeated, but api-surface:gate runs emitDeclarations for json-schema first and fails if it fails, so the declarations are fresh. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line is added. |
+| F-5: Every `adapted` marker matches its clause | n/a | No adapted marker or DIV clause is added. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | No Oracle fixture is relied on. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | The body still checks everything its consequence string declares, including AD-6.13 (committed and current async-surface). The tool sources are now shown, and surfaceOf, diff, render and registeredFqcn match the CLI check path. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The change is only in the json-schema test. It adds no stub or fake of another Component. |
+| F-9: Every `@asyncRoot` tag is true | n/a | No packages/*/src file is changed and no @​asyncRoot tag is added. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file is changed. |
+
+Findings:
+
+None.
+
+Findings of the latest reject, addressed (ESC-8.8-1):
+
+- **P-1** (reviewer 1, F-2) `tools/async-surface/async-surface.ts`: The '--check' code path is not shown. Cannot confirm that 'surfaceOf', 'diff', 'render' and the 'registeredFqcn' resolver, called in-process, reproduce what the CLI check enforces (missing tags, errors, drift). Supply the file and 'tools/lint-rules/thenables.ts' so the equivalence can be checked. **fixed**: async-surface.ts, including main's --check path, and thenables.ts are now in the prompt. The in-process call matches the CLI: same thenableTypes, packageDeclarations, surfaceOf, resolver, render and diff.
+- **P-2** (reviewer 1, F-3) `tools/async-surface/async-surface.ts`: The CLI '--check' main is not shown, so I cannot confirm that no check it ran (for example a separate error class or a thenable line check) is dropped from the in-process version. **fixed**: The CLI main is shown. Its checks are errors from surfaceOf, then drift against the committed file (a missing file counts as []). The test covers both; the file's existence is asserted separately. The tsc step is covered by the gate.
+- **P-3** (reviewer 2, F-2) `packages/json-schema/tests/xaravel/epic-close.test.ts`: Supply tools/async-surface/async-surface.ts and tools/lint-rules/thenables.ts, including the former CLI check path, so the new in-process check can be compared with the removed command for preserved validation and failure conditions. **fixed**: The tool sources are supplied. The new check preserves the failure conditions of the removed command: errors and drift fail the test.
+- **P-4** (reviewer 2, F-7) `packages/json-schema/tests/xaravel/epic-close.test.ts`: Provide the implementations of packageDeclarations, surfaceOf, thenableTypes, render, diff and registeredFqcn from the dynamically imported tools. Their asserted signatures alone do not establish that the test verifies current emitted async surface and qualified thenable resolution as AD-6.13 requires. **fixed**: The implementations of packageDeclarations, surfaceOf, thenableTypes, render, diff and registeredFqcn are shown. They read the freshly emitted .d.ts and resolve thenables by qualified name, as AD-6.13 requires.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"0452a94282680e2db8ac3fe37f69ea98fc3b1b9d","base":"376d85d1eadddcad03032d734f754404e3d462c0","cli":"claude","model":"claude-sonnet-5-5","loop_cli":"codex","fallback":null,"date":"2026-11-01T00:04:43.603Z","items":[{"id":"F-1","result":"n/a","note":"No Ported Test is changed; the change touches only an Xaravel Test.","findings":[]},{"id":"F-2","result":"pass","note":"No expected value changed. The async-surface check now runs in-process with the same pieces as the CLI --check path: thenableTypes(root), packageDeclarations, surfaceOf with registeredFqcn resolved from the package file, then render and diff against the committed file. It fails on errors or drift, as the CLI does. The gate assertions are kept unchanged.","findings":[]},{"id":"F-3","result":"pass","note":"No assertion is removed. The gate's exit-code and 'zero unexplained' assertions are moved earlier, and the async check keeps its assertion. The CLI's tsc -b step is not repeated, but api-surface:gate runs emitDeclarations for json-schema first and fails if it fails, so the declarations are fresh.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is added.","findings":[]},{"id":"F-5","result":"n/a","note":"No adapted marker or DIV clause is added.","findings":[]},{"id":"F-6","result":"n/a","note":"No Oracle fixture is relied on.","findings":[]},{"id":"F-7","result":"pass","note":"The body still checks everything its consequence string declares, including AD-6.13 (committed and current async-surface). The tool sources are now shown, and surfaceOf, diff, render and registeredFqcn match the CLI check path.","findings":[]},{"id":"F-8","result":"pass","note":"The change is only in the json-schema test. It adds no stub or fake of another Component.","findings":[]},{"id":"F-9","result":"n/a","note":"No packages/*/src file is changed and no @asyncRoot tag is added.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file is changed.","findings":[]}],"prior":[{"id":"P-1","reviewer":1,"item":"F-2","path":"tools/async-surface/async-surface.ts","detail":"The `--check` code path is not shown. Cannot confirm that `surfaceOf`, `diff`, `render` and the `registeredFqcn` resolver, called in-process, reproduce what the CLI check enforces (missing tags, errors, drift). Supply the file and `tools/lint-rules/thenables.ts` so the equivalence can be checked.","fixed":true,"note":"async-surface.ts, including main's --check path, and thenables.ts are now in the prompt. The in-process call matches the CLI: same thenableTypes, packageDeclarations, surfaceOf, resolver, render and diff."},{"id":"P-2","reviewer":1,"item":"F-3","path":"tools/async-surface/async-surface.ts","detail":"The CLI `--check` main is not shown, so I cannot confirm that no check it ran (for example a separate error class or a thenable line check) is dropped from the in-process version.","fixed":true,"note":"The CLI main is shown. Its checks are errors from surfaceOf, then drift against the committed file (a missing file counts as []). The test covers both; the file's existence is asserted separately. The tsc step is covered by the gate."},{"id":"P-3","reviewer":2,"item":"F-2","path":"packages/json-schema/tests/xaravel/epic-close.test.ts","detail":"Supply tools/async-surface/async-surface.ts and tools/lint-rules/thenables.ts, including the former CLI check path, so the new in-process check can be compared with the removed command for preserved validation and failure conditions.","fixed":true,"note":"The tool sources are supplied. The new check preserves the failure conditions of the removed command: errors and drift fail the test."},{"id":"P-4","reviewer":2,"item":"F-7","path":"packages/json-schema/tests/xaravel/epic-close.test.ts","detail":"Provide the implementations of packageDeclarations, surfaceOf, thenableTypes, render, diff and registeredFqcn from the dynamically imported tools. Their asserted signatures alone do not establish that the test verifies current emitted async surface and qualified thenable resolution as AD-6.13 requires.","fixed":true,"note":"The implementations of packageDeclarations, surfaceOf, thenableTypes, render, diff and registeredFqcn are shown. They read the freshly emitted .d.ts and resolve thenables by qualified name, as AD-6.13 requires."}]}
+```
+
+### Reviewer 2: pass at tree 0452a94282680e2db8ac3fe37f69ea98fc3b1b9d
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `codex` loop, against base `376d85d1eadddcad03032d734f754404e3d462c0`, on 2026-11-01T00:04:43.603Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | No Ported Test is added or changed. |
+| F-2: No expected value is weakened | pass | Compared the removed CLI check with its supplied implementation: the replacement preserves missing-tag, malformed-tag, overload, thenable and drift failures. The unchanged API gate emits declarations first and retains both assertions. |
+| F-3: No assertion is removed without a DIV clause | pass | Compared the diff and CLI failure conditions: the API assertions are relocated, and the async check retains every validation through the same tool functions. No assertion is dropped. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line is set to skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | No assertion adaptation marker or Expectations adapted field is changed. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The action item relies on no Oracle error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | Compared XT-json-schema-3 with its consequence and cited AD bullets. Its checks cover the declared package requirements; the supplied tool bodies establish fresh declaration generation, qualified thenable resolution, surface validation and drift detection. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The scoped change modifies only the json-schema test and reuses existing repository tools; it introduces no implementation of another Component. |
+| F-9: Every `@asyncRoot` tag is true | n/a | No framework source file or @​asyncRoot tag is changed or retained in a touched source file. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file is changed. |
+
+Findings:
+
+None.
+
+Findings of the latest reject, addressed (ESC-8.8-1):
+
+- **P-1** (reviewer 1, F-2) `tools/async-surface/async-surface.ts`: The '--check' code path is not shown. Cannot confirm that 'surfaceOf', 'diff', 'render' and the 'registeredFqcn' resolver, called in-process, reproduce what the CLI check enforces (missing tags, errors, drift). Supply the file and 'tools/lint-rules/thenables.ts' so the equivalence can be checked. **fixed**: Both requested tool files are supplied. The in-process calls preserve the CLI's surface errors and drift checks, using declarations freshly emitted by the API gate.
+- **P-2** (reviewer 1, F-3) `tools/async-surface/async-surface.ts`: The CLI '--check' main is not shown, so I cannot confirm that no check it ran (for example a separate error class or a thenable line check) is dropped from the in-process version. **fixed**: The supplied CLI main shows no additional surface or thenable validation omitted by the replacement.
+- **P-3** (reviewer 2, F-2) `packages/json-schema/tests/xaravel/epic-close.test.ts`: Supply tools/async-surface/async-surface.ts and tools/lint-rules/thenables.ts, including the former CLI check path, so the new in-process check can be compared with the removed command for preserved validation and failure conditions. **fixed**: Compared the supplied CLI check path and resolver with the replacement; validation and failure conditions are preserved.
+- **P-4** (reviewer 2, F-7) `packages/json-schema/tests/xaravel/epic-close.test.ts`: Provide the implementations of packageDeclarations, surfaceOf, thenableTypes, render, diff and registeredFqcn from the dynamically imported tools. Their asserted signatures alone do not establish that the test verifies current emitted async surface and qualified thenable resolution as AD-6.13 requires. **fixed**: All requested function implementations are supplied and establish emitted declaration reading, qualified thenable resolution, surface validation, rendering and drift comparison.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"0452a94282680e2db8ac3fe37f69ea98fc3b1b9d","base":"376d85d1eadddcad03032d734f754404e3d462c0","cli":"codex","model":"gpt-6.1-sol","loop_cli":"codex","fallback":null,"date":"2026-11-01T00:04:43.603Z","items":[{"id":"F-1","result":"n/a","note":"No Ported Test is added or changed.","findings":[]},{"id":"F-2","result":"pass","note":"Compared the removed CLI check with its supplied implementation: the replacement preserves missing-tag, malformed-tag, overload, thenable and drift failures. The unchanged API gate emits declarations first and retains both assertions.","findings":[]},{"id":"F-3","result":"pass","note":"Compared the diff and CLI failure conditions: the API assertions are relocated, and the async check retains every validation through the same tool functions. No assertion is dropped.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is set to skip.","findings":[]},{"id":"F-5","result":"n/a","note":"No assertion adaptation marker or Expectations adapted field is changed.","findings":[]},{"id":"F-6","result":"n/a","note":"The action item relies on no Oracle error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"Compared XT-json-schema-3 with its consequence and cited AD bullets. Its checks cover the declared package requirements; the supplied tool bodies establish fresh declaration generation, qualified thenable resolution, surface validation and drift detection.","findings":[]},{"id":"F-8","result":"pass","note":"The scoped change modifies only the json-schema test and reuses existing repository tools; it introduces no implementation of another Component.","findings":[]},{"id":"F-9","result":"n/a","note":"No framework source file or @asyncRoot tag is changed or retained in a touched source file.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file is changed.","findings":[]}],"prior":[{"id":"P-1","reviewer":1,"item":"F-2","path":"tools/async-surface/async-surface.ts","detail":"The `--check` code path is not shown. Cannot confirm that `surfaceOf`, `diff`, `render` and the `registeredFqcn` resolver, called in-process, reproduce what the CLI check enforces (missing tags, errors, drift). Supply the file and `tools/lint-rules/thenables.ts` so the equivalence can be checked.","fixed":true,"note":"Both requested tool files are supplied. The in-process calls preserve the CLI's surface errors and drift checks, using declarations freshly emitted by the API gate."},{"id":"P-2","reviewer":1,"item":"F-3","path":"tools/async-surface/async-surface.ts","detail":"The CLI `--check` main is not shown, so I cannot confirm that no check it ran (for example a separate error class or a thenable line check) is dropped from the in-process version.","fixed":true,"note":"The supplied CLI main shows no additional surface or thenable validation omitted by the replacement."},{"id":"P-3","reviewer":2,"item":"F-2","path":"packages/json-schema/tests/xaravel/epic-close.test.ts","detail":"Supply tools/async-surface/async-surface.ts and tools/lint-rules/thenables.ts, including the former CLI check path, so the new in-process check can be compared with the removed command for preserved validation and failure conditions.","fixed":true,"note":"Compared the supplied CLI check path and resolver with the replacement; validation and failure conditions are preserved."},{"id":"P-4","reviewer":2,"item":"F-7","path":"packages/json-schema/tests/xaravel/epic-close.test.ts","detail":"Provide the implementations of packageDeclarations, surfaceOf, thenableTypes, render, diff and registeredFqcn from the dynamically imported tools. Their asserted signatures alone do not establish that the test verifies current emitted async surface and qualified thenable resolution as AD-6.13 requires.","fixed":true,"note":"All requested function implementations are supplied and establish emitted declaration reading, qualified thenable resolution, surface validation, rendering and drift comparison."}]}
+```
+
+### Reviewer 1: pass at tree ce202be4b537eceb0de18a39bb332e5fee7b6805
+
+Reviewed by `claude` (model `claude-sonnet-5-5`) for a `codex` loop, against base `376d85d1eadddcad03032d734f754404e3d462c0`, on 2026-11-01T00:05:21.878Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | No Ported Test changed; only an Xaravel Test (XT-json-schema-3). |
+| F-2: No expected value is weakened | pass | Compared old and new XT-json-schema-3 assertions: the gate exit code and the 'zero unexplained' assertions are kept unchanged, just moved earlier. The async check keeps assertSame(0, ...) with the same drift/errors logic. Nothing is weakened. |
+| F-3: No assertion is removed without a DIV clause | pass | Every assertion in the old test has a counterpart. The async-surface --check child is replaced by an in-process surfaceOf/diff/render check with equivalent error and drift semantics. The gate assertions are kept. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | No Expectations line is added. |
+| F-5: Every `adapted` marker matches its clause | n/a | No adapted marker is added. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | No Oracle fixture is involved. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | The consequence string is unchanged and the body still checks all its parts. The cited AD-6.13 (async-surface current) is still verified in-process. The AD-2.x checks are untouched. |
+| F-8: No stub, fake or partial implementation of another Component | pass | Only the json-schema package's own test changes. It imports repository tools but adds no stub or fake of another Component. |
+| F-9: Every `@asyncRoot` tag is true | n/a | No packages/*/src file is touched and no @​asyncRoot tag is added. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file is changed. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"ce202be4b537eceb0de18a39bb332e5fee7b6805","base":"376d85d1eadddcad03032d734f754404e3d462c0","cli":"claude","model":"claude-sonnet-5-5","loop_cli":"codex","fallback":null,"date":"2026-11-01T00:05:21.878Z","items":[{"id":"F-1","result":"n/a","note":"No Ported Test changed; only an Xaravel Test (XT-json-schema-3).","findings":[]},{"id":"F-2","result":"pass","note":"Compared old and new XT-json-schema-3 assertions: the gate exit code and the 'zero unexplained' assertions are kept unchanged, just moved earlier. The async check keeps assertSame(0, ...) with the same drift/errors logic. Nothing is weakened.","findings":[]},{"id":"F-3","result":"pass","note":"Every assertion in the old test has a counterpart. The async-surface --check child is replaced by an in-process surfaceOf/diff/render check with equivalent error and drift semantics. The gate assertions are kept.","findings":[]},{"id":"F-4","result":"n/a","note":"No Expectations line is added.","findings":[]},{"id":"F-5","result":"n/a","note":"No adapted marker is added.","findings":[]},{"id":"F-6","result":"n/a","note":"No Oracle fixture is involved.","findings":[]},{"id":"F-7","result":"pass","note":"The consequence string is unchanged and the body still checks all its parts. The cited AD-6.13 (async-surface current) is still verified in-process. The AD-2.x checks are untouched.","findings":[]},{"id":"F-8","result":"pass","note":"Only the json-schema package's own test changes. It imports repository tools but adds no stub or fake of another Component.","findings":[]},{"id":"F-9","result":"n/a","note":"No packages/*/src file is touched and no @asyncRoot tag is added.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file is changed.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: pass at tree ce202be4b537eceb0de18a39bb332e5fee7b6805
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `codex` loop, against base `376d85d1eadddcad03032d734f754404e3d462c0`, on 2026-11-01T00:05:21.878Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | No Ported Test is added or changed; the modified test is XT-json-schema-3. |
+| F-2: No expected value is weakened | pass | The diff preserves expected values and comparison strength. The replacement async-surface check still requires zero errors and zero drift, using the same generator functions after the API gate emits declarations. |
+| F-3: No assertion is removed without a DIV clause | pass | No assertion is dropped: the API gate assertions move earlier, and the async-surface exit-code assertion is replaced by an equivalent zero-errors-and-drift assertion. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change adds or modifies no Expectations skip line. |
+| F-5: Every `adapted` marker matches its clause | n/a | The change contains no assertion adaptation marker or Expectations adapted field. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The item relies on no Oracle error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | XT-json-schema-3 retains checks for its declared documentation, dependency, licensing, API, and Expectations consequences. Its in-process async check follows the supplied CLI's surface generation, resolver, error, and drift logic; the cited AD bullets match the checks. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The sole scoped change is a json-schema test that reuses existing repository tools; it introduces no other Component's implementation or fake behavior. |
+| F-9: Every `@asyncRoot` tag is true | n/a | No framework source file or @​asyncRoot tag is changed or retained in a touched source file; the new async callback is a test body. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file is changed. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"ce202be4b537eceb0de18a39bb332e5fee7b6805","base":"376d85d1eadddcad03032d734f754404e3d462c0","cli":"codex","model":"gpt-6.1-sol","loop_cli":"codex","fallback":null,"date":"2026-11-01T00:05:21.878Z","items":[{"id":"F-1","result":"n/a","note":"No Ported Test is added or changed; the modified test is XT-json-schema-3.","findings":[]},{"id":"F-2","result":"pass","note":"The diff preserves expected values and comparison strength. The replacement async-surface check still requires zero errors and zero drift, using the same generator functions after the API gate emits declarations.","findings":[]},{"id":"F-3","result":"pass","note":"No assertion is dropped: the API gate assertions move earlier, and the async-surface exit-code assertion is replaced by an equivalent zero-errors-and-drift assertion.","findings":[]},{"id":"F-4","result":"n/a","note":"The change adds or modifies no Expectations skip line.","findings":[]},{"id":"F-5","result":"n/a","note":"The change contains no assertion adaptation marker or Expectations adapted field.","findings":[]},{"id":"F-6","result":"n/a","note":"The item relies on no Oracle error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"XT-json-schema-3 retains checks for its declared documentation, dependency, licensing, API, and Expectations consequences. Its in-process async check follows the supplied CLI's surface generation, resolver, error, and drift logic; the cited AD bullets match the checks.","findings":[]},{"id":"F-8","result":"pass","note":"The sole scoped change is a json-schema test that reuses existing repository tools; it introduces no other Component's implementation or fake behavior.","findings":[]},{"id":"F-9","result":"n/a","note":"No framework source file or @asyncRoot tag is changed or retained in a touched source file; the new async callback is a test body.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file is changed.","findings":[]}],"prior":[]}
+```
+
 ## Post-change loaded verification
 
 The additional full harness with concurrent typecheck and lint passed: all three commands exited 0; `XARAVEL tests=546 passed=541 failed=0 skipped=5`, `SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0`. Complete logs are retained in orchestrator state `tmp/retro16-item4-postchange-loaded/{harness,typecheck,lint}.log`. This resolves the review request for direct loaded verification of the changed implementation.
 
 Evidence-only followup PR #605 targets the first Fidelity reject tree `26e7e5574a343a9b5accb4b2c74b26b821b7eef6`; it includes nested dynamic tool imports in prompt evidence without changing checks or verdict rules, under the 2026-10-22 Missing evidence amendment. The item must rerun Fidelity after that PR merges.
+
+## Auto Run Result
+
+Status: done.
+
+XT-json-schema-3 passed all three unchanged-baseline loaded reproductions, so no flaky Escalation was raised. It now runs the complete API gate once in a bounded child and reuses freshly emitted declarations for its in-process async check. All previous assertion meanings remain; no Expectations or package runtime behavior changed.
+
+Files changed: `packages/json-schema/tests/xaravel/epic-close.test.ts` implements the check refactor; the Epic 16 retrospective records reproduction and evidence repair; this spec records implementation, all reviews and verification; sprint status completes only this action item. Evidence fix #605 was separately reviewed by its regression cases and merged under the authorized Missing evidence route.
+
+Review findings: 12 first-pass findings, 5 medium and 7 false. Two medium groups were resolved: direct loaded verification, and the four Fidelity source omissions through #605. Every rejected finding and its refutation appears in the triage log. Edge-case and verification-gap layers found none; final Fidelity found none. No deferred items. Follow-up review recommended: false; both resolved groups have direct verification and no specific unverified implementation risk remains.
+
+Verification: three baseline full harnesses with concurrent typecheck/lint; targeted XT-json-schema-3; full post-change harness; an additional loaded post-change harness; typecheck; lint; diff whitespace; and two current Fidelity passes. Every retained full harness reported `checked=21817 differ=0`, with `541` Xaravel passes and `5` existing skips. Seven unavailable backend Variants were NOT-RUN as permitted for local runs. The original failure cause remains unproved; reduced duplicate child work does not establish a historical cause or guarantee all future schedules.
