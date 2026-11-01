@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-31-2026 17:15
+last_updated: 10-31-2026 17:41
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -2566,5 +2566,5 @@ action_items:
       8.5.11 results; no other runtime behaviour changes. Its PR takes epic-16-retro-item-1-callstatic-and-ref-utf8
       out of epic 16 waiting_on_maintainer"
     owner: "orchestrator"
-    status: open
+    status: in-progress
     ref: "decisions/MAINT-2026-10-31-epic-16-item-5.md"
