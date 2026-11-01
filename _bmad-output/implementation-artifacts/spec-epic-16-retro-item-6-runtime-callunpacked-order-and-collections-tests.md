@@ -2,7 +2,7 @@
 title: 'Runtime argument unpacking error order'
 type: bugfix
 created: '2026-10-31'
-status: done
+status: blocked
 baseline_revision: 5e89aeaee639147cf4406cb40b17dd9f0ea25eaf
 review_loop_iteration: 0
 followup_review_recommended: false
@@ -159,7 +159,11 @@ Findings:
 
 ## Auto Run Result
 
-Status: done.
+Status: blocked.
+
+Blocking condition: permission denied: elevated final-tree Fidelity Review. After updating retro-gates.yaml to release item 1, the bound tree changed and the prior review became stale. The sandboxed rerun timed out after 15 minutes and began a retry; those iteration-owned processes were stopped before requesting the same command outside the sandbox. Automatic approval review rejected the elevated command: repository diff/spec content might be sent to external CLI services, and it treated the transcript as insufficient authorization. No retry or workaround was attempted after denial.
+
+The verified implementation is preserved in `retro-16-item-6-callunpacked-attempt.patch`; package changes were reverted in place. Item 6 remains in-progress and waiting_on_maintainer; item 1 remains waiting. Maintainer action: resolve authorization for the required final-tree Fidelity Review, then resume this spec and saved patch. Earlier successful verification below applies to that saved implementation, not the documentation-only blocked record.
 
 Implemented the saved item 5 runtime change: both entry points reject unsupported named arguments immediately in iteration order. Added XT-runtime-152 and 13 executed PHP 8.5.11 evidence rows, preserving options diagnostics, positional order and lazy cleanup. Updated exactly the XT-collections-11/12 class/message assertion pairs to DIV-9.15 native TypeError. Existing runtime fixtures map PHP named-capable callbacks to options wrappers without changing expected results. Deleted the now-applied saved attempt patch.
 

@@ -1,0 +1,189 @@
+diff --git a/packages/collections/tests/xaravel/arr.test.ts b/packages/collections/tests/xaravel/arr.test.ts
+index 8cdee810..5e480625 100644
+--- a/packages/collections/tests/xaravel/arr.test.ts
++++ b/packages/collections/tests/xaravel/arr.test.ts
+@@ -959,8 +959,8 @@ fails(() => Arr.string({ key: null }, "key"), InvalidArgumentException,
+   Assert.assertSame(sparseSnapshot, sparse);
+   let unpackError: unknown = null;
+   try { Arr.mapSpread([{ named: "A" }], () => null); } catch (error) { unpackError = error; }
+-  Assert.assertInstanceOf(PhpError, unpackError);
+-  Assert.assertSame("Cannot use positional argument after named argument during unpacking", (unpackError as PhpError).getMessage());
++  Assert.assertInstanceOf(globalThis.TypeError, unpackError); // adapted:DIV-9.15
++  Assert.assertSame("callUnpacked(): named argument unpacking is untranslatable for a target without an options form (ESC-14.5-3)", (unpackError as Error).message); // adapted:DIV-9.15
+ 
+   let enumerations = 0;
+   let cleanup = 0;
+diff --git a/packages/collections/tests/xaravel/collections.test.ts b/packages/collections/tests/xaravel/collections.test.ts
+index 38ba9a4d..b744ca06 100644
+--- a/packages/collections/tests/xaravel/collections.test.ts
++++ b/packages/collections/tests/xaravel/collections.test.ts
+@@ -1377,8 +1377,8 @@ xaravelTest(
+       try {
+         make([2, 3]).reduceSpread((total: number, value: number) => { namedCalls.push([total, value]); return { total: total + value }; }, 0);
+       } catch (error) { namedFailure = error; }
+-      Assert.assertInstanceOf(PhpError, namedFailure);
+-      Assert.assertSame("Cannot use positional argument after named argument", (namedFailure as PhpError).getMessage());
++      Assert.assertInstanceOf(globalThis.TypeError, namedFailure); // adapted:DIV-9.15
++      Assert.assertSame("call_user_func_array(): named argument unpacking is untranslatable for a target without an options form (ESC-14.5-3)", (namedFailure as Error).message); // adapted:DIV-9.15
+       Assert.assertSame([[0, 2]], namedCalls);
+       const nested = [0];
+       const phpPair = new PhpArray<number, unknown>([[7, nested], [9, ["ignored"]]]);
+diff --git a/packages/runtime/src/php/callables.ts b/packages/runtime/src/php/callables.ts
+index 67c9a90c..363ec79e 100644
+--- a/packages/runtime/src/php/callables.ts
++++ b/packages/runtime/src/php/callables.ts
+@@ -146,6 +146,10 @@ function unpack(fn: string, callable: unknown, args: unknown): unknown {
+   for (const [key, value] of entries) {
+     if (typeof key !== "string" && !(typeof key === "bigint" && key >= INT_MIN && key <= INT_MAX) && !(typeof key === "number" && Number.isSafeInteger(key) && !Object.is(key, -0))) throw new PhpError("Keys must be of type int|string during argument unpacking");
+     if (typeof key === "string") {
++      // DIV-9.15; MAINT-2026-10-31-epic-16-item-5: reject in argument order.
++      if ((target as unknown as Record<symbol, unknown>)[OPTIONS] !== true) {
++        throw new TypeError(`${fn}(): named argument unpacking is untranslatable for a target without an options form (ESC-14.5-3)`);
++      }
+       if (Object.hasOwn(named, key)) throw new PhpError(`Named parameter $${key} overwrites previous argument`);
+       hasNamed = true;
+       Object.defineProperty(named, key, { value: valueCopy(value), enumerable: true, configurable: true });
+@@ -154,12 +158,7 @@ function unpack(fn: string, callable: unknown, args: unknown): unknown {
+       positional.push(valueCopy(value));
+     }
+   }
+-  if (hasNamed) {
+-    if ((target as unknown as Record<symbol, unknown>)[OPTIONS] !== true) {
+-      throw new TypeError(`${fn}(): named argument unpacking is untranslatable for a target without an options form (ESC-14.5-3)`);
+-    }
+-    positional.push(named);
+-  }
++  if (hasNamed) positional.push(named);
+   return target(...positional) ?? null;
+ }
+ 
+diff --git a/packages/runtime/tests/xaravel/php-callunpacked-order.probe.php b/packages/runtime/tests/xaravel/php-callunpacked-order.probe.php
+new file mode 100644
+index 00000000..3e760fa5
+--- /dev/null
++++ b/packages/runtime/tests/xaravel/php-callunpacked-order.probe.php
+@@ -0,0 +1,26 @@
++<?php
++// PHP 8.5.11 evidence for XT-runtime-152; run: php php-callunpacked-order.probe.php
++function attempt(callable $run): mixed {
++    try { return $run(); } catch (Throwable $error) { return get_class($error).': '.$error->getMessage(); }
++}
++function out(string $label, mixed $value): void { echo $label, "\t", json_encode($value, JSON_THROW_ON_ERROR), "\n"; }
++$plain = fn($value = null) => $value;
++$options = fn($value = null, ...$options) => [$value, $options];
++foreach (['callUnpacked', 'call_user_func_array'] as $entry) {
++    $invoke = $entry === 'callUnpacked' ? fn($target, $args) => $target(...$args) : fn($target, $args) => call_user_func_array($target, $args);
++    out("$entry.unsupported-first", attempt(fn() => $invoke($plain, ['a'=>1, 0=>2])));
++    out("$entry.unsupported-second", attempt(fn() => $invoke($plain, [0=>1, 'a'=>2])));
++    out("$entry.options", $invoke($options, [0=>1, 'limit'=>2]));
++    out("$entry.order", attempt(fn() => $invoke($options, ['limit'=>2, 0=>1])));
++    out("$entry.positional", $invoke(fn(...$values) => $values, [8=>'a', 3=>'b']));
++}
++out('callUnpacked.duplicate', attempt(fn() => $options(...(function(){ yield 'limit'=>1; yield 'limit'=>2; })())));
++out('callUnpacked.bad-key', attempt(fn() => $options(...(function(){ yield null=>1; })())));
++$log = [];
++$error = attempt(function() use ($plain, &$log) {
++    $plain(...(function() use (&$log) {
++        try { $log[]='start'; yield 'a'=>1; $log[]='later'; yield 0=>2; }
++        finally { $log[]='finally'; }
++    })());
++});
++out('callUnpacked.lazy', [$error, $log]);
+diff --git a/packages/runtime/tests/xaravel/php-callunpacked-order.probe.txt b/packages/runtime/tests/xaravel/php-callunpacked-order.probe.txt
+new file mode 100644
+index 00000000..dec04974
+--- /dev/null
++++ b/packages/runtime/tests/xaravel/php-callunpacked-order.probe.txt
+@@ -0,0 +1,13 @@
++callUnpacked.unsupported-first	"Error: Unknown named parameter $a"
++callUnpacked.unsupported-second	"Error: Unknown named parameter $a"
++callUnpacked.options	[1,{"limit":2}]
++callUnpacked.order	"Error: Cannot use positional argument after named argument during unpacking"
++callUnpacked.positional	["a","b"]
++call_user_func_array.unsupported-first	"Error: Unknown named parameter $a"
++call_user_func_array.unsupported-second	"Error: Unknown named parameter $a"
++call_user_func_array.options	[1,{"limit":2}]
++call_user_func_array.order	"Error: Cannot use positional argument after named argument"
++call_user_func_array.positional	["a","b"]
++callUnpacked.duplicate	"Error: Named parameter $limit overwrites previous argument"
++callUnpacked.bad-key	"Error: Keys must be of type int|string during argument unpacking"
++callUnpacked.lazy	["Error: Unknown named parameter $a",["start","finally"]]
+diff --git a/packages/runtime/tests/xaravel/php-callunpacked-order.test.ts b/packages/runtime/tests/xaravel/php-callunpacked-order.test.ts
+new file mode 100644
+index 00000000..84788564
+--- /dev/null
++++ b/packages/runtime/tests/xaravel/php-callunpacked-order.test.ts
+@@ -0,0 +1,49 @@
++// Executed PHP 8.5.11 evidence; unsupported names adapt only under DIV-9.15.
++import { readFileSync } from "node:fs";
++import { Assert, xaravelTest } from "@xaravel/assert";
++import * as p from "@xaravel/runtime/php";
++import { fqcn } from "@xaravel/runtime/registry";
++
++const options = Object.assign((value: unknown = null, opts: unknown = []) => [value, opts], { [Symbol.for("xaravel.php.options")]: true });
++function attempt(run: () => unknown): unknown {
++  try { return run(); } catch (error) { return `${fqcn(error as object)}: ${(error as Error).message}`; }
++}
++function encode(value: unknown): string { return p.jsonEncode(value) as string; }
++function array(entries: [p.PhpKeyInput, unknown][]): p.PhpArray<p.PhpKeyInput, unknown> { return new p.PhpArray(entries); }
++
++xaravelTest("XT-runtime-152", "Unpacking rejects unsupported names in argument order and preserves options diagnostics against PHP 8.5.11", () => {
++  const records = new Map(readFileSync(`${import.meta.dir}/php-callunpacked-order.probe.txt`, "utf8").trim().split("\n").map((line) => {
++    const tab = line.indexOf("\t"); return [line.slice(0, tab), line.slice(tab + 1)];
++  }));
++  const checked = new Set<string>();
++  const check = (label: string, actual: unknown): void => { Assert.assertSame(records.get(label), encode(actual), label); checked.add(label); };
++  for (const [name, invoke] of [["callUnpacked", p.callUnpacked], ["call_user_func_array", p.call_user_func_array]] as const) {
++    for (const [suffix, entries] of [["first", [["a", 1], [0, 2]]], ["second", [[0, 1], ["a", 2]]]] as [string, [p.PhpKeyInput, unknown][]][]) {
++      const label = `${name}.unsupported-${suffix}`;
++      check(label, "Error: Unknown named parameter $a");
++      let caught: unknown = null;
++      let called = false;
++      try { invoke(() => { called = true; }, array(entries)); } catch (error) { caught = error; }
++      Assert.assertTrue(caught instanceof globalThis.TypeError); // adapted:DIV-9.15
++      Assert.assertSame(`${name}(): named argument unpacking is untranslatable for a target without an options form (ESC-14.5-3)`, (caught as Error).message); // adapted:DIV-9.15
++      Assert.assertFalse(called);
++    }
++    check(`${name}.options`, invoke(options, array([[0, 1], ["limit", 2]])));
++    check(`${name}.order`, attempt(() => invoke(options, array([["limit", 2], [0, 1]]))));
++    check(`${name}.positional`, invoke((...values: unknown[]) => values, array([[8, "a"], [3, "b"]])));
++  }
++  check("callUnpacked.duplicate", attempt(() => p.callUnpacked(options, p.Generator.owned((function* () { yield p.keyed("limit", 1); yield p.keyed("limit", 2); })()))));
++  check("callUnpacked.bad-key", attempt(() => p.callUnpacked(options, p.Generator.owned((function* () { yield p.keyed(null, 1); })()))));
++  const log: string[] = [];
++  let caught: unknown = null;
++  try {
++    p.callUnpacked(() => null, p.Generator.owned((function* () {
++      try { log.push("start"); yield p.keyed("a", 1); log.push("later"); yield p.keyed(0, 2); }
++      finally { log.push("finally"); }
++    })()));
++  } catch (error) { caught = error; }
++  check("callUnpacked.lazy", ["Error: Unknown named parameter $a", log]);
++  Assert.assertTrue(caught instanceof globalThis.TypeError); // adapted:DIV-9.15
++  Assert.assertSame("callUnpacked(): named argument unpacking is untranslatable for a target without an options form (ESC-14.5-3)", (caught as Error).message); // adapted:DIV-9.15
++  Assert.assertSame([...records.keys()].sort(), [...checked].sort(), "every PHP evidence label is checked");
++});
+diff --git a/packages/runtime/tests/xaravel/php-chunk-sort-arith-callables.test.ts b/packages/runtime/tests/xaravel/php-chunk-sort-arith-callables.test.ts
+index c55c08de..6977158d 100644
+--- a/packages/runtime/tests/xaravel/php-chunk-sort-arith-callables.test.ts
++++ b/packages/runtime/tests/xaravel/php-chunk-sort-arith-callables.test.ts
+@@ -110,7 +110,8 @@ const cases: Record<string, () => unknown> = {
+   callbacks: () => [p.array_map([new Child(), "METHOD"], [1, 2]), p.array_filter([0, 1], [new Invokable(), "__INVOKE"]), p.array_any([1], [fqcn(Child), "STAT"]), p.array_map(`${fqcn(Child)}::STAT`, [1])],
+   "callback.errors": () => [attempt(() => p.array_map(["Missing", "m"], [1])), attempt(() => p.array_map([fqcn(Child), "method"], [1])), attempt(() => p.array_map([1, "x"], [1])), attempt(() => p.array_map(["x"], [1])), attempt(() => p.call_user_func_array(42, [])), attempt(() => p.call_user_func_array("strtoupper", 1))],
+   append: () => { const input = new p.PhpArray<p.PhpKeyInput, unknown>([[5, "a"], ["x", "b"]]); input.delete(5); const ref = new p.Ref<unknown>(input); const value = { nested: [1] }; p.arrayAppend(ref, value); value.nested.push(2); return ref.value; },
+-  unpack: () => [p.call_user_func_array((a: unknown, b: unknown) => [a, b], new p.PhpArray<p.PhpKeyInput, unknown>([[5, "x"], [9, "y"]])), attempt(() => p.call_user_func_array("strtoupper", new p.PhpArray<p.PhpKeyInput, unknown>([["string", "x"], [0, "y"]])))],
++  // The options wrapper preserves the recorded PHP named parameter for the ordering check.
++  unpack: () => [p.call_user_func_array((a: unknown, b: unknown) => [a, b], new p.PhpArray<p.PhpKeyInput, unknown>([[5, "x"], [9, "y"]])), attempt(() => p.call_user_func_array(Object.assign((opts: { string: string }) => p.strtoupper(opts.string), { [Symbol.for("xaravel.php.options")]: true }), new p.PhpArray<p.PhpKeyInput, unknown>([["string", "x"], [0, "y"]])))],
+   locale: () => runInFrame("unit", () => [p.setlocale(p.LC_ALL, "C"), p.setlocale(p.LC_ALL, "0"), p.setlocale(p.LC_ALL, "POSIX"), p.setlocale(p.LC_ALL, "xaravel-missing-locale"), p.setlocale(p.LC_ALL, "0"), p.strcoll("ab", "a")]),
+   "generator.owned": () => { const log: string[] = []; for (const _ of p.Generator.owned(source(log))) break; return log; },
+   "generator.held": () => { const log: string[] = []; const g = new p.Generator(source(log)); for (const _ of g) break; const before = [...log]; g.next(); const during = [g.current(), [...log]]; g.next(); return [before, during, log]; },
+@@ -176,7 +177,8 @@ const cases: Record<string, () => unknown> = {
+   }),
+   "locale.variadic-errors": () => runInFrame("unit", () => [attempt(() => p.setlocale(p.LC_ALL, "missing", new p.stdClass())), attempt(() => p.setlocale(p.LC_ALL, "missing", "missing", new p.stdClass())), p.setlocale(p.LC_ALL, "missing", ["C"]), p.setlocale(p.LC_ALL, [], "C")]),
+   "subclass.custom": () => [p.is_subclass_of(new ContractImpl(), `${NS}\\CustomChild`), p.is_subclass_of(new ContractImpl(), `${NS}\\CustomParent`), p.is_subclass_of(ContractImpl, `${NS}\\CustomParent`), p.is_subclass_of(CustomChild, `${NS}\\CustomParent`), p.is_subclass_of(CustomParent, `${NS}\\CustomChild`), p.is_subclass_of(CustomChild, `${NS}\\CustomChild`), p.is_subclass_of(CustomChild, `${NS}\\CustomParent`, false)],
+-  "unpack.custom-traversable": () => [PairIterator, PairAggregate].flatMap((klass) => ([[[8, "a"], [3, "b"]], [[null, 1]], [["named", 1], [0, 2]]] as const).map((pairs) => attempt(() => p.callUnpacked((...values: unknown[]) => values, new klass(pairs))))),
++  // PHP's variadic target accepts named arguments; its JS mapping needs the options brand.
++  "unpack.custom-traversable": () => [PairIterator, PairAggregate].flatMap((klass) => ([[[8, "a"], [3, "b"]], [[null, 1]], [["named", 1], [0, 2]]] as const).map((pairs) => attempt(() => p.callUnpacked(Object.assign((...values: unknown[]) => values, { [Symbol.for("xaravel.php.options")]: true }), new klass(pairs))))),
+   "append.negative-index": () => ([[-5, false], [-5, true], [-1, true]] as const).map(([key, remove]) => {
+     const array = new p.PhpArray([[key, "old"]]); if (remove) array.delete(key);
+     const ref = new p.Ref<unknown>(array); p.arrayAppend(ref, "new"); p.arrayAppend(ref, "next"); return ref.value;

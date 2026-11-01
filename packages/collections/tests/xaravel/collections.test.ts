@@ -1377,8 +1377,8 @@ xaravelTest(
       try {
         make([2, 3]).reduceSpread((total: number, value: number) => { namedCalls.push([total, value]); return { total: total + value }; }, 0);
       } catch (error) { namedFailure = error; }
-      Assert.assertInstanceOf(globalThis.TypeError, namedFailure); // adapted:DIV-9.15
-      Assert.assertSame("call_user_func_array(): named argument unpacking is untranslatable for a target without an options form (ESC-14.5-3)", (namedFailure as Error).message); // adapted:DIV-9.15
+      Assert.assertInstanceOf(PhpError, namedFailure);
+      Assert.assertSame("Cannot use positional argument after named argument", (namedFailure as PhpError).getMessage());
       Assert.assertSame([[0, 2]], namedCalls);
       const nested = [0];
       const phpPair = new PhpArray<number, unknown>([[7, nested], [9, ["ignored"]]]);

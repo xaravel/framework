@@ -110,8 +110,7 @@ const cases: Record<string, () => unknown> = {
   callbacks: () => [p.array_map([new Child(), "METHOD"], [1, 2]), p.array_filter([0, 1], [new Invokable(), "__INVOKE"]), p.array_any([1], [fqcn(Child), "STAT"]), p.array_map(`${fqcn(Child)}::STAT`, [1])],
   "callback.errors": () => [attempt(() => p.array_map(["Missing", "m"], [1])), attempt(() => p.array_map([fqcn(Child), "method"], [1])), attempt(() => p.array_map([1, "x"], [1])), attempt(() => p.array_map(["x"], [1])), attempt(() => p.call_user_func_array(42, [])), attempt(() => p.call_user_func_array("strtoupper", 1))],
   append: () => { const input = new p.PhpArray<p.PhpKeyInput, unknown>([[5, "a"], ["x", "b"]]); input.delete(5); const ref = new p.Ref<unknown>(input); const value = { nested: [1] }; p.arrayAppend(ref, value); value.nested.push(2); return ref.value; },
-  // The options wrapper preserves the recorded PHP named parameter for the ordering check.
-  unpack: () => [p.call_user_func_array((a: unknown, b: unknown) => [a, b], new p.PhpArray<p.PhpKeyInput, unknown>([[5, "x"], [9, "y"]])), attempt(() => p.call_user_func_array(Object.assign((opts: { string: string }) => p.strtoupper(opts.string), { [Symbol.for("xaravel.php.options")]: true }), new p.PhpArray<p.PhpKeyInput, unknown>([["string", "x"], [0, "y"]])))],
+  unpack: () => [p.call_user_func_array((a: unknown, b: unknown) => [a, b], new p.PhpArray<p.PhpKeyInput, unknown>([[5, "x"], [9, "y"]])), attempt(() => p.call_user_func_array("strtoupper", new p.PhpArray<p.PhpKeyInput, unknown>([["string", "x"], [0, "y"]])))],
   locale: () => runInFrame("unit", () => [p.setlocale(p.LC_ALL, "C"), p.setlocale(p.LC_ALL, "0"), p.setlocale(p.LC_ALL, "POSIX"), p.setlocale(p.LC_ALL, "xaravel-missing-locale"), p.setlocale(p.LC_ALL, "0"), p.strcoll("ab", "a")]),
   "generator.owned": () => { const log: string[] = []; for (const _ of p.Generator.owned(source(log))) break; return log; },
   "generator.held": () => { const log: string[] = []; const g = new p.Generator(source(log)); for (const _ of g) break; const before = [...log]; g.next(); const during = [g.current(), [...log]]; g.next(); return [before, during, log]; },
@@ -177,8 +176,7 @@ const cases: Record<string, () => unknown> = {
   }),
   "locale.variadic-errors": () => runInFrame("unit", () => [attempt(() => p.setlocale(p.LC_ALL, "missing", new p.stdClass())), attempt(() => p.setlocale(p.LC_ALL, "missing", "missing", new p.stdClass())), p.setlocale(p.LC_ALL, "missing", ["C"]), p.setlocale(p.LC_ALL, [], "C")]),
   "subclass.custom": () => [p.is_subclass_of(new ContractImpl(), `${NS}\\CustomChild`), p.is_subclass_of(new ContractImpl(), `${NS}\\CustomParent`), p.is_subclass_of(ContractImpl, `${NS}\\CustomParent`), p.is_subclass_of(CustomChild, `${NS}\\CustomParent`), p.is_subclass_of(CustomParent, `${NS}\\CustomChild`), p.is_subclass_of(CustomChild, `${NS}\\CustomChild`), p.is_subclass_of(CustomChild, `${NS}\\CustomParent`, false)],
-  // PHP's variadic target accepts named arguments; its JS mapping needs the options brand.
-  "unpack.custom-traversable": () => [PairIterator, PairAggregate].flatMap((klass) => ([[[8, "a"], [3, "b"]], [[null, 1]], [["named", 1], [0, 2]]] as const).map((pairs) => attempt(() => p.callUnpacked(Object.assign((...values: unknown[]) => values, { [Symbol.for("xaravel.php.options")]: true }), new klass(pairs))))),
+  "unpack.custom-traversable": () => [PairIterator, PairAggregate].flatMap((klass) => ([[[8, "a"], [3, "b"]], [[null, 1]], [["named", 1], [0, 2]]] as const).map((pairs) => attempt(() => p.callUnpacked((...values: unknown[]) => values, new klass(pairs))))),
   "append.negative-index": () => ([[-5, false], [-5, true], [-1, true]] as const).map(([key, remove]) => {
     const array = new p.PhpArray([[key, "old"]]); if (remove) array.delete(key);
     const ref = new p.Ref<unknown>(array); p.arrayAppend(ref, "new"); p.arrayAppend(ref, "next"); return ref.value;
