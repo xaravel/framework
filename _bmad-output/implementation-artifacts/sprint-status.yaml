@@ -179,7 +179,7 @@ development_status:
   epic-16-retrospective: done
 
   epic-17: in-progress
-  17-1-binding-and-resolution-core: in-progress
+  17-1-binding-and-resolution-core: blocked  # ESC-17.1-1..3: consequence row, injection defaults/nullability and runtime reflection; planning intent gap
   17-2-contextual-binding-and-contextual-attributes: backlog
   17-3-calling-extending-tagging-and-resolving-hooks: backlog
   17-4-scoped-bindings-and-scope-frame-write-rules: backlog
