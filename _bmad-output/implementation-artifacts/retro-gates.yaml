@@ -130,4 +130,8 @@ epic-16:
   checkpoint_approved: false
   waiting_on_maintainer:
     - epic-16-retro-item-1-callstatic-and-ref-utf8
-    - epic-16-retro-item-5-runtime-callunpacked-order
+epic-17:
+  # No retrospective yet: this entry routes the monitor-ruled action item that waits on a ruling (step D).
+  # epic-17-item-1 (runtime Container reflection, ESC-17.1-3) waits on the Maintainer's ESC-17.1-2 ruling (parameter defaults and nullability).
+  waiting_on_maintainer:
+    - epic-17-item-1-runtime-container-reflection
