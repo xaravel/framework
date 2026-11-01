@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 10-16-2026 22:58
-last_updated: 10-31-2026 17:05
+last_updated: 10-31-2026 17:15
 project: xaravel
 project_key: NOKEY
 tracking_system: file-system
@@ -2553,3 +2553,18 @@ action_items:
     owner: "orchestrator"
     status: done
     ref: "_bmad-output/implementation-artifacts/epic-16-retro-2026-10-31.md"
+  - id: "epic-16-retro-item-5-runtime-callunpacked-order"
+    epic: 16
+    action: "In scope packages/runtime (decisions/MAINT-2026-10-31-epic-16-item-5.md):
+      in the shared unpack of callUnpacked and call_user_func_array (packages/runtime/src/php/callables.ts),
+      a string key whose target has no options form throws the ESC-14.5-3 TypeError
+      (DIV-9.15) as soon as it is reached in argument order, so a later positional
+      argument never reports a different error first, as PHP reports the unknown named
+      parameter first. A target with an options form keeps today handling, including
+      the positional-after-named, duplicate-name and key-type errors. XT-runtime cases
+      for {a: 1, 0: 2}, {0: 1, a: 2} and an options-form target against recorded PHP
+      8.5.11 results; no other runtime behaviour changes. Its PR takes epic-16-retro-item-1-callstatic-and-ref-utf8
+      out of epic 16 waiting_on_maintainer"
+    owner: "orchestrator"
+    status: open
+    ref: "decisions/MAINT-2026-10-31-epic-16-item-5.md"

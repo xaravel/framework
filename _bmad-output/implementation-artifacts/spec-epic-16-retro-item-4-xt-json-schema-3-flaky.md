@@ -271,6 +271,56 @@ None.
 {"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"ce202be4b537eceb0de18a39bb332e5fee7b6805","base":"376d85d1eadddcad03032d734f754404e3d462c0","cli":"codex","model":"gpt-6.1-sol","loop_cli":"codex","fallback":null,"date":"2026-11-01T00:05:21.878Z","items":[{"id":"F-1","result":"n/a","note":"No Ported Test is added or changed; the modified test is XT-json-schema-3.","findings":[]},{"id":"F-2","result":"pass","note":"The diff preserves expected values and comparison strength. The replacement async-surface check still requires zero errors and zero drift, using the same generator functions after the API gate emits declarations.","findings":[]},{"id":"F-3","result":"pass","note":"No assertion is dropped: the API gate assertions move earlier, and the async-surface exit-code assertion is replaced by an equivalent zero-errors-and-drift assertion.","findings":[]},{"id":"F-4","result":"n/a","note":"The change adds or modifies no Expectations skip line.","findings":[]},{"id":"F-5","result":"n/a","note":"The change contains no assertion adaptation marker or Expectations adapted field.","findings":[]},{"id":"F-6","result":"n/a","note":"The item relies on no Oracle error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"XT-json-schema-3 retains checks for its declared documentation, dependency, licensing, API, and Expectations consequences. Its in-process async check follows the supplied CLI's surface generation, resolver, error, and drift logic; the cited AD bullets match the checks.","findings":[]},{"id":"F-8","result":"pass","note":"The sole scoped change is a json-schema test that reuses existing repository tools; it introduces no other Component's implementation or fake behavior.","findings":[]},{"id":"F-9","result":"n/a","note":"No framework source file or @asyncRoot tag is changed or retained in a touched source file; the new async callback is a test body.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file is changed.","findings":[]}],"prior":[]}
 ```
 
+### Reviewer 1: pass at tree f727ae25c415efd37a3ad506b0fbae6e11a3e4f8
+
+Reviewed by `claude` (model `claude-sonnet-5-5`) for a `codex` loop, against base `376d85d1eadddcad03032d734f754404e3d462c0`, on 2026-11-01T00:15:53.704Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | No Ported Test is changed or added. The only change is to Xaravel Test XT-json-schema-3. |
+| F-2: No expected value is weakened | pass | No expected value changed. The async-surface check still expects zero errors and zero drift against the committed async-surface.json. The gate assertions (exit 0, '0 unexplained') are unchanged and only moved earlier in the test. |
+| F-3: No assertion is removed without a DIV clause | pass | Every assertion of the old test body is still present. The old async-surface exit-code assertion became an equivalent in-process assertion on the same errors and drift. The gate assertions were moved, not dropped. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change adds no Expectations line and no skip. |
+| F-5: Every `adapted` marker matches its clause | n/a | The added lines carry no adapted marker or DIV clause citation. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The change touches no Oracle fixture, and no assigned request has an error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | The consequence string is unchanged. The body still checks everything it claims, including async-surface.json being current (AD-6.13) and the API gate with zero unexplained. The change only runs the gate once and reuses the emitted declarations for the async check. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The change edits only packages/json-schema/tests. It adds no stub, fake or partial implementation of another Component. It calls the existing repository tools as they are. |
+| F-9: Every `@asyncRoot` tag is true | n/a | No packages/*/src file changes and no @​asyncRoot tag is added. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file changes. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":1,"verdict":"pass","tree":"f727ae25c415efd37a3ad506b0fbae6e11a3e4f8","base":"376d85d1eadddcad03032d734f754404e3d462c0","cli":"claude","model":"claude-sonnet-5-5","loop_cli":"codex","fallback":null,"date":"2026-11-01T00:15:53.704Z","items":[{"id":"F-1","result":"n/a","note":"No Ported Test is changed or added. The only change is to Xaravel Test XT-json-schema-3.","findings":[]},{"id":"F-2","result":"pass","note":"No expected value changed. The async-surface check still expects zero errors and zero drift against the committed async-surface.json. The gate assertions (exit 0, '0 unexplained') are unchanged and only moved earlier in the test.","findings":[]},{"id":"F-3","result":"pass","note":"Every assertion of the old test body is still present. The old async-surface exit-code assertion became an equivalent in-process assertion on the same errors and drift. The gate assertions were moved, not dropped.","findings":[]},{"id":"F-4","result":"n/a","note":"The change adds no Expectations line and no skip.","findings":[]},{"id":"F-5","result":"n/a","note":"The added lines carry no adapted marker or DIV clause citation.","findings":[]},{"id":"F-6","result":"n/a","note":"The change touches no Oracle fixture, and no assigned request has an error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"The consequence string is unchanged. The body still checks everything it claims, including async-surface.json being current (AD-6.13) and the API gate with zero unexplained. The change only runs the gate once and reuses the emitted declarations for the async check.","findings":[]},{"id":"F-8","result":"pass","note":"The change edits only packages/json-schema/tests. It adds no stub, fake or partial implementation of another Component. It calls the existing repository tools as they are.","findings":[]},{"id":"F-9","result":"n/a","note":"No packages/*/src file changes and no @asyncRoot tag is added.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file changes.","findings":[]}],"prior":[]}
+```
+
+### Reviewer 2: pass at tree f727ae25c415efd37a3ad506b0fbae6e11a3e4f8
+
+Reviewed by `codex` (model `gpt-6.1-sol`) for a `codex` loop, against base `376d85d1eadddcad03032d734f754404e3d462c0`, on 2026-11-01T00:15:53.704Z.
+
+| Item | Result | Note |
+| --- | --- | --- |
+| F-1: Assertions match Upstream | n/a | No Ported Test is added or changed; the change touches only XT-json-schema-3. |
+| F-2: No expected value is weakened | pass | Compared the old subprocess exit assertion with the replacement: zero errors and zero drift remain required. Both API gate assertions retain their expected values. |
+| F-3: No assertion is removed without a DIV clause | n/a | No Ported Test or Upstream assertion count is changed. |
+| F-4: Every new Skip Reason is justified and its precedence is right | n/a | The change adds or modifies no Expectations skip line. |
+| F-5: Every `adapted` marker matches its clause | n/a | The change introduces no adapted marker or Expectations adapted field. |
+| F-6: Every Oracle error fixture is the error Upstream's test expects | n/a | The item relies on no Oracle error fixture. |
+| F-7: Every Xaravel Test verifies the consequence it declares | pass | Compared XT-json-schema-3 with its consequence and the supplied tool implementations. The API gate emits declarations before the in-process check, which uses the same declaration reader, thenable resolver, surface generator, renderer and drift comparison as the former CLI. The remaining consequence checks are preserved. |
+| F-8: No stub, fake or partial implementation of another Component | pass | The sole scoped change is a json-schema test using existing repository tools; it implements no other Component's behavior. |
+| F-9: Every `@asyncRoot` tag is true | n/a | No framework source file or @​asyncRoot tag is changed or retained in a touched source file. |
+| F-10: Oracle requests match the Upstream test's inputs | n/a | No Oracle request file is changed. |
+
+Findings:
+
+None.
+
+```json
+{"kind":"fidelity-verdict","reviewer":2,"verdict":"pass","tree":"f727ae25c415efd37a3ad506b0fbae6e11a3e4f8","base":"376d85d1eadddcad03032d734f754404e3d462c0","cli":"codex","model":"gpt-6.1-sol","loop_cli":"codex","fallback":null,"date":"2026-11-01T00:15:53.704Z","items":[{"id":"F-1","result":"n/a","note":"No Ported Test is added or changed; the change touches only XT-json-schema-3.","findings":[]},{"id":"F-2","result":"pass","note":"Compared the old subprocess exit assertion with the replacement: zero errors and zero drift remain required. Both API gate assertions retain their expected values.","findings":[]},{"id":"F-3","result":"n/a","note":"No Ported Test or Upstream assertion count is changed.","findings":[]},{"id":"F-4","result":"n/a","note":"The change adds or modifies no Expectations skip line.","findings":[]},{"id":"F-5","result":"n/a","note":"The change introduces no adapted marker or Expectations adapted field.","findings":[]},{"id":"F-6","result":"n/a","note":"The item relies on no Oracle error fixture.","findings":[]},{"id":"F-7","result":"pass","note":"Compared XT-json-schema-3 with its consequence and the supplied tool implementations. The API gate emits declarations before the in-process check, which uses the same declaration reader, thenable resolver, surface generator, renderer and drift comparison as the former CLI. The remaining consequence checks are preserved.","findings":[]},{"id":"F-8","result":"pass","note":"The sole scoped change is a json-schema test using existing repository tools; it implements no other Component's behavior.","findings":[]},{"id":"F-9","result":"n/a","note":"No framework source file or @asyncRoot tag is changed or retained in a touched source file.","findings":[]},{"id":"F-10","result":"n/a","note":"No Oracle request file is changed.","findings":[]}],"prior":[]}
+```
+
 ## Post-change loaded verification
 
 The additional full harness with concurrent typecheck and lint passed: all three commands exited 0; `XARAVEL tests=546 passed=541 failed=0 skipped=5`, `SUMMARY variants=11 run=4 not-run=7 checked=21817 differ=0`. Complete logs are retained in orchestrator state `tmp/retro16-item4-postchange-loaded/{harness,typecheck,lint}.log`. This resolves the review request for direct loaded verification of the changed implementation.
