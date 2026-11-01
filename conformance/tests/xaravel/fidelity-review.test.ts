@@ -1495,6 +1495,38 @@ xaravelTest(
     ].join("\n");
     expect(fileImports("a/b/c.test.ts", importerText, (path) => known.has(path))).toEqual(["a/b/helper.ts", "a/b/lazy.ts", "a/b/setup.ts", "a/shared.ts", "pkg/tests/values.ts"]);
     expect(fileImports(semanticsTest, read(semanticsTest), (path) => existsSync(join(root, path)))).toContain(oracleValues);
+    // Dynamic tool imports inside a test callback use top-level path constants, including a chained REPO base.
+    // Unknown expressions, missing modules and paths outside the repository never enter (h), even if exists accepts them.
+    const nestedPath = "packages/kid/tests/xaravel/close.test.ts";
+    const nestedText = [
+      'const PACKAGE_DIR = resolve(import.meta.dir, "..", "..");',
+      'const REPO = resolve(PACKAGE_DIR, "..", "..");',
+      'xaravelTest("XT-kid-1", "close", async () => {',
+      '  const { surfaceOf } = await import(join(REPO, "tools/async-surface/async-surface.ts")) as { surfaceOf: unknown };',
+      '  if (true) {',
+      '    const { registeredFqcn } = await import(join(REPO, "tools/lint-rules/thenables.ts"));',
+      '  }',
+      '  await import(join(unknownRoot, "unknown.ts"));',
+      '  await import(join(REPO, "missing.ts"));',
+      '  await import(join(REPO, "..", "outside.ts"));',
+      '  await import("/absolute.ts");',
+      '});',
+    ].join("\n");
+    const nestedModules = ["tools/async-surface/async-surface.ts", "tools/lint-rules/thenables.ts"];
+    expect(fileImports(nestedPath, nestedText, () => true)).toEqual([...nestedModules, "missing.ts"].sort());
+    const nestedRoot = tempDir("fidelity-nested-imports-");
+    write(nestedRoot, nestedPath, nestedText);
+    for (const module of nestedModules) {
+      write(nestedRoot, module, `export const marker = "${module}";\n`);
+    }
+    expect(fileImports(nestedPath, nestedText, (path) => existsSync(join(nestedRoot, path)))).toEqual(nestedModules);
+    const nestedWhole = wholeFileEvidence(nestedRoot, [{ filename: nestedPath, status: "added", patch: "@@ -0,0 +1 @@\n+x" }], new Map(), 400_000);
+    expect(nestedWhole.map((item) => [item.path, item.reason])).toEqual([
+      ...nestedModules.map((module) => [module, `imported by ${nestedPath}`]),
+      [nestedPath, "changed"],
+    ]);
+    expect(nestedWhole.slice(0, 2).map((item) => item.text)).toEqual(nestedModules.map((module) => readFileSync(join(nestedRoot, module), "utf8")));
+    expect(wholeFileEvidence(nestedRoot, [{ filename: nestedPath, status: "added", patch: "@@ -0,0 +1 @@\n+x" }], new Map(), 0).filter((item) => nestedModules.includes(item.path)).every((item) => item.note?.startsWith("omitted for size:"))).toBe(true);
     // The ESC-9.10-1 cases come with no case-by-case rule: the imported grader module, and the decision a changed
     // source file's unchanged docblock cites, are shown in full; the changed files are too.
     const whole = wholeFileEvidence(root, [...registryPatch(registryPath), ...registryPatch(semanticsTest)], new Map(), 400_000);

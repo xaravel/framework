@@ -772,7 +772,7 @@ function wholeFileLang(path: string): string {
 
 /**
  * The repository files a TypeScript file imports: each relative specifier of a static import, re-export, side-effect
- * import or literal dynamic `import(…)`, and each module the dynamic-import idiom binds names from (`moduleBindings`,
+ * import or literal dynamic `import(…)`, and resolvable dynamic imports at any nesting depth (through top-level path constants,
  * ESC-9.10-1). `exists` says whether a repository path can be read. Package imports (`@xaravel/…`) are left out here;
  * `packageImports` resolves those a changed line adds (ESC-14.8-3).
  */
@@ -784,9 +784,18 @@ export function fileImports(path: string, text: string, exists: (path: string) =
       out.add(target);
     }
   }
-  if (/\bawait\s+import\s*\(/.test(text)) {
+  if (/\bimport\s*\(/.test(text)) {
     for (const binding of moduleBindings(path, testUnits(text), exists)) {
       out.add(binding.target);
+    }
+    // Test callbacks are single units to moduleBindings. Follow their imports too, without changing binding
+    // analysis for (e); pathExpression accepts only constant repository paths, never evaluated expressions.
+    const consts = fileConsts(testUnits(text));
+    for (const match of text.matchAll(/\bimport\s*\(\s*([^()]*(?:\([^()]*\)[^()]*)*?)\s*\)/g)) {
+      const target = pathExpression(match[1]!, path, consts);
+      if (target !== null && !posix.isAbsolute(target) && !target.startsWith("..") && exists(target)) {
+        out.add(target);
+      }
     }
   }
   out.delete(path);
