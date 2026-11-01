@@ -22,6 +22,8 @@ Two reviewer agents, separate from the implementer, review every Story against U
 
 **Skip Reasons.** Beside the Precedence section, the prompt carries the Skip Reasons table of `conformance/README.md`. When an added Expectations line is a `skip` with reason `not-ported-yet` or `blocked-by:<c>`, and the line or its Escalation names another Component, the prompt also carries the `blocked-by` rule `bun run expectations:reasons` applies, from `tools/expectations/reasons.ts`, with the Phase and first Epic of the test's Component and of each named one, and what that check says of `blocked-by:<c>` for the line (evidence (i), [ESC-14.2-5](../escalations/ESC-14.2-5.md)). When such a line cites an Escalation, the prompt then carries that Escalation in full, and its decision record in full when it has one; an open Escalation's absent decision, or a cited Escalation with no file, is named as unavailable, with why ([ESC-15.1-5](../escalations/ESC-15.1-5.md)).
 
+Dynamic repository imports in whole-file evidence (h) are followed inside callbacks too, through top-level path constants such as `join(REPO, …)`; unresolved and outside-repository paths are excluded, under the same depth, ordering and size limits.
+
 **Xaravel Tests.** The prompt shows each added or changed Xaravel Test in full, with every declaration it uses, directly or through another, from its own file or from a repository test module its file imports, each with its `path:lines`: the helpers it calls, including through a spread (`...helper()`), and the fixtures they name (evidence (e), [ESC-9.9-4](../escalations/ESC-9.9-4.md), [ESC-9.10-1](../escalations/ESC-9.10-1.md)).
 
 An item is `n/a` only when the PR has nothing it applies to, such as F-10 on a PR that changes no Oracle request file.
