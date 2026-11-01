@@ -146,6 +146,10 @@ function unpack(fn: string, callable: unknown, args: unknown): unknown {
   for (const [key, value] of entries) {
     if (typeof key !== "string" && !(typeof key === "bigint" && key >= INT_MIN && key <= INT_MAX) && !(typeof key === "number" && Number.isSafeInteger(key) && !Object.is(key, -0))) throw new PhpError("Keys must be of type int|string during argument unpacking");
     if (typeof key === "string") {
+      // DIV-9.15; MAINT-2026-10-31-epic-16-item-5: reject in argument order.
+      if ((target as unknown as Record<symbol, unknown>)[OPTIONS] !== true) {
+        throw new TypeError(`${fn}(): named argument unpacking is untranslatable for a target without an options form (ESC-14.5-3)`);
+      }
       if (Object.hasOwn(named, key)) throw new PhpError(`Named parameter $${key} overwrites previous argument`);
       hasNamed = true;
       Object.defineProperty(named, key, { value: valueCopy(value), enumerable: true, configurable: true });
@@ -154,12 +158,7 @@ function unpack(fn: string, callable: unknown, args: unknown): unknown {
       positional.push(valueCopy(value));
     }
   }
-  if (hasNamed) {
-    if ((target as unknown as Record<symbol, unknown>)[OPTIONS] !== true) {
-      throw new TypeError(`${fn}(): named argument unpacking is untranslatable for a target without an options form (ESC-14.5-3)`);
-    }
-    positional.push(named);
-  }
+  if (hasNamed) positional.push(named);
   return target(...positional) ?? null;
 }
 

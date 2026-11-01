@@ -959,8 +959,8 @@ fails(() => Arr.string({ key: null }, "key"), InvalidArgumentException,
   Assert.assertSame(sparseSnapshot, sparse);
   let unpackError: unknown = null;
   try { Arr.mapSpread([{ named: "A" }], () => null); } catch (error) { unpackError = error; }
-  Assert.assertInstanceOf(PhpError, unpackError);
-  Assert.assertSame("Cannot use positional argument after named argument during unpacking", (unpackError as PhpError).getMessage());
+  Assert.assertInstanceOf(globalThis.TypeError, unpackError); // adapted:DIV-9.15
+  Assert.assertSame("callUnpacked(): named argument unpacking is untranslatable for a target without an options form (ESC-14.5-3)", (unpackError as Error).message); // adapted:DIV-9.15
 
   let enumerations = 0;
   let cleanup = 0;
