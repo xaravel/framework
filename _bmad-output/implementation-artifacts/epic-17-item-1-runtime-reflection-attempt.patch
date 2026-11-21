@@ -1,0 +1,666 @@
+diff --git a/packages/runtime/docs/reflection.md b/packages/runtime/docs/reflection.md
+index a719edd8..ca12394e 100644
+--- a/packages/runtime/docs/reflection.md
++++ b/packages/runtime/docs/reflection.md
+@@ -170,3 +170,5 @@ PHP's `ReflectionException`, an `Exception`.
+   always `instanceof`).
+ - `lazy()` / `proxy()` (DIV-12.14).
+ - Reading `Function.prototype.toString()`: an undeclared closure's parameters are not guessed.
++
++Parameter declarations support `nullable`, `optional`, and `attributed` with `parameterAttribute`. Classes may use `abstractClass`. `ReflectionProperty` reads represented properties; `call_user_func` and `spl_object_id` share runtime callable resolution and object identity.
+diff --git a/packages/runtime/src/index.ts b/packages/runtime/src/index.ts
+index 8f2448fe..ef0d216e 100644
+--- a/packages/runtime/src/index.ts
++++ b/packages/runtime/src/index.ts
+@@ -86,7 +86,9 @@ export {
+   arsort,
+   asort,
+   Attribute,
++  abstractClass,
+   attribute,
++  parameterAttribute,
+   type AttributeDecorator,
+   BackedEnum,
+   BadFunctionCallException,
+@@ -155,6 +157,8 @@ export {
+   ReflectionMethod,
+   ReflectionNamedType,
+   ReflectionParameter,
++  ReflectionProperty,
++  spl_object_id,
+   ReflectionUnionType,
+   reset,
+   round,
+@@ -266,9 +270,9 @@ export {
+ export { fqcn, isContractToken, loadAutoload, loadClassmap, type RegisteredClass, registerClass, registerContractToken, registerTestClass, registerTrait, resolveClass, resolveClassAsync, writeClassmap } from "./registry/index";
+ export { inject, type InjectDecorator, type InjectMap, readInjectMetadata } from "./metadata/inject";
+ export { readReturnMetadata, returns } from "./metadata/returns";
+-export { allOf, oneOf, parent, primitive, self, static, variadic } from "./metadata/specs";
++export { allOf, attributed, nullable, oneOf, optional, parent, primitive, self, static, variadic } from "./metadata/specs";
+ export { bootTraits, classUsesRecursive, type ClassReference, clearBootedTraits, initializeTraits, type Mixed, mixin } from "./traits/mixin";
+-export { plus, minus, array_sum, divide, intdiv, floor, ceil, PHP_INT_MAX, PHP_INT_MIN, LC_ALL, LC_CTYPE, LC_NUMERIC, LC_TIME, LC_COLLATE, LC_MONETARY, LC_MESSAGES, setlocale, array_chunk, arrayAppend, key, ksort, krsort, uksort, sort, rsort, callUnpacked, call_user_func_array, resolveCallable, strtolower, strrev, is_subclass_of } from "./php/index";
++export { plus, minus, array_sum, divide, intdiv, floor, ceil, PHP_INT_MAX, PHP_INT_MIN, LC_ALL, LC_CTYPE, LC_NUMERIC, LC_TIME, LC_COLLATE, LC_MONETARY, LC_MESSAGES, setlocale, array_chunk, arrayAppend, key, ksort, krsort, uksort, sort, rsort, callUnpacked, call_user_func, call_user_func_array, resolveCallable, strtolower, strrev, is_subclass_of } from "./php/index";
+ 
+ export { array_is_list, array_push, http_build_query, PHP_QUERY_RFC1738, PHP_QUERY_RFC3986, type HttpBuildQueryOptions, bindPhpArguments, phpReturn, type PhpParameter, type PhpUserlandType } from "./php/index";
+ 
+diff --git a/packages/runtime/src/metadata/specs.ts b/packages/runtime/src/metadata/specs.ts
+index a3bb302a..d2407283 100644
+--- a/packages/runtime/src/metadata/specs.ts
++++ b/packages/runtime/src/metadata/specs.ts
+@@ -10,13 +10,14 @@
+ //
+ // Each value is a frozen null-prototype descriptor carrying a module-private brand, so `specOf` tells it from a plain
+ // object of the same shape. `specOf` is internal: the reflection classes read it.
++import { isParameterAttribute } from "../php/attributes";
+ import { isContractToken } from "../registry/registry";
+ 
+ /** The private brand every Spec value carries. */
+ const SPEC: unique symbol = Symbol("xaravel.spec");
+ 
+ /** The kinds of Spec value. */
+-export type SpecKind = "primitive" | "self" | "parent" | "static" | "variadic" | "oneOf" | "allOf";
++export type SpecKind = "primitive" | "self" | "parent" | "static" | "variadic" | "oneOf" | "allOf" | "nullable" | "optional" | "attributed";
+ 
+ /** What `specOf` reads from a Spec value. Internal. */
+ export interface SpecInfo {
+@@ -127,3 +128,30 @@ export function allOf(...types: unknown[]): object {
+   }
+   return descriptor("allOf", null, types);
+ }
++
++/** PHP nullable type declaration (DIV-3.5). */
++export function nullable(spec: unknown): object {
++  const kind = specOf(spec)?.kind;
++  if (spec === undefined || spec === null || kind === "primitive" || kind === "variadic" || kind === "nullable" || kind === "optional" || kind === "attributed") {
++    throw new TypeError("nullable(): invalid inner Spec (DIV-3.5)");
++  }
++  return descriptor("nullable", spec);
++}
++
++/** PHP parameter default, evaluated whenever read (DIV-3.5). */
++export function optional(spec: unknown, defaultValue: () => unknown): object {
++  const kind = specOf(spec)?.kind;
++  if (spec === undefined || spec === null || kind === "optional" || kind === "variadic" || (kind === "attributed" && specOf(specOf(spec)!.spec)?.kind === "variadic") || typeof defaultValue !== "function") {
++    throw new TypeError("optional(): invalid Spec or default (DIV-3.5)");
++  }
++  return descriptor("optional", spec, [defaultValue]);
++}
++
++/** Parameter attributes in source order (DIV-3.6). */
++export function attributed(spec: unknown, ...attributes: unknown[]): object {
++  const kind = specOf(spec)?.kind;
++  if (spec === undefined || spec === null || kind === "optional" || kind === "attributed" || attributes.length === 0 || !attributes.every(isParameterAttribute)) {
++    throw new TypeError("attributed(): invalid Spec or attributes (DIV-3.6)");
++  }
++  return descriptor("attributed", spec, attributes);
++}
+diff --git a/packages/runtime/src/php/ReflectionAttribute.ts b/packages/runtime/src/php/ReflectionAttribute.ts
+index b798f4e6..bd3eaede 100644
+--- a/packages/runtime/src/php/ReflectionAttribute.ts
++++ b/packages/runtime/src/php/ReflectionAttribute.ts
+@@ -19,13 +19,16 @@ const TARGET_NAMES: readonly (readonly [number, string])[] = [
+ ];
+ 
+ export class ReflectionAttribute {
++  static readonly IS_INSTANCEOF = 2;
+   readonly #entry: AttributeEntry;
+   readonly #repeated: boolean;
++  readonly #target: number;
+ 
+   /** Built by `ReflectionClass.getAttributes()`: the entry, and whether its class appears more than once on the target. */
+-  constructor(entry: AttributeEntry, repeated: boolean) {
++  constructor(entry: AttributeEntry, repeated: boolean, target: number = Attribute.TARGET_CLASS) {
+     this.#entry = entry;
+     this.#repeated = repeated;
++    this.#target = target;
+   }
+ 
+   /** PHP's `getName()`: the attribute class's FQCN. */
+@@ -44,9 +47,9 @@ export class ReflectionAttribute {
+     if (typeof flags !== "number" || !Number.isInteger(flags) || flags < 0 || flags > (Attribute.TARGET_ALL | Attribute.IS_REPEATABLE)) {
+       throw new Error("Invalid attribute flags specified");
+     }
+-    if ((flags & Attribute.TARGET_CLASS) === 0) {
++    if ((flags & this.#target) === 0) {
+       const allowed = TARGET_NAMES.filter(([flag]) => (flags & flag) !== 0).map(([, name]) => name);
+-      throw new Error(`Attribute "${this.getName()}" cannot target class (allowed targets: ${allowed.join(", ")})`);
++      throw new Error(`Attribute "${this.getName()}" cannot target ${this.#target === Attribute.TARGET_PARAMETER ? "parameter" : "class"} (allowed targets: ${allowed.join(", ")})`);
+     }
+     if (this.#repeated && (flags & Attribute.IS_REPEATABLE) === 0) {
+       throw new Error(`Attribute "${this.getName()}" must not be repeated`);
+diff --git a/packages/runtime/src/php/ReflectionClass.ts b/packages/runtime/src/php/ReflectionClass.ts
+index 23b5f8d0..634126dc 100644
+--- a/packages/runtime/src/php/ReflectionClass.ts
++++ b/packages/runtime/src/php/ReflectionClass.ts
+@@ -1,14 +1,14 @@
+ // PHP's `ReflectionClass` (DIV-3.2, DIV-12.15) over a class or a contract token, which PHP sees as an interface. A
+ // class's parents are its registered ancestors on the constructor chain: an unregistered one (a `mixin()` layer, the
+ // JS `Error`) is skipped. Its attributes are its own `@attribute(...)` list.
+-import { fqcn, isContractToken, type RegisteredClass, registerClass } from "../registry/registry";
+-import { ownAttributes } from "./attributes";
++import { fqcn, isContractToken, isTraitClass, type RegisteredClass, registerClass } from "../registry/registry";
++import { isAbstractClass, ownAttributes } from "./attributes";
+ import { hasBrand } from "./hasBrand";
+ import { ReflectionAttribute } from "./ReflectionAttribute";
+ import { ReflectionMethod } from "./ReflectionMethod";
+ import { phpTypeName } from "./phpType";
+ import { TypeError as PhpTypeError } from "./TypeError";
+-import { classChain, type ReflectionTarget, reflectionTarget, registeredName, resolveReflectionName } from "./reflectionTargets";
++import { classChain, findMethod, type ReflectionTarget, reflectionTarget, registeredName, resolveReflectionName } from "./reflectionTargets";
+ 
+ /** A contract token's parent tokens (`@xaravel/contracts`' `CONTRACT_PARENTS`), read without importing contracts. */
+ const CONTRACT_PARENTS = Symbol.for("xaravel.contract.parents");
+@@ -44,6 +44,14 @@ export class ReflectionClass {
+     this.name = fqcn(this.#target);
+   }
+ 
++  isAbstract(): boolean { return isAbstractClass(this.#target); }
++
++  isInstantiable(): boolean { return typeof this.#target === "function" && !isTraitClass(this.#target) && !this.isAbstract(); }
++
++  getConstructor(): ReflectionMethod | null {
++    return findMethod(this.#target, "__construct") === null ? null : new ReflectionMethod(this.#target, "__construct");
++  }
++
+   /** PHP's `getName()`: the FQCN. */
+   getName(): string {
+     return this.name;
+diff --git a/packages/runtime/src/php/ReflectionIntersectionType.ts b/packages/runtime/src/php/ReflectionIntersectionType.ts
+index cf4457dd..057b5600 100644
+--- a/packages/runtime/src/php/ReflectionIntersectionType.ts
++++ b/packages/runtime/src/php/ReflectionIntersectionType.ts
+@@ -10,6 +10,8 @@ export class ReflectionIntersectionType {
+     this.#types = Object.freeze([...types]);
+   }
+ 
++  allowsNull(): boolean { return false; }
++
+   /** PHP's `getTypes()`: the members, in declaration order. */
+   getTypes(): ReflectionNamedType[] {
+     return [...this.#types];
+diff --git a/packages/runtime/src/php/ReflectionNamedType.ts b/packages/runtime/src/php/ReflectionNamedType.ts
+index 6ffde2f3..5c898791 100644
+--- a/packages/runtime/src/php/ReflectionNamedType.ts
++++ b/packages/runtime/src/php/ReflectionNamedType.ts
+@@ -11,15 +11,17 @@ export class ReflectionNamedType {
+   readonly #name: string;
+   readonly #builtin: boolean;
+   readonly #value: object | null;
++  readonly #nullable: boolean;
+ 
+   /**
+    * Built by the reflection classes; `name` is the type's name, `builtin` whether PHP calls it builtin, and `value`
+    * the class or token the Spec holds (null for a builtin or a relative marker).
+    */
+-  constructor(name: string, builtin: boolean, value: object | null = null) {
++  constructor(name: string, builtin: boolean, value: object | null = null, nullable: boolean = false) {
+     this.#name = name;
+     this.#builtin = builtin;
+     this.#value = value;
++    this.#nullable = nullable || name === "mixed" || name === "null";
+   }
+ 
+   /** PHP's `getName()`: the FQCN, the builtin's name, or `self` / `parent` / `static`. */
+@@ -27,6 +29,8 @@ export class ReflectionNamedType {
+     return this.#name;
+   }
+ 
++  allowsNull(): boolean { return this.#nullable; }
++
+   /** PHP's `isBuiltin()`. */
+   isBuiltin(): boolean {
+     return this.#builtin;
+diff --git a/packages/runtime/src/php/ReflectionParameter.ts b/packages/runtime/src/php/ReflectionParameter.ts
+index 6a376c16..b9d1e7ca 100644
+--- a/packages/runtime/src/php/ReflectionParameter.ts
++++ b/packages/runtime/src/php/ReflectionParameter.ts
+@@ -1,47 +1,79 @@
+-// PHP's `ReflectionParameter` (DIV-3.2, DIV-3.3): one key of an `inject` map, in order. Its Spec is its type, and a
+-// `variadic(spec)` Spec makes it variadic, of type `spec`. A method's parameter is declared by the method's class; a
+-// closure's by none (JS keeps no class scope).
+ import { specOf } from "../metadata/specs";
+-import { registerClass } from "../registry/registry";
++import { fqcn, registerClass } from "../registry/registry";
++import { isParameterAttribute, type AttributeEntry } from "./attributes";
++import { Attribute } from "./Attribute";
++import { hasBrand } from "./hasBrand";
++import { ReflectionAttribute } from "./ReflectionAttribute";
+ import type { ReflectionClass } from "./ReflectionClass";
++import { ReflectionException } from "./ReflectionException";
++import { ReflectionFunction } from "./ReflectionFunction";
++import { ReflectionMethod } from "./ReflectionMethod";
++import { TypeError as PhpTypeError } from "./TypeError";
++import { ValueError } from "./ValueError";
++import { phpFunction } from "./phpFunctions";
++import { phpTypeName } from "./phpType";
+ import { type ReflectionTypeValue, typeOfSpec } from "./reflectionTypes";
+ 
+ export class ReflectionParameter {
+-  /** PHP's `$name`: the parameter's name. */
+   readonly name: string;
+   readonly #spec: unknown;
+   readonly #declaringClass: ReflectionClass | null;
+ 
+-  /** Built by `getParameters()`: the `inject` key, its Spec, and the declaring class or null. */
+-  constructor(name: string, spec: unknown, declaringClass: ReflectionClass | null) {
+-    this.name = name;
+-    this.#spec = spec;
+-    this.#declaringClass = declaringClass;
++  constructor(name: string, spec: unknown, declaringClass: ReflectionClass | null);
++  constructor(callable: unknown, parameter: string | number);
++  constructor(first: unknown, second: unknown, declaringClass?: ReflectionClass | null) {
++    if (arguments.length === 3) {
++      this.name = first as string;
++      this.#spec = second;
++      this.#declaringClass = declaringClass ?? null;
++      return;
++    }
++    if (typeof second !== "string" && (typeof second !== "number" || !Number.isInteger(second))) throw new PhpTypeError(`ReflectionParameter::__construct(): Argument #2 ($param) must be of type string|int, ${phpTypeName(second)} given`);
++    if (typeof second === "number" && second < 0) throw new ValueError("ReflectionParameter::__construct(): Argument #2 ($param) must be greater than or equal to 0");
++    const split = typeof first === "string" ? first.lastIndexOf("::") : -1;
++    const reader = Array.isArray(first) && first.length === 2
++      ? new ReflectionMethod(first[0] as object | string, first[1] as string)
++      : split >= 0
++        ? new ReflectionMethod((first as string).slice(0, split), (first as string).slice(split + 2))
++        : new ReflectionFunction((typeof first === "string" ? phpFunction(first) ?? first : first) as (...args: never[]) => unknown);
++    const parameters = reader.getParameters();
++    const found = typeof second === "number" ? parameters[second] : parameters.find((p) => p.name === second);
++    if (found === undefined) throw new ReflectionException(`The parameter specified by its ${typeof second === "number" ? "offset" : "name"} could not be found`);
++    this.name = found.name;
++    this.#spec = found.#spec;
++    this.#declaringClass = found.#declaringClass;
+   }
+ 
+-  /** PHP's `getName()`. */
+-  getName(): string {
+-    return this.name;
++  getName(): string { return this.name; }
++  #inner(): unknown {
++    let spec = this.#spec;
++    while (specOf(spec)?.kind === "optional" || specOf(spec)?.kind === "attributed") spec = specOf(spec)!.spec;
++    return spec;
+   }
+-
+-  /** PHP's `isVariadic()`: whether the Spec is `variadic(...)`. */
+-  isVariadic(): boolean {
+-    return specOf(this.#spec)?.kind === "variadic";
+-  }
+-
+-  /**
+-   * PHP's `getType()`: the Spec's type (a variadic's element type). Throws `TypeError` for a value that is not a
+-   * class, a token, `String`, `Number`, `Boolean` or a Spec value.
+-   */
+-  getType(): ReflectionTypeValue {
++  isVariadic(): boolean { return specOf(this.#inner())?.kind === "variadic"; }
++  isOptional(): boolean { return specOf(this.#spec)?.kind === "optional" || this.isVariadic(); }
++  isDefaultValueAvailable(): boolean { return specOf(this.#spec)?.kind === "optional"; }
++  getDefaultValue(): unknown {
+     const info = specOf(this.#spec);
+-    return typeOfSpec(info?.kind === "variadic" ? info.spec : this.#spec, `ReflectionParameter::getType(): the Spec of $${this.name}`);
++    if (info?.kind !== "optional") throw new ReflectionException("Internal error: Failed to retrieve the default value");
++    return (info.types[0] as () => unknown)() ?? null;
+   }
+-
+-  /** PHP's `getDeclaringClass()`: the method's class, or null for a closure. */
+-  getDeclaringClass(): ReflectionClass | null {
+-    return this.#declaringClass;
++  getType(): ReflectionTypeValue | null {
++    let spec = this.#inner();
++    if (isParameterAttribute(spec)) return null;
++    if (specOf(spec)?.kind === "variadic") spec = specOf(spec)!.spec;
++    return typeOfSpec(spec, `ReflectionParameter::getType(): the Spec of $${this.name}`);
++  }
++  hasType(): boolean { return this.getType() !== null; }
++  allowsNull(): boolean { return this.getType()?.allowsNull() ?? true; }
++  getDeclaringClass(): ReflectionClass | null { return this.#declaringClass; }
++  getAttributes(name: object | string | null = null, flags: number = 0): ReflectionAttribute[] {
++    let spec = this.#spec;
++    if (specOf(spec)?.kind === "optional") spec = specOf(spec)!.spec;
++    const info = specOf(spec);
++    const entries: readonly AttributeEntry[] = isParameterAttribute(spec) ? [spec] : info?.kind === "attributed" ? info.types as AttributeEntry[] : [];
++    return entries.filter((entry) => name === null || entry.class === name || (typeof name === "string" && fqcn(entry.class).toLowerCase() === name.toLowerCase()) || (flags === ReflectionAttribute.IS_INSTANCEOF && ((typeof name === "function" && entry.class.prototype instanceof name) || (typeof name === "object" && hasBrand(entry.class, name)))))
++      .map((entry) => new ReflectionAttribute(entry, entries.filter((other) => other.class === entry.class).length > 1, Attribute.TARGET_PARAMETER));
+   }
+ }
+-
+ registerClass("ReflectionParameter", ReflectionParameter);
+diff --git a/packages/runtime/src/php/ReflectionProperty.ts b/packages/runtime/src/php/ReflectionProperty.ts
+new file mode 100644
+index 00000000..bb59ce04
+--- /dev/null
++++ b/packages/runtime/src/php/ReflectionProperty.ts
+@@ -0,0 +1,27 @@
++import { fqcn, registerClass } from "../registry/registry";
++import { ReflectionException } from "./ReflectionException";
++import { reflectionTarget, type ReflectionTarget } from "./reflectionTargets";
++
++/** Reflection over represented JavaScript properties. */
++export class ReflectionProperty {
++  readonly name: string;
++  readonly class: string;
++  readonly #target: ReflectionTarget;
++  constructor(objectOrClass: object | string, property: string) {
++    this.#target = reflectionTarget(objectOrClass, "ReflectionProperty::__construct(): Argument #1 ($class)");
++    this.name = property;
++    this.class = fqcn(this.#target);
++    if (typeof objectOrClass === "object" && objectOrClass !== null && typeof this.#target === "function" && !(property in objectOrClass) && !(property in this.#target)) {
++      throw new ReflectionException(`Property ${this.class}::$${property} does not exist`);
++    }
++  }
++  getName(): string { return this.name; }
++  getValue(object: unknown = null): unknown {
++    if (typeof this.#target !== "function" || (typeof object !== "object" && typeof object !== "function") || object === null || !Function.prototype[Symbol.hasInstance].call(this.#target, object)) {
++      throw new ReflectionException("Given object is not an instance of the class this property was declared in");
++    }
++    if (!(this.name in object)) throw new ReflectionException(`Property ${this.class}::$${this.name} does not exist`);
++    return (object as Record<string, unknown>)[this.name] ?? null;
++  }
++}
++registerClass("ReflectionProperty", ReflectionProperty);
+diff --git a/packages/runtime/src/php/ReflectionUnionType.ts b/packages/runtime/src/php/ReflectionUnionType.ts
+index dca835ff..82042406 100644
+--- a/packages/runtime/src/php/ReflectionUnionType.ts
++++ b/packages/runtime/src/php/ReflectionUnionType.ts
+@@ -11,6 +11,8 @@ export class ReflectionUnionType {
+     this.#types = Object.freeze([...types]);
+   }
+ 
++  allowsNull(): boolean { return this.#types.some((type) => type.allowsNull()); }
++
+   /** PHP's `getTypes()`: the members, in declaration order; an `allOf(...)` member is a `ReflectionIntersectionType`. */
+   getTypes(): (ReflectionNamedType | ReflectionIntersectionType)[] {
+     return [...this.#types];
+diff --git a/packages/runtime/src/php/WeakMap.ts b/packages/runtime/src/php/WeakMap.ts
+index e1ac631a..bbd8c74d 100644
+--- a/packages/runtime/src/php/WeakMap.ts
++++ b/packages/runtime/src/php/WeakMap.ts
+@@ -37,7 +37,7 @@ interface Slot {
+ const objectIds = new globalThis.WeakMap<object, number>();
+ let lastObjectId = 0;
+ 
+-function objectId(o: object): number {
++export function objectId(o: object): number {
+   let id = objectIds.get(o);
+   if (id === undefined) {
+     id = ++lastObjectId;
+diff --git a/packages/runtime/src/php/attributes.ts b/packages/runtime/src/php/attributes.ts
+index cd6b0372..a9f1d201 100644
+--- a/packages/runtime/src/php/attributes.ts
++++ b/packages/runtime/src/php/attributes.ts
+@@ -71,3 +71,29 @@ export function declareOwnAttribute(klass: abstract new (...args: never[]) => un
+   }
+   prepend(metadata as MetadataHolder, entryOf(attributeClass, args));
+ }
++
++const PARAMETER_ATTRIBUTE = Symbol("xaravel.parameterAttribute");
++
++/** A parameter attribute declaration (DIV-3.6). */
++export function parameterAttribute(klass: abstract new (...args: never[]) => unknown, ...args: unknown[]): AttributeEntry {
++  const entry = entryOf(klass, args);
++  const result = { class: entry.class, args: entry.args };
++  Object.defineProperty(result, PARAMETER_ATTRIBUTE, { value: true });
++  return Object.freeze(result);
++}
++
++export function isParameterAttribute(value: unknown): value is AttributeEntry {
++  return typeof value === "object" && value !== null && Object.hasOwn(value, PARAMETER_ATTRIBUTE);
++}
++
++const ABSTRACT = Symbol.for("xaravel.abstract");
++/** Marks a class abstract in its own metadata (DIV-12.23). */
++export function abstractClass(_value: unknown, context: DecoratorContext): void {
++  if (typeof context !== "object" || context === null || context.kind !== "class") throw new TypeError("abstractClass(): target must be a class (DIV-12.23)");
++  Object.defineProperty(context.metadata, ABSTRACT, { value: true, configurable: true });
++}
++export function isAbstractClass(klass: unknown): boolean {
++  if (typeof klass !== "function" || !Object.hasOwn(klass, METADATA)) return false;
++  const metadata: unknown = (klass as unknown as MetadataHolder)[METADATA];
++  return typeof metadata === "object" && metadata !== null && Object.hasOwn(metadata, ABSTRACT) && (metadata as MetadataHolder)[ABSTRACT] === true;
++}
+diff --git a/packages/runtime/src/php/callables.ts b/packages/runtime/src/php/callables.ts
+index 67c9a90c..4651b491 100644
+--- a/packages/runtime/src/php/callables.ts
++++ b/packages/runtime/src/php/callables.ts
+@@ -167,3 +167,9 @@ function unpack(fn: string, callable: unknown, args: unknown): unknown {
+ export function call_user_func_array(callback: unknown, args: unknown): unknown {
+   return unpack("call_user_func_array", callback, args);
+ }
++
++/** PHP's call_user_func, sharing the callback resolver. */
++export function call_user_func(callback: unknown, ...args: unknown[]): unknown {
++  const target = callableParameter("call_user_func", 1, callback) as PhpCallable;
++  return target(...args.map(valueCopy)) ?? null;
++}
+diff --git a/packages/runtime/src/php/index.ts b/packages/runtime/src/php/index.ts
+index d6bbd6ea..3fc4a7dd 100644
+--- a/packages/runtime/src/php/index.ts
++++ b/packages/runtime/src/php/index.ts
+@@ -96,7 +96,7 @@ export {
+ export { Attribute } from "./Attribute";
+ export { BackedEnum } from "./BackedEnum";
+ export { Closure } from "./Closure";
+-export { attribute, type AttributeDecorator } from "./attributes";
++export { abstractClass, attribute, parameterAttribute, type AttributeDecorator } from "./attributes";
+ export { BadFunctionCallException } from "./BadFunctionCallException";
+ export { BadMethodCallException } from "./BadMethodCallException";
+ export { CachingIterator } from "./CachingIterator";
+@@ -131,6 +131,8 @@ export { ReflectionFunction } from "./ReflectionFunction";
+ export { ReflectionIntersectionType } from "./ReflectionIntersectionType";
+ export { ReflectionMethod } from "./ReflectionMethod";
+ export { ReflectionNamedType } from "./ReflectionNamedType";
++export { ReflectionProperty } from "./ReflectionProperty";
++export { spl_object_id } from "./spl_object_id";
+ export { ReflectionParameter } from "./ReflectionParameter";
+ export { ReflectionUnionType } from "./ReflectionUnionType";
+ export { RuntimeException } from "./RuntimeException";
+@@ -235,7 +237,7 @@ export { plus, minus, array_sum, divide, intdiv, floor, ceil, PHP_INT_MAX, PHP_I
+ export { LC_ALL, LC_CTYPE, LC_NUMERIC, LC_TIME, LC_COLLATE, LC_MONETARY, LC_MESSAGES, setlocale } from "./locale";
+ export { array_chunk } from "./arrayFunctions";
+ export { arrayAppend, key, ksort, krsort, uksort, sort, rsort } from "./arrayRefFunctions";
+-export { callUnpacked, call_user_func_array, resolveCallable } from "./callables";
++export { callUnpacked, call_user_func, call_user_func_array, resolveCallable } from "./callables";
+ export { strtolower, strrev } from "./stringFunctions";
+ export { is_subclass_of } from "./typeTests";
+ 
+diff --git a/packages/runtime/src/php/phpFunctions.ts b/packages/runtime/src/php/phpFunctions.ts
+index a6968a67..79b5e1c0 100644
+--- a/packages/runtime/src/php/phpFunctions.ts
++++ b/packages/runtime/src/php/phpFunctions.ts
+@@ -15,7 +15,8 @@ import { array_is_list, array_push, http_build_query } from "./arrBuiltins";
+ import { array_chunk } from "./arrayFunctions";
+ import { key, ksort, krsort, uksort, sort, rsort } from "./arrayRefFunctions";
+ import { array_sum, intdiv, floor, ceil } from "./arithmetic";
+-import { call_user_func_array } from "./callables";
++import { spl_object_id } from "./spl_object_id";
++import { call_user_func, call_user_func_array } from "./callables";
+ import { setlocale } from "./locale";
+ import { strtolower, strrev } from "./stringFunctions";
+ import { is_subclass_of } from "./typeTests";
+@@ -121,6 +122,8 @@ export const PHP_FUNCTIONS: Readonly<Record<string, PhpFunction>> = Object.freez
+       entry("floor", floor, 1, 1),
+       entry("ceil", ceil, 1, 1),
+       entry("array_sum", array_sum, 1, 1),
++      entry("spl_object_id", spl_object_id, 1, 1),
++      entry("call_user_func", call_user_func, 1, 2, true),
+       entry("call_user_func_array", call_user_func_array, 2, 2),
+       entry("setlocale", setlocale, 2, 3, true),
+       entry("strtolower", strtolower, 1, 1),
+diff --git a/packages/runtime/src/php/reflectionTargets.ts b/packages/runtime/src/php/reflectionTargets.ts
+index f1f1880d..a3ea892a 100644
+--- a/packages/runtime/src/php/reflectionTargets.ts
++++ b/packages/runtime/src/php/reflectionTargets.ts
+@@ -85,6 +85,13 @@ export function findMethod(target: ReflectionTarget, name: string): FoundMethod
+   if (typeof target !== "function") {
+     return null;
+   }
++  if (name === "__construct") {
++    for (const klass of [target as RegisteredClass, ...classChain(target as RegisteredClass)]) {
++      const source = Function.prototype.toString.call(klass);
++      if (/\bconstructor\s*\(/.test(source)) return { fn: klass as unknown as FoundMethod["fn"], declaringClass: klass, isStatic: false };
++    }
++    return null;
++  }
+   let last: RegisteredClass = target as RegisteredClass;
+   if (name !== "constructor") {
+     for (let holder: unknown = (target as { prototype?: unknown }).prototype; typeof holder === "object" && holder !== null && holder !== Object.prototype; holder = Object.getPrototypeOf(holder)) {
+diff --git a/packages/runtime/src/php/reflectionTypes.ts b/packages/runtime/src/php/reflectionTypes.ts
+index 3c16f122..1eb86ce0 100644
+--- a/packages/runtime/src/php/reflectionTypes.ts
++++ b/packages/runtime/src/php/reflectionTypes.ts
+@@ -40,6 +40,12 @@ function namedType(spec: unknown, where: string): ReflectionNamedType {
+  */
+ export function typeOfSpec(spec: unknown, where: string): ReflectionTypeValue {
+   const info = specOf(spec);
++  if (info?.kind === "nullable") {
++    const inner = typeOfSpec(info.spec, where);
++    if (inner instanceof ReflectionUnionType) return new ReflectionUnionType([...inner.getTypes(), new ReflectionNamedType("null", true)]);
++    if (inner instanceof ReflectionIntersectionType) return new ReflectionUnionType([inner, new ReflectionNamedType("null", true)]);
++    return new ReflectionNamedType(inner.getName(), inner.isBuiltin(), inner.getClassOrToken(), true);
++  }
+   if (info?.kind === "oneOf") {
+     return new ReflectionUnionType(info.types.map((member) => (specOf(member)?.kind === "allOf" ? intersectionOf(member, where) : namedType(member, where))));
+   }
+diff --git a/packages/runtime/src/php/spl_object_id.ts b/packages/runtime/src/php/spl_object_id.ts
+new file mode 100644
+index 00000000..001972e3
+--- /dev/null
++++ b/packages/runtime/src/php/spl_object_id.ts
+@@ -0,0 +1,12 @@
++import { isClassConstructor } from "./Closure";
++import { phpType, phpTypeName } from "./phpType";
++import { TypeError as PhpTypeError } from "./TypeError";
++import { objectId } from "./WeakMap";
++
++/** PHP's object identity, shared with WeakMap diagnostics. */
++export function spl_object_id(object: unknown): number {
++  if (object === null || (typeof object !== "object" && typeof object !== "function") || isClassConstructor(object) || phpType(object) !== "object") {
++    throw new PhpTypeError(`spl_object_id(): Argument #1 ($object) must be of type object, ${phpTypeName(object)} given`);
++  }
++  return objectId(object);
++}
+diff --git a/packages/runtime/tests/xaravel/container-reflection-probe.php b/packages/runtime/tests/xaravel/container-reflection-probe.php
+new file mode 100644
+index 00000000..fde19663
+--- /dev/null
++++ b/packages/runtime/tests/xaravel/container-reflection-probe.php
+@@ -0,0 +1,14 @@
++<?php
++// PHP 8.5.11 observations for XT-runtime-152 and XT-runtime-153.
++#[Attribute(Attribute::TARGET_PARAMETER)] class ExampleAttribute { function __construct(public string $value) {} }
++class Example { public int $value = 4; function __construct(string $value) {} }
++abstract class AbstractExample {}
++class ConcreteExample extends AbstractExample {}
++$fn = function (#[ExampleAttribute('first')] ?Example $value = null, string ...$rest) {};
++$p = new ReflectionParameter($fn, 'value');
++var_dump($p->isOptional(), $p->allowsNull(), $p->hasType(), $p->getDefaultValue(), $p->getAttributes()[0]->newInstance()->value);
++var_dump((new ReflectionParameter($fn, 1))->isVariadic());
++var_dump((new ReflectionClass(AbstractExample::class))->isInstantiable(), (new ReflectionClass(ConcreteExample::class))->isInstantiable());
++$o = new Example('x');
++var_dump((new ReflectionClass(Example::class))->getConstructor()->getName(), (new ReflectionProperty($o, 'value'))->getValue($o), spl_object_id($o) === spl_object_id($o), call_user_func(fn($x) => $x + 1, 2));
++try { (new ReflectionParameter($fn, 1))->getDefaultValue(); } catch (Throwable $e) { echo get_class($e), ': ', $e->getMessage(), "\n"; }
+diff --git a/packages/runtime/tests/xaravel/container-reflection.test.ts b/packages/runtime/tests/xaravel/container-reflection.test.ts
+new file mode 100644
+index 00000000..1c845dc3
+--- /dev/null
++++ b/packages/runtime/tests/xaravel/container-reflection.test.ts
+@@ -0,0 +1,57 @@
++import { Assert, xaravelTest } from "@xaravel/assert";
++import { attributed, inject, nullable, oneOf, optional, primitive, variadic } from "@xaravel/runtime";
++import { abstractClass, Attribute, attribute, call_user_func, parameterAttribute, ReflectionClass, ReflectionException, ReflectionFunction, ReflectionParameter, ReflectionProperty, ReflectionUnionType, spl_object_id } from "@xaravel/runtime/php";
++import { registerClass } from "@xaravel/runtime/registry";
++
++@attribute(Attribute, Attribute.TARGET_PARAMETER)
++class ExampleAttribute { constructor(readonly value: string) {} }
++registerClass("RuntimeReflectionExampleAttribute", ExampleAttribute);
++class Example { value = 4; constructor(_value: string) {} }
++registerClass("RuntimeReflectionExample", Example);
++@abstractClass
++abstract class AbstractExample {}
++registerClass("RuntimeReflectionAbstract", AbstractExample);
++class ConcreteExample extends AbstractExample {}
++registerClass("RuntimeReflectionConcrete", ConcreteExample);
++
++xaravelTest("XT-runtime-152", "parameter metadata preserves nullable defaults and ordered attributes", () => {
++  let calls = 0;
++  const fn = inject({ value: optional(attributed(nullable(Example), parameterAttribute(ExampleAttribute, "first")), () => { calls++; return []; }), rest: variadic(String) }, (value: unknown, ...rest: unknown[]) => { void value; void rest; return null; });
++  const [param, rest] = new ReflectionFunction(fn).getParameters();
++  Assert.assertTrue(param!.isOptional());
++  Assert.assertTrue(param!.allowsNull());
++  Assert.assertTrue(param!.hasType());
++  Assert.assertSame(0, calls);
++  Assert.assertFalse(param!.getDefaultValue() === param!.getDefaultValue());
++  Assert.assertSame(2, calls);
++  Assert.assertSame("first", (param!.getAttributes()[0]!.newInstance() as ExampleAttribute).value);
++  Assert.assertTrue(rest!.isVariadic());
++  Assert.assertTrue(rest!.isOptional());
++  Assert.assertSame("value", new ReflectionParameter(fn, 0).getName());
++  Assert.assertTrue(new ReflectionParameter(fn, "value").allowsNull());
++  const union = new ReflectionFunction(inject({ x: nullable(oneOf(Example, String)) }, (x: unknown) => { void x; return null; })).getParameters()[0]!.getType();
++  Assert.assertTrue(union instanceof ReflectionUnionType);
++  Assert.assertTrue(union!.allowsNull());
++  Assert.assertNull(new ReflectionFunction(inject({ x: parameterAttribute(ExampleAttribute, "x") }, (x: unknown) => { void x; return null; })).getParameters()[0]!.getType());
++  for (const [fn, type] of [
++    [() => nullable(primitive), TypeError],
++    [() => attributed(optional(String, () => ""), parameterAttribute(ExampleAttribute)), TypeError],
++    [() => rest!.getDefaultValue(), ReflectionException],
++  ] as const) {
++    let error: unknown = null;
++    try { fn(); } catch (caught) { error = caught; }
++    Assert.assertTrue(error instanceof type);
++  }
++});
++
++xaravelTest("XT-runtime-153", "abstract classes, represented properties, callables and object identity reflect PHP behavior", () => {
++  Assert.assertFalse(new ReflectionClass(AbstractExample).isInstantiable());
++  Assert.assertTrue(new ReflectionClass(ConcreteExample).isInstantiable());
++  Assert.assertFalse(new ReflectionClass(ConcreteExample).isAbstract());
++  Assert.assertSame("__construct", new ReflectionClass(Example).getConstructor()!.getName());
++  const object = new Example("x");
++  Assert.assertSame(4, new ReflectionProperty(object, "value").getValue(object));
++  Assert.assertSame(spl_object_id(object), spl_object_id(object));
++  Assert.assertNotSame(spl_object_id(object), spl_object_id(new Example("y")));
++  Assert.assertSame(3, call_user_func((x: number) => x + 1, 2));
++});
+diff --git a/packages/runtime/tests/xaravel/php-set-functions.probe.php b/packages/runtime/tests/xaravel/php-set-functions.probe.php
+index a0cf8a23..c3b16c68 100644
+--- a/packages/runtime/tests/xaravel/php-set-functions.probe.php
++++ b/packages/runtime/tests/xaravel/php-set-functions.probe.php
+@@ -70,9 +70,9 @@ namespace {
+     }
+ 
+     // Every PHP global function the runtime exports under its PHP name: the resolver registry.
+-    $registry = ['abs', 'addcslashes', 'array_all', 'array_any', 'array_chunk', 'array_column', 'array_combine', 'array_diff', 'array_diff_assoc', 'array_diff_key', 'array_diff_uassoc', 'array_diff_ukey', 'array_filter', 'array_find_key', 'array_first', 'array_flip', 'array_intersect', 'array_intersect_assoc', 'array_intersect_key', 'array_intersect_uassoc', 'array_is_list', 'array_key_exists', 'array_key_first', 'array_key_last', 'array_keys', 'array_last', 'array_map', 'array_merge', 'array_merge_recursive', 'array_pad', 'array_pop', 'array_push', 'array_reduce', 'array_replace', 'array_replace_recursive', 'array_reverse', 'array_search', 'array_shift', 'array_slice', 'array_splice', 'array_sum', 'array_udiff', 'array_uintersect', 'array_unique', 'array_unshift', 'array_values', 'arsort', 'asort', 'call_user_func_array', 'ceil', 'chunk_split', 'class_exists', 'count', 'ctype_digit', 'ctype_space', 'end', 'explode', 'file_get_contents', 'filter_var', 'floor', 'function_exists', 'get_debug_type', 'getenv', 'gettype', 'http_build_query', 'implode', 'in_array', 'intdiv', 'is_a', 'is_array', 'is_bool', 'is_callable', 'is_float', 'is_int', 'is_iterable', 'is_null', 'is_numeric', 'is_object', 'is_scalar', 'is_string', 'is_subclass_of', 'iterator_count', 'iterator_to_array', 'json_last_error', 'key', 'krsort', 'ksort', 'lcfirst', 'ltrim', 'max', 'mb_convert_encoding', 'mb_encoding_aliases', 'mb_list_encodings', 'mb_strlen', 'mb_strpos', 'mb_substr', 'method_exists', 'min', 'ord', 'preg_last_error', 'preg_last_error_msg', 'preg_match', 'preg_match_all', 'preg_replace_callback', 'preg_split', 'property_exists', 'putenv', 'range', 'rawurldecode', 'reset', 'round', 'rsort', 'rtrim', 'setlocale', 'sort', 'sprintf', 'str_contains', 'str_replace', 'str_starts_with', 'strcasecmp', 'strcmp', 'strcoll', 'stripcslashes', 'strlen', 'strnatcasecmp', 'strnatcmp', 'strpos', 'strrev', 'strtok', 'strtolower', 'strtoupper', 'substr', 'trait_exists', 'trim', 'uasort', 'uksort'];
++    $registry = ['abs', 'addcslashes', 'array_all', 'array_any', 'array_chunk', 'array_column', 'array_combine', 'array_diff', 'array_diff_assoc', 'array_diff_key', 'array_diff_uassoc', 'array_diff_ukey', 'array_filter', 'array_find_key', 'array_first', 'array_flip', 'array_intersect', 'array_intersect_assoc', 'array_intersect_key', 'array_intersect_uassoc', 'array_is_list', 'array_key_exists', 'array_key_first', 'array_key_last', 'array_keys', 'array_last', 'array_map', 'array_merge', 'array_merge_recursive', 'array_pad', 'array_pop', 'array_push', 'array_reduce', 'array_replace', 'array_replace_recursive', 'array_reverse', 'array_search', 'array_shift', 'array_slice', 'array_splice', 'array_sum', 'array_udiff', 'array_uintersect', 'array_unique', 'array_unshift', 'array_values', 'arsort', 'asort', 'call_user_func', 'call_user_func_array', 'ceil', 'chunk_split', 'class_exists', 'count', 'ctype_digit', 'ctype_space', 'end', 'explode', 'file_get_contents', 'filter_var', 'floor', 'function_exists', 'get_debug_type', 'getenv', 'gettype', 'http_build_query', 'implode', 'in_array', 'intdiv', 'is_a', 'is_array', 'is_bool', 'is_callable', 'is_float', 'is_int', 'is_iterable', 'is_null', 'is_numeric', 'is_object', 'is_scalar', 'is_string', 'is_subclass_of', 'iterator_count', 'iterator_to_array', 'json_last_error', 'key', 'krsort', 'ksort', 'lcfirst', 'ltrim', 'max', 'mb_convert_encoding', 'mb_encoding_aliases', 'mb_list_encodings', 'mb_strlen', 'mb_strpos', 'mb_substr', 'method_exists', 'min', 'ord', 'preg_last_error', 'preg_last_error_msg', 'preg_match', 'preg_match_all', 'preg_replace_callback', 'preg_split', 'property_exists', 'putenv', 'range', 'rawurldecode', 'reset', 'round', 'rsort', 'rtrim', 'setlocale', 'sort', 'spl_object_id', 'sprintf', 'str_contains', 'str_replace', 'str_starts_with', 'strcasecmp', 'strcmp', 'strcoll', 'stripcslashes', 'strlen', 'strnatcasecmp', 'strnatcmp', 'strpos', 'strrev', 'strtok', 'strtolower', 'strtoupper', 'substr', 'trait_exists', 'trim', 'uasort', 'uksort'];
+     // Every function the package root exports (a class excluded), by name.
+-    $exports = ['abs', 'addcslashes', 'allOf', 'arrayAppend', 'arrayEntries', 'arrayFromEntries', 'arrayUnion', 'array_all', 'array_any', 'array_chunk', 'array_column', 'array_combine', 'array_diff', 'array_diff_assoc', 'array_diff_key', 'array_diff_uassoc', 'array_diff_ukey', 'array_filter', 'array_find_key', 'array_first', 'array_flip', 'array_intersect', 'array_intersect_assoc', 'array_intersect_key', 'array_intersect_uassoc', 'array_is_list', 'array_key_exists', 'array_key_first', 'array_key_last', 'array_keys', 'array_last', 'array_map', 'array_merge', 'array_merge_recursive', 'array_pad', 'array_pop', 'array_push', 'array_reduce', 'array_replace', 'array_replace_recursive', 'array_reverse', 'array_search', 'array_shift', 'array_slice', 'array_splice', 'array_sum', 'array_udiff', 'array_uintersect', 'array_unique', 'array_unshift', 'array_values', 'arsort', 'asort', 'attribute', 'bindPhpArguments', 'bindToFrame', 'bootTraits', 'callMethod', 'callUnpacked', 'call_user_func_array', 'ceil', 'chunk_split', 'classUsesRecursive', 'class_exists', 'clearBootedTraits', 'count', 'ctype_digit', 'ctype_space', 'currentApplication', 'currentFrame', 'divide', 'end', 'enumExists', 'explode', 'file_get_contents', 'filter_var', 'float', 'floor', 'fqcn', 'frameAsyncGenerator', 'frameDefer', 'frameKinds', 'frameOverlay', 'frameSlot', 'frameStatic', 'frameStreamSource', 'function_exists', 'getDebugType', 'get_debug_type', 'getenv', 'gettype', 'hasBrand', 'http_build_query', 'identical', 'implode', 'in_array', 'initializeTraits', 'inject', 'intdiv', 'interfaceExists', 'interleave', 'isContractToken', 'isFloat', 'isNumeric', 'is_a', 'is_array', 'is_bool', 'is_callable', 'is_float', 'is_int', 'is_iterable', 'is_null', 'is_numeric', 'is_object', 'is_scalar', 'is_string', 'is_subclass_of', 'iterator_count', 'iterator_to_array', 'jsonDecode', 'jsonEncode', 'jsonLastError', 'jsonLastErrorMsg', 'json_last_error', 'key', 'keyed', 'krsort', 'ksort', 'lcfirst', 'loadAutoload', 'loadClassmap', 'looseEquals', 'ltrim', 'max', 'mb_convert_encoding', 'mb_encoding_aliases', 'mb_list_encodings', 'mb_strlen', 'mb_strpos', 'mb_substr', 'method_exists', 'min', 'minus', 'mixin', 'normalizeKey', 'normalizeNull', 'offsetAssign', 'offsetReference', 'oneOf', 'ord', 'phpFunction', 'phpReturn', 'phpSerialize', 'phpUnserialize', 'plus', 'preg_last_error', 'preg_last_error_msg', 'preg_match', 'preg_match_all', 'preg_replace_callback', 'preg_split', 'property_exists', 'putenv', 'range', 'rawurldecode', 'readInjectMetadata', 'readReturnMetadata', 'referenceAt', 'registerClass', 'registerContractToken', 'registerTestClass', 'registerTrait', 'reset', 'resolveCallable', 'resolveClass', 'resolveClassAsync', 'returns', 'round', 'rsort', 'rtrim', 'runInFrame', 'runInNarrowFrame', 'runInRootFrame', 'setDefaultApplication', 'setlocale', 'sort', 'spaceship', 'sprintf', 'str_contains', 'str_replace', 'str_starts_with', 'strcasecmp', 'strcmp', 'strcoll', 'stripcslashes', 'strlen', 'strnatcasecmp', 'strnatcmp', 'strpos', 'strrev', 'strtok', 'strtolower', 'strtoupper', 'substr', 'toBool', 'toFloat', 'toInt', 'toPhpArray', 'toPhpString', 'trait_exists', 'trim', 'uasort', 'uksort', 'unhandledMatch', 'valueCopy', 'variadic', 'writeClassmap', 'yieldFrom'];
++    $exports = ['abstractClass', 'abs', 'addcslashes', 'allOf', 'arrayAppend', 'arrayEntries', 'arrayFromEntries', 'arrayUnion', 'array_all', 'array_any', 'array_chunk', 'array_column', 'array_combine', 'array_diff', 'array_diff_assoc', 'array_diff_key', 'array_diff_uassoc', 'array_diff_ukey', 'array_filter', 'array_find_key', 'array_first', 'array_flip', 'array_intersect', 'array_intersect_assoc', 'array_intersect_key', 'array_intersect_uassoc', 'array_is_list', 'array_key_exists', 'array_key_first', 'array_key_last', 'array_keys', 'array_last', 'array_map', 'array_merge', 'array_merge_recursive', 'array_pad', 'array_pop', 'array_push', 'array_reduce', 'array_replace', 'array_replace_recursive', 'array_reverse', 'array_search', 'array_shift', 'array_slice', 'array_splice', 'array_sum', 'array_udiff', 'array_uintersect', 'array_unique', 'array_unshift', 'array_values', 'arsort', 'asort', 'attribute', 'attributed', 'bindPhpArguments', 'bindToFrame', 'bootTraits', 'callMethod', 'callUnpacked', 'call_user_func', 'call_user_func_array', 'ceil', 'chunk_split', 'classUsesRecursive', 'class_exists', 'clearBootedTraits', 'count', 'ctype_digit', 'ctype_space', 'currentApplication', 'currentFrame', 'divide', 'end', 'enumExists', 'explode', 'file_get_contents', 'filter_var', 'float', 'floor', 'fqcn', 'frameAsyncGenerator', 'frameDefer', 'frameKinds', 'frameOverlay', 'frameSlot', 'frameStatic', 'frameStreamSource', 'function_exists', 'getDebugType', 'get_debug_type', 'getenv', 'gettype', 'hasBrand', 'http_build_query', 'identical', 'implode', 'in_array', 'initializeTraits', 'inject', 'intdiv', 'interfaceExists', 'interleave', 'isContractToken', 'isFloat', 'isNumeric', 'is_a', 'is_array', 'is_bool', 'is_callable', 'is_float', 'is_int', 'is_iterable', 'is_null', 'is_numeric', 'is_object', 'is_scalar', 'is_string', 'is_subclass_of', 'iterator_count', 'iterator_to_array', 'jsonDecode', 'jsonEncode', 'jsonLastError', 'jsonLastErrorMsg', 'json_last_error', 'key', 'keyed', 'krsort', 'ksort', 'lcfirst', 'loadAutoload', 'loadClassmap', 'looseEquals', 'ltrim', 'max', 'mb_convert_encoding', 'mb_encoding_aliases', 'mb_list_encodings', 'mb_strlen', 'mb_strpos', 'mb_substr', 'method_exists', 'min', 'minus', 'mixin', 'normalizeKey', 'normalizeNull', 'nullable', 'offsetAssign', 'offsetReference', 'oneOf', 'optional', 'ord', 'parameterAttribute', 'phpFunction', 'phpReturn', 'phpSerialize', 'phpUnserialize', 'plus', 'preg_last_error', 'preg_last_error_msg', 'preg_match', 'preg_match_all', 'preg_replace_callback', 'preg_split', 'property_exists', 'putenv', 'range', 'rawurldecode', 'readInjectMetadata', 'readReturnMetadata', 'referenceAt', 'registerClass', 'registerContractToken', 'registerTestClass', 'registerTrait', 'reset', 'resolveCallable', 'resolveClass', 'resolveClassAsync', 'returns', 'round', 'rsort', 'rtrim', 'runInFrame', 'runInNarrowFrame', 'runInRootFrame', 'setDefaultApplication', 'setlocale', 'sort', 'spaceship', 'sprintf', 'str_contains', 'str_replace', 'str_starts_with', 'strcasecmp', 'strcmp', 'strcoll', 'stripcslashes', 'strlen', 'strnatcasecmp', 'strnatcmp', 'strpos', 'strrev', 'strtok', 'strtolower', 'strtoupper', 'substr', 'toBool', 'toFloat', 'toInt', 'toPhpArray', 'toPhpString', 'trait_exists', 'trim', 'uasort', 'uksort', 'unhandledMatch', 'valueCopy', 'variadic', 'writeClassmap', 'yieldFrom'];
+ 
+     $mixed = [1, '1', 2, 'a', null, 1.0, true];
+     $other = ['1', '', 2.5];
+diff --git a/packages/runtime/tests/xaravel/php-set-functions.probe.txt b/packages/runtime/tests/xaravel/php-set-functions.probe.txt
+index d90fc759..9b1460a1 100644
+--- a/packages/runtime/tests/xaravel/php-set-functions.probe.txt
++++ b/packages/runtime/tests/xaravel/php-set-functions.probe.txt
+@@ -24,6 +24,6 @@ union.errors	["TypeError: Unsupported operand types: array + int","TypeError: Un
+ resolver.calls	[["A","B"],["A"],["A"],[0,-1],{"0":"a","2":"b"},{"0":1,"2":2.5,"3":"3"},[1,3],[2,3],[4,5],[2,0],[[1,0,0]],[["a"]],[true,false,true],{"a":"a","d":"A","b":"B","c":"C"}]
+ resolver.arity	["ArgumentCountError: strtoupper() expects exactly 1 argument, 2 given","ArgumentCountError: strcasecmp() expects exactly 2 arguments, 1 given","ArgumentCountError: strcasecmp() expects exactly 2 arguments, 3 given","ArgumentCountError: array_keys() expects at most 3 arguments, 4 given","ArgumentCountError: strcasecmp() expects exactly 2 arguments, 1 given",[],"ArgumentCountError: is_string() expects exactly 1 argument, 2 given","ArgumentCountError: is_int() expects exactly 1 argument, 2 given","ArgumentCountError: is_string() expects exactly 1 argument, 2 given"]
+ resolver.is_callable	[[true,true,"strcasecmp"],[true,true,"STRCASECMP"],[true,true,"\\strcasecmp"],[false,true,"\\\\strcasecmp"],[true,true,"StrToUpper"],[true,true,"is_int"],[true,true,"array_udiff"],[true,true,"reset"],[false,true,"nope"],[false,true," strlen"],[false,true,"strlen "],[false,true,""],[false,true,"\\"]]
+-resolver.reflection	[["abs",1,1,false,[]],["addcslashes",2,2,false,[]],["array_all",2,2,false,[]],["array_any",2,2,false,[]],["array_chunk",2,3,false,[]],["array_column",2,3,false,[]],["array_combine",2,2,false,[]],["array_diff",1,2,true,[]],["array_diff_assoc",1,2,true,[]],["array_diff_key",1,2,true,[]],["array_diff_uassoc",1,2,true,[]],["array_diff_ukey",1,2,true,[]],["array_filter",1,3,false,[]],["array_find_key",2,2,false,[]],["array_first",1,1,false,[]],["array_flip",1,1,false,[]],["array_intersect",1,2,true,[]],["array_intersect_assoc",1,2,true,[]],["array_intersect_key",1,2,true,[]],["array_intersect_uassoc",1,2,true,[]],["array_is_list",1,1,false,[]],["array_key_exists",2,2,false,[]],["array_key_first",1,1,false,[]],["array_key_last",1,1,false,[]],["array_keys",1,3,false,[]],["array_last",1,1,false,[]],["array_map",2,3,true,[]],["array_merge",0,1,true,[]],["array_merge_recursive",0,1,true,[]],["array_pad",3,3,false,[]],["array_pop",1,1,false,[0]],["array_push",1,2,true,[0]],["array_reduce",2,3,false,[]],["array_replace",1,2,true,[]],["array_replace_recursive",1,2,true,[]],["array_reverse",1,2,false,[]],["array_search",2,3,false,[]],["array_shift",1,1,false,[0]],["array_slice",2,4,false,[]],["array_splice",2,4,false,[0]],["array_sum",1,1,false,[]],["array_udiff",1,2,true,[]],["array_uintersect",1,2,true,[]],["array_unique",1,2,false,[]],["array_unshift",1,2,true,[0]],["array_values",1,1,false,[]],["arsort",1,2,false,[0]],["asort",1,2,false,[0]],["call_user_func_array",2,2,false,[]],["ceil",1,1,false,[]],["chunk_split",1,3,false,[]],["class_exists",1,2,false,[]],["count",1,2,false,[]],["ctype_digit",1,1,false,[]],["ctype_space",1,1,false,[]],["end",1,1,false,[0]],["explode",2,3,false,[]],["file_get_contents",1,5,false,[]],["filter_var",1,3,false,[]],["floor",1,1,false,[]],["function_exists",1,1,false,[]],["get_debug_type",1,1,false,[]],["getenv",0,2,false,[]],["gettype",1,1,false,[]],["http_build_query",1,4,false,[]],["implode",1,2,false,[]],["in_array",2,3,false,[]],["intdiv",2,2,false,[]],["is_a",2,3,false,[]],["is_array",1,1,false,[]],["is_bool",1,1,false,[]],["is_callable",1,3,false,[2]],["is_float",1,1,false,[]],["is_int",1,1,false,[]],["is_iterable",1,1,false,[]],["is_null",1,1,false,[]],["is_numeric",1,1,false,[]],["is_object",1,1,false,[]],["is_scalar",1,1,false,[]],["is_string",1,1,false,[]],["is_subclass_of",2,3,false,[]],["iterator_count",1,1,false,[]],["iterator_to_array",1,2,false,[]],["json_last_error",0,0,false,[]],["key",1,1,false,[]],["krsort",1,2,false,[0]],["ksort",1,2,false,[0]],["lcfirst",1,1,false,[]],["ltrim",1,2,false,[]],["max",1,2,true,[]],["mb_convert_encoding",2,3,false,[]],["mb_encoding_aliases",1,1,false,[]],["mb_list_encodings",0,0,false,[]],["mb_strlen",1,2,false,[]],["mb_strpos",2,4,false,[]],["mb_substr",2,4,false,[]],["method_exists",2,2,false,[]],["min",1,2,true,[]],["ord",1,1,false,[]],["preg_last_error",0,0,false,[]],["preg_last_error_msg",0,0,false,[]],["preg_match",2,5,false,[2]],["preg_match_all",2,5,false,[2]],["preg_replace_callback",3,6,false,[4]],["preg_split",2,4,false,[]],["property_exists",2,2,false,[]],["putenv",1,1,false,[]],["range",2,3,false,[]],["rawurldecode",1,1,false,[]],["reset",1,1,false,[0]],["round",1,3,false,[]],["rsort",1,2,false,[0]],["rtrim",1,2,false,[]],["setlocale",2,3,true,[]],["sort",1,2,false,[0]],["sprintf",1,2,true,[]],["str_contains",2,2,false,[]],["str_replace",3,4,false,[3]],["str_starts_with",2,2,false,[]],["strcasecmp",2,2,false,[]],["strcmp",2,2,false,[]],["strcoll",2,2,false,[]],["stripcslashes",1,1,false,[]],["strlen",1,1,false,[]],["strnatcasecmp",2,2,false,[]],["strnatcmp",2,2,false,[]],["strpos",2,3,false,[]],["strrev",1,1,false,[]],["strtok",1,2,false,[]],["strtolower",1,1,false,[]],["strtoupper",1,1,false,[]],["substr",2,3,false,[]],["trait_exists",1,2,false,[]],["trim",1,2,false,[]],["uasort",2,2,false,[0]],["uksort",2,2,false,[0]]]
+-resolver.counts	[["ArgumentCountError: abs() expects exactly 1 argument, 0 given","ArgumentCountError: abs() expects exactly 1 argument, 2 given"],["ArgumentCountError: addcslashes() expects exactly 2 arguments, 0 given","ArgumentCountError: addcslashes() expects exactly 2 arguments, 3 given"],["ArgumentCountError: array_all() expects exactly 2 arguments, 0 given","ArgumentCountError: array_all() expects exactly 2 arguments, 3 given"],["ArgumentCountError: array_any() expects exactly 2 arguments, 0 given","ArgumentCountError: array_any() expects exactly 2 arguments, 3 given"],["ArgumentCountError: array_chunk() expects at least 2 arguments, 0 given","ArgumentCountError: array_chunk() expects at most 3 arguments, 4 given"],["ArgumentCountError: array_column() expects at least 2 arguments, 0 given","ArgumentCountError: array_column() expects at most 3 arguments, 4 given"],["ArgumentCountError: array_combine() expects exactly 2 arguments, 0 given","ArgumentCountError: array_combine() expects exactly 2 arguments, 3 given"],["ArgumentCountError: array_diff() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_diff_assoc() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_diff_key() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_diff_uassoc() expects at least 2 arguments, 0 given",null],["ArgumentCountError: array_diff_ukey() expects at least 2 arguments, 0 given",null],["ArgumentCountError: array_filter() expects at least 1 argument, 0 given","ArgumentCountError: array_filter() expects at most 3 arguments, 4 given"],["ArgumentCountError: array_find_key() expects exactly 2 arguments, 0 given","ArgumentCountError: array_find_key() expects exactly 2 arguments, 3 given"],["ArgumentCountError: array_first() expects exactly 1 argument, 0 given","ArgumentCountError: array_first() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_flip() expects exactly 1 argument, 0 given","ArgumentCountError: array_flip() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_intersect() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_intersect_assoc() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_intersect_key() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_intersect_uassoc() expects at least 2 arguments, 0 given",null],["ArgumentCountError: array_is_list() expects exactly 1 argument, 0 given","ArgumentCountError: array_is_list() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_key_exists() expects exactly 2 arguments, 0 given","ArgumentCountError: array_key_exists() expects exactly 2 arguments, 3 given"],["ArgumentCountError: array_key_first() expects exactly 1 argument, 0 given","ArgumentCountError: array_key_first() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_key_last() expects exactly 1 argument, 0 given","ArgumentCountError: array_key_last() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_keys() expects at least 1 argument, 0 given","ArgumentCountError: array_keys() expects at most 3 arguments, 4 given"],["ArgumentCountError: array_last() expects exactly 1 argument, 0 given","ArgumentCountError: array_last() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_map() expects at least 2 arguments, 0 given",null],[null,null],[null,null],["ArgumentCountError: array_pad() expects exactly 3 arguments, 0 given","ArgumentCountError: array_pad() expects exactly 3 arguments, 4 given"],["ArgumentCountError: array_pop() expects exactly 1 argument, 0 given","ArgumentCountError: array_pop() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_push() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_reduce() expects at least 2 arguments, 0 given","ArgumentCountError: array_reduce() expects at most 3 arguments, 4 given"],["ArgumentCountError: array_replace() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_replace_recursive() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_reverse() expects at least 1 argument, 0 given","ArgumentCountError: array_reverse() expects at most 2 arguments, 3 given"],["ArgumentCountError: array_search() expects at least 2 arguments, 0 given","ArgumentCountError: array_search() expects at most 3 arguments, 4 given"],["ArgumentCountError: array_shift() expects exactly 1 argument, 0 given","ArgumentCountError: array_shift() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_slice() expects at least 2 arguments, 0 given","ArgumentCountError: array_slice() expects at most 4 arguments, 5 given"],["ArgumentCountError: array_splice() expects at least 2 arguments, 0 given","ArgumentCountError: array_splice() expects at most 4 arguments, 5 given"],["ArgumentCountError: array_sum() expects exactly 1 argument, 0 given","ArgumentCountError: array_sum() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_udiff() expects at least 2 arguments, 0 given",null],["ArgumentCountError: array_uintersect() expects at least 2 arguments, 0 given",null],["ArgumentCountError: array_unique() expects at least 1 argument, 0 given","ArgumentCountError: array_unique() expects at most 2 arguments, 3 given"],["ArgumentCountError: array_unshift() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_values() expects exactly 1 argument, 0 given","ArgumentCountError: array_values() expects exactly 1 argument, 2 given"],["ArgumentCountError: arsort() expects at least 1 argument, 0 given","ArgumentCountError: arsort() expects at most 2 arguments, 3 given"],["ArgumentCountError: asort() expects at least 1 argument, 0 given","ArgumentCountError: asort() expects at most 2 arguments, 3 given"],["ArgumentCountError: call_user_func_array() expects exactly 2 arguments, 0 given","ArgumentCountError: call_user_func_array() expects exactly 2 arguments, 3 given"],["ArgumentCountError: ceil() expects exactly 1 argument, 0 given","ArgumentCountError: ceil() expects exactly 1 argument, 2 given"],["ArgumentCountError: chunk_split() expects at least 1 argument, 0 given","ArgumentCountError: chunk_split() expects at most 3 arguments, 4 given"],["ArgumentCountError: class_exists() expects at least 1 argument, 0 given","ArgumentCountError: class_exists() expects at most 2 arguments, 3 given"],["ArgumentCountError: count() expects at least 1 argument, 0 given","ArgumentCountError: count() expects at most 2 arguments, 3 given"],["ArgumentCountError: ctype_digit() expects exactly 1 argument, 0 given","ArgumentCountError: ctype_digit() expects exactly 1 argument, 2 given"],["ArgumentCountError: ctype_space() expects exactly 1 argument, 0 given","ArgumentCountError: ctype_space() expects exactly 1 argument, 2 given"],["ArgumentCountError: end() expects exactly 1 argument, 0 given","ArgumentCountError: end() expects exactly 1 argument, 2 given"],["ArgumentCountError: explode() expects at least 2 arguments, 0 given","ArgumentCountError: explode() expects at most 3 arguments, 4 given"],["ArgumentCountError: file_get_contents() expects at least 1 argument, 0 given","ArgumentCountError: file_get_contents() expects at most 5 arguments, 6 given"],["ArgumentCountError: filter_var() expects at least 1 argument, 0 given","ArgumentCountError: filter_var() expects at most 3 arguments, 4 given"],["ArgumentCountError: floor() expects exactly 1 argument, 0 given","ArgumentCountError: floor() expects exactly 1 argument, 2 given"],["ArgumentCountError: function_exists() expects exactly 1 argument, 0 given","ArgumentCountError: function_exists() expects exactly 1 argument, 2 given"],["ArgumentCountError: get_debug_type() expects exactly 1 argument, 0 given","ArgumentCountError: get_debug_type() expects exactly 1 argument, 2 given"],[null,"ArgumentCountError: getenv() expects at most 2 arguments, 3 given"],["ArgumentCountError: gettype() expects exactly 1 argument, 0 given","ArgumentCountError: gettype() expects exactly 1 argument, 2 given"],["ArgumentCountError: http_build_query() expects at least 1 argument, 0 given","ArgumentCountError: http_build_query() expects at most 4 arguments, 5 given"],["ArgumentCountError: implode() expects at least 1 argument, 0 given","ArgumentCountError: implode() expects at most 2 arguments, 3 given"],["ArgumentCountError: in_array() expects at least 2 arguments, 0 given","ArgumentCountError: in_array() expects at most 3 arguments, 4 given"],["ArgumentCountError: intdiv() expects exactly 2 arguments, 0 given","ArgumentCountError: intdiv() expects exactly 2 arguments, 3 given"],["ArgumentCountError: is_a() expects at least 2 arguments, 0 given","ArgumentCountError: is_a() expects at most 3 arguments, 4 given"],["ArgumentCountError: is_array() expects exactly 1 argument, 0 given","ArgumentCountError: is_array() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_bool() expects exactly 1 argument, 0 given","ArgumentCountError: is_bool() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_callable() expects at least 1 argument, 0 given","ArgumentCountError: is_callable() expects at most 3 arguments, 4 given"],["ArgumentCountError: is_float() expects exactly 1 argument, 0 given","ArgumentCountError: is_float() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_int() expects exactly 1 argument, 0 given","ArgumentCountError: is_int() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_iterable() expects exactly 1 argument, 0 given","ArgumentCountError: is_iterable() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_null() expects exactly 1 argument, 0 given","ArgumentCountError: is_null() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_numeric() expects exactly 1 argument, 0 given","ArgumentCountError: is_numeric() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_object() expects exactly 1 argument, 0 given","ArgumentCountError: is_object() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_scalar() expects exactly 1 argument, 0 given","ArgumentCountError: is_scalar() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_string() expects exactly 1 argument, 0 given","ArgumentCountError: is_string() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_subclass_of() expects at least 2 arguments, 0 given","ArgumentCountError: is_subclass_of() expects at most 3 arguments, 4 given"],["ArgumentCountError: iterator_count() expects exactly 1 argument, 0 given","ArgumentCountError: iterator_count() expects exactly 1 argument, 2 given"],["ArgumentCountError: iterator_to_array() expects at least 1 argument, 0 given","ArgumentCountError: iterator_to_array() expects at most 2 arguments, 3 given"],[null,"ArgumentCountError: json_last_error() expects exactly 0 arguments, 1 given"],["ArgumentCountError: key() expects exactly 1 argument, 0 given","ArgumentCountError: key() expects exactly 1 argument, 2 given"],["ArgumentCountError: krsort() expects at least 1 argument, 0 given","ArgumentCountError: krsort() expects at most 2 arguments, 3 given"],["ArgumentCountError: ksort() expects at least 1 argument, 0 given","ArgumentCountError: ksort() expects at most 2 arguments, 3 given"],["ArgumentCountError: lcfirst() expects exactly 1 argument, 0 given","ArgumentCountError: lcfirst() expects exactly 1 argument, 2 given"],["ArgumentCountError: ltrim() expects at least 1 argument, 0 given","ArgumentCountError: ltrim() expects at most 2 arguments, 3 given"],["ArgumentCountError: max() expects at least 1 argument, 0 given",null],["ArgumentCountError: mb_convert_encoding() expects at least 2 arguments, 0 given","ArgumentCountError: mb_convert_encoding() expects at most 3 arguments, 4 given"],["ArgumentCountError: mb_encoding_aliases() expects exactly 1 argument, 0 given","ArgumentCountError: mb_encoding_aliases() expects exactly 1 argument, 2 given"],[null,"ArgumentCountError: mb_list_encodings() expects exactly 0 arguments, 1 given"],["ArgumentCountError: mb_strlen() expects at least 1 argument, 0 given","ArgumentCountError: mb_strlen() expects at most 2 arguments, 3 given"],["ArgumentCountError: mb_strpos() expects at least 2 arguments, 0 given","ArgumentCountError: mb_strpos() expects at most 4 arguments, 5 given"],["ArgumentCountError: mb_substr() expects at least 2 arguments, 0 given","ArgumentCountError: mb_substr() expects at most 4 arguments, 5 given"],["ArgumentCountError: method_exists() expects exactly 2 arguments, 0 given","ArgumentCountError: method_exists() expects exactly 2 arguments, 3 given"],["ArgumentCountError: min() expects at least 1 argument, 0 given",null],["ArgumentCountError: ord() expects exactly 1 argument, 0 given","ArgumentCountError: ord() expects exactly 1 argument, 2 given"],[null,"ArgumentCountError: preg_last_error() expects exactly 0 arguments, 1 given"],[null,"ArgumentCountError: preg_last_error_msg() expects exactly 0 arguments, 1 given"],["ArgumentCountError: preg_match() expects at least 2 arguments, 0 given","ArgumentCountError: preg_match() expects at most 5 arguments, 6 given"],["ArgumentCountError: preg_match_all() expects at least 2 arguments, 0 given","ArgumentCountError: preg_match_all() expects at most 5 arguments, 6 given"],["ArgumentCountError: preg_replace_callback() expects at least 3 arguments, 0 given","ArgumentCountError: preg_replace_callback() expects at most 6 arguments, 7 given"],["ArgumentCountError: preg_split() expects at least 2 arguments, 0 given","ArgumentCountError: preg_split() expects at most 4 arguments, 5 given"],["ArgumentCountError: property_exists() expects exactly 2 arguments, 0 given","ArgumentCountError: property_exists() expects exactly 2 arguments, 3 given"],["ArgumentCountError: putenv() expects exactly 1 argument, 0 given","ArgumentCountError: putenv() expects exactly 1 argument, 2 given"],["ArgumentCountError: range() expects at least 2 arguments, 0 given","ArgumentCountError: range() expects at most 3 arguments, 4 given"],["ArgumentCountError: rawurldecode() expects exactly 1 argument, 0 given","ArgumentCountError: rawurldecode() expects exactly 1 argument, 2 given"],["ArgumentCountError: reset() expects exactly 1 argument, 0 given","ArgumentCountError: reset() expects exactly 1 argument, 2 given"],["ArgumentCountError: round() expects at least 1 argument, 0 given","ArgumentCountError: round() expects at most 3 arguments, 4 given"],["ArgumentCountError: rsort() expects at least 1 argument, 0 given","ArgumentCountError: rsort() expects at most 2 arguments, 3 given"],["ArgumentCountError: rtrim() expects at least 1 argument, 0 given","ArgumentCountError: rtrim() expects at most 2 arguments, 3 given"],["ArgumentCountError: setlocale() expects at least 2 arguments, 0 given",null],["ArgumentCountError: sort() expects at least 1 argument, 0 given","ArgumentCountError: sort() expects at most 2 arguments, 3 given"],["ArgumentCountError: sprintf() expects at least 1 argument, 0 given",null],["ArgumentCountError: str_contains() expects exactly 2 arguments, 0 given","ArgumentCountError: str_contains() expects exactly 2 arguments, 3 given"],["ArgumentCountError: str_replace() expects at least 3 arguments, 0 given","ArgumentCountError: str_replace() expects at most 4 arguments, 5 given"],["ArgumentCountError: str_starts_with() expects exactly 2 arguments, 0 given","ArgumentCountError: str_starts_with() expects exactly 2 arguments, 3 given"],["ArgumentCountError: strcasecmp() expects exactly 2 arguments, 0 given","ArgumentCountError: strcasecmp() expects exactly 2 arguments, 3 given"],["ArgumentCountError: strcmp() expects exactly 2 arguments, 0 given","ArgumentCountError: strcmp() expects exactly 2 arguments, 3 given"],["ArgumentCountError: strcoll() expects exactly 2 arguments, 0 given","ArgumentCountError: strcoll() expects exactly 2 arguments, 3 given"],["ArgumentCountError: stripcslashes() expects exactly 1 argument, 0 given","ArgumentCountError: stripcslashes() expects exactly 1 argument, 2 given"],["ArgumentCountError: strlen() expects exactly 1 argument, 0 given","ArgumentCountError: strlen() expects exactly 1 argument, 2 given"],["ArgumentCountError: strnatcasecmp() expects exactly 2 arguments, 0 given","ArgumentCountError: strnatcasecmp() expects exactly 2 arguments, 3 given"],["ArgumentCountError: strnatcmp() expects exactly 2 arguments, 0 given","ArgumentCountError: strnatcmp() expects exactly 2 arguments, 3 given"],["ArgumentCountError: strpos() expects at least 2 arguments, 0 given","ArgumentCountError: strpos() expects at most 3 arguments, 4 given"],["ArgumentCountError: strrev() expects exactly 1 argument, 0 given","ArgumentCountError: strrev() expects exactly 1 argument, 2 given"],["ArgumentCountError: strtok() expects at least 1 argument, 0 given","ArgumentCountError: strtok() expects at most 2 arguments, 3 given"],["ArgumentCountError: strtolower() expects exactly 1 argument, 0 given","ArgumentCountError: strtolower() expects exactly 1 argument, 2 given"],["ArgumentCountError: strtoupper() expects exactly 1 argument, 0 given","ArgumentCountError: strtoupper() expects exactly 1 argument, 2 given"],["ArgumentCountError: substr() expects at least 2 arguments, 0 given","ArgumentCountError: substr() expects at most 3 arguments, 4 given"],["ArgumentCountError: trait_exists() expects at least 1 argument, 0 given","ArgumentCountError: trait_exists() expects at most 2 arguments, 3 given"],["ArgumentCountError: trim() expects at least 1 argument, 0 given","ArgumentCountError: trim() expects at most 2 arguments, 3 given"],["ArgumentCountError: uasort() expects exactly 2 arguments, 0 given","ArgumentCountError: uasort() expects exactly 2 arguments, 3 given"],["ArgumentCountError: uksort() expects exactly 2 arguments, 0 given","ArgumentCountError: uksort() expects exactly 2 arguments, 3 given"]]
+-resolver.exports	{"abs":true,"addcslashes":true,"allOf":false,"arrayAppend":false,"arrayEntries":false,"arrayFromEntries":false,"arrayUnion":false,"array_all":true,"array_any":true,"array_chunk":true,"array_column":true,"array_combine":true,"array_diff":true,"array_diff_assoc":true,"array_diff_key":true,"array_diff_uassoc":true,"array_diff_ukey":true,"array_filter":true,"array_find_key":true,"array_first":true,"array_flip":true,"array_intersect":true,"array_intersect_assoc":true,"array_intersect_key":true,"array_intersect_uassoc":true,"array_is_list":true,"array_key_exists":true,"array_key_first":true,"array_key_last":true,"array_keys":true,"array_last":true,"array_map":true,"array_merge":true,"array_merge_recursive":true,"array_pad":true,"array_pop":true,"array_push":true,"array_reduce":true,"array_replace":true,"array_replace_recursive":true,"array_reverse":true,"array_search":true,"array_shift":true,"array_slice":true,"array_splice":true,"array_sum":true,"array_udiff":true,"array_uintersect":true,"array_unique":true,"array_unshift":true,"array_values":true,"arsort":true,"asort":true,"attribute":false,"bindPhpArguments":false,"bindToFrame":false,"bootTraits":false,"callMethod":false,"callUnpacked":false,"call_user_func_array":true,"ceil":true,"chunk_split":true,"classUsesRecursive":false,"class_exists":true,"clearBootedTraits":false,"count":true,"ctype_digit":true,"ctype_space":true,"currentApplication":false,"currentFrame":false,"divide":false,"end":true,"enumExists":false,"explode":true,"file_get_contents":true,"filter_var":true,"float":false,"floor":true,"fqcn":false,"frameAsyncGenerator":false,"frameDefer":false,"frameKinds":false,"frameOverlay":false,"frameSlot":false,"frameStatic":false,"frameStreamSource":false,"function_exists":true,"getDebugType":false,"get_debug_type":true,"getenv":true,"gettype":true,"hasBrand":false,"http_build_query":true,"identical":false,"implode":true,"in_array":true,"initializeTraits":false,"inject":false,"intdiv":true,"interfaceExists":false,"interleave":false,"isContractToken":false,"isFloat":false,"isNumeric":false,"is_a":true,"is_array":true,"is_bool":true,"is_callable":true,"is_float":true,"is_int":true,"is_iterable":true,"is_null":true,"is_numeric":true,"is_object":true,"is_scalar":true,"is_string":true,"is_subclass_of":true,"iterator_count":true,"iterator_to_array":true,"jsonDecode":false,"jsonEncode":false,"jsonLastError":false,"jsonLastErrorMsg":false,"json_last_error":true,"key":true,"keyed":false,"krsort":true,"ksort":true,"lcfirst":true,"loadAutoload":false,"loadClassmap":false,"looseEquals":false,"ltrim":true,"max":true,"mb_convert_encoding":true,"mb_encoding_aliases":true,"mb_list_encodings":true,"mb_strlen":true,"mb_strpos":true,"mb_substr":true,"method_exists":true,"min":true,"minus":false,"mixin":false,"normalizeKey":false,"normalizeNull":false,"offsetAssign":false,"offsetReference":false,"oneOf":false,"ord":true,"phpFunction":false,"phpReturn":false,"phpSerialize":false,"phpUnserialize":false,"plus":false,"preg_last_error":true,"preg_last_error_msg":true,"preg_match":true,"preg_match_all":true,"preg_replace_callback":true,"preg_split":true,"property_exists":true,"putenv":true,"range":true,"rawurldecode":true,"readInjectMetadata":false,"readReturnMetadata":false,"referenceAt":false,"registerClass":false,"registerContractToken":false,"registerTestClass":false,"registerTrait":false,"reset":true,"resolveCallable":false,"resolveClass":false,"resolveClassAsync":false,"returns":false,"round":true,"rsort":true,"rtrim":true,"runInFrame":false,"runInNarrowFrame":false,"runInRootFrame":false,"setDefaultApplication":false,"setlocale":true,"sort":true,"spaceship":false,"sprintf":true,"str_contains":true,"str_replace":true,"str_starts_with":true,"strcasecmp":true,"strcmp":true,"strcoll":true,"stripcslashes":true,"strlen":true,"strnatcasecmp":true,"strnatcmp":true,"strpos":true,"strrev":true,"strtok":true,"strtolower":true,"strtoupper":true,"substr":true,"toBool":false,"toFloat":false,"toInt":false,"toPhpArray":false,"toPhpString":false,"trait_exists":true,"trim":true,"uasort":true,"uksort":true,"unhandledMatch":false,"valueCopy":false,"variadic":false,"writeClassmap":false,"yieldFrom":false}
++resolver.reflection	[["abs",1,1,false,[]],["addcslashes",2,2,false,[]],["array_all",2,2,false,[]],["array_any",2,2,false,[]],["array_chunk",2,3,false,[]],["array_column",2,3,false,[]],["array_combine",2,2,false,[]],["array_diff",1,2,true,[]],["array_diff_assoc",1,2,true,[]],["array_diff_key",1,2,true,[]],["array_diff_uassoc",1,2,true,[]],["array_diff_ukey",1,2,true,[]],["array_filter",1,3,false,[]],["array_find_key",2,2,false,[]],["array_first",1,1,false,[]],["array_flip",1,1,false,[]],["array_intersect",1,2,true,[]],["array_intersect_assoc",1,2,true,[]],["array_intersect_key",1,2,true,[]],["array_intersect_uassoc",1,2,true,[]],["array_is_list",1,1,false,[]],["array_key_exists",2,2,false,[]],["array_key_first",1,1,false,[]],["array_key_last",1,1,false,[]],["array_keys",1,3,false,[]],["array_last",1,1,false,[]],["array_map",2,3,true,[]],["array_merge",0,1,true,[]],["array_merge_recursive",0,1,true,[]],["array_pad",3,3,false,[]],["array_pop",1,1,false,[0]],["array_push",1,2,true,[0]],["array_reduce",2,3,false,[]],["array_replace",1,2,true,[]],["array_replace_recursive",1,2,true,[]],["array_reverse",1,2,false,[]],["array_search",2,3,false,[]],["array_shift",1,1,false,[0]],["array_slice",2,4,false,[]],["array_splice",2,4,false,[0]],["array_sum",1,1,false,[]],["array_udiff",1,2,true,[]],["array_uintersect",1,2,true,[]],["array_unique",1,2,false,[]],["array_unshift",1,2,true,[0]],["array_values",1,1,false,[]],["arsort",1,2,false,[0]],["asort",1,2,false,[0]],["call_user_func",1,2,true,[]],["call_user_func_array",2,2,false,[]],["ceil",1,1,false,[]],["chunk_split",1,3,false,[]],["class_exists",1,2,false,[]],["count",1,2,false,[]],["ctype_digit",1,1,false,[]],["ctype_space",1,1,false,[]],["end",1,1,false,[0]],["explode",2,3,false,[]],["file_get_contents",1,5,false,[]],["filter_var",1,3,false,[]],["floor",1,1,false,[]],["function_exists",1,1,false,[]],["get_debug_type",1,1,false,[]],["getenv",0,2,false,[]],["gettype",1,1,false,[]],["http_build_query",1,4,false,[]],["implode",1,2,false,[]],["in_array",2,3,false,[]],["intdiv",2,2,false,[]],["is_a",2,3,false,[]],["is_array",1,1,false,[]],["is_bool",1,1,false,[]],["is_callable",1,3,false,[2]],["is_float",1,1,false,[]],["is_int",1,1,false,[]],["is_iterable",1,1,false,[]],["is_null",1,1,false,[]],["is_numeric",1,1,false,[]],["is_object",1,1,false,[]],["is_scalar",1,1,false,[]],["is_string",1,1,false,[]],["is_subclass_of",2,3,false,[]],["iterator_count",1,1,false,[]],["iterator_to_array",1,2,false,[]],["json_last_error",0,0,false,[]],["key",1,1,false,[]],["krsort",1,2,false,[0]],["ksort",1,2,false,[0]],["lcfirst",1,1,false,[]],["ltrim",1,2,false,[]],["max",1,2,true,[]],["mb_convert_encoding",2,3,false,[]],["mb_encoding_aliases",1,1,false,[]],["mb_list_encodings",0,0,false,[]],["mb_strlen",1,2,false,[]],["mb_strpos",2,4,false,[]],["mb_substr",2,4,false,[]],["method_exists",2,2,false,[]],["min",1,2,true,[]],["ord",1,1,false,[]],["preg_last_error",0,0,false,[]],["preg_last_error_msg",0,0,false,[]],["preg_match",2,5,false,[2]],["preg_match_all",2,5,false,[2]],["preg_replace_callback",3,6,false,[4]],["preg_split",2,4,false,[]],["property_exists",2,2,false,[]],["putenv",1,1,false,[]],["range",2,3,false,[]],["rawurldecode",1,1,false,[]],["reset",1,1,false,[0]],["round",1,3,false,[]],["rsort",1,2,false,[0]],["rtrim",1,2,false,[]],["setlocale",2,3,true,[]],["sort",1,2,false,[0]],["spl_object_id",1,1,false,[]],["sprintf",1,2,true,[]],["str_contains",2,2,false,[]],["str_replace",3,4,false,[3]],["str_starts_with",2,2,false,[]],["strcasecmp",2,2,false,[]],["strcmp",2,2,false,[]],["strcoll",2,2,false,[]],["stripcslashes",1,1,false,[]],["strlen",1,1,false,[]],["strnatcasecmp",2,2,false,[]],["strnatcmp",2,2,false,[]],["strpos",2,3,false,[]],["strrev",1,1,false,[]],["strtok",1,2,false,[]],["strtolower",1,1,false,[]],["strtoupper",1,1,false,[]],["substr",2,3,false,[]],["trait_exists",1,2,false,[]],["trim",1,2,false,[]],["uasort",2,2,false,[0]],["uksort",2,2,false,[0]]]
++resolver.counts	[["ArgumentCountError: abs() expects exactly 1 argument, 0 given","ArgumentCountError: abs() expects exactly 1 argument, 2 given"],["ArgumentCountError: addcslashes() expects exactly 2 arguments, 0 given","ArgumentCountError: addcslashes() expects exactly 2 arguments, 3 given"],["ArgumentCountError: array_all() expects exactly 2 arguments, 0 given","ArgumentCountError: array_all() expects exactly 2 arguments, 3 given"],["ArgumentCountError: array_any() expects exactly 2 arguments, 0 given","ArgumentCountError: array_any() expects exactly 2 arguments, 3 given"],["ArgumentCountError: array_chunk() expects at least 2 arguments, 0 given","ArgumentCountError: array_chunk() expects at most 3 arguments, 4 given"],["ArgumentCountError: array_column() expects at least 2 arguments, 0 given","ArgumentCountError: array_column() expects at most 3 arguments, 4 given"],["ArgumentCountError: array_combine() expects exactly 2 arguments, 0 given","ArgumentCountError: array_combine() expects exactly 2 arguments, 3 given"],["ArgumentCountError: array_diff() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_diff_assoc() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_diff_key() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_diff_uassoc() expects at least 2 arguments, 0 given",null],["ArgumentCountError: array_diff_ukey() expects at least 2 arguments, 0 given",null],["ArgumentCountError: array_filter() expects at least 1 argument, 0 given","ArgumentCountError: array_filter() expects at most 3 arguments, 4 given"],["ArgumentCountError: array_find_key() expects exactly 2 arguments, 0 given","ArgumentCountError: array_find_key() expects exactly 2 arguments, 3 given"],["ArgumentCountError: array_first() expects exactly 1 argument, 0 given","ArgumentCountError: array_first() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_flip() expects exactly 1 argument, 0 given","ArgumentCountError: array_flip() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_intersect() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_intersect_assoc() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_intersect_key() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_intersect_uassoc() expects at least 2 arguments, 0 given",null],["ArgumentCountError: array_is_list() expects exactly 1 argument, 0 given","ArgumentCountError: array_is_list() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_key_exists() expects exactly 2 arguments, 0 given","ArgumentCountError: array_key_exists() expects exactly 2 arguments, 3 given"],["ArgumentCountError: array_key_first() expects exactly 1 argument, 0 given","ArgumentCountError: array_key_first() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_key_last() expects exactly 1 argument, 0 given","ArgumentCountError: array_key_last() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_keys() expects at least 1 argument, 0 given","ArgumentCountError: array_keys() expects at most 3 arguments, 4 given"],["ArgumentCountError: array_last() expects exactly 1 argument, 0 given","ArgumentCountError: array_last() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_map() expects at least 2 arguments, 0 given",null],[null,null],[null,null],["ArgumentCountError: array_pad() expects exactly 3 arguments, 0 given","ArgumentCountError: array_pad() expects exactly 3 arguments, 4 given"],["ArgumentCountError: array_pop() expects exactly 1 argument, 0 given","ArgumentCountError: array_pop() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_push() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_reduce() expects at least 2 arguments, 0 given","ArgumentCountError: array_reduce() expects at most 3 arguments, 4 given"],["ArgumentCountError: array_replace() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_replace_recursive() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_reverse() expects at least 1 argument, 0 given","ArgumentCountError: array_reverse() expects at most 2 arguments, 3 given"],["ArgumentCountError: array_search() expects at least 2 arguments, 0 given","ArgumentCountError: array_search() expects at most 3 arguments, 4 given"],["ArgumentCountError: array_shift() expects exactly 1 argument, 0 given","ArgumentCountError: array_shift() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_slice() expects at least 2 arguments, 0 given","ArgumentCountError: array_slice() expects at most 4 arguments, 5 given"],["ArgumentCountError: array_splice() expects at least 2 arguments, 0 given","ArgumentCountError: array_splice() expects at most 4 arguments, 5 given"],["ArgumentCountError: array_sum() expects exactly 1 argument, 0 given","ArgumentCountError: array_sum() expects exactly 1 argument, 2 given"],["ArgumentCountError: array_udiff() expects at least 2 arguments, 0 given",null],["ArgumentCountError: array_uintersect() expects at least 2 arguments, 0 given",null],["ArgumentCountError: array_unique() expects at least 1 argument, 0 given","ArgumentCountError: array_unique() expects at most 2 arguments, 3 given"],["ArgumentCountError: array_unshift() expects at least 1 argument, 0 given",null],["ArgumentCountError: array_values() expects exactly 1 argument, 0 given","ArgumentCountError: array_values() expects exactly 1 argument, 2 given"],["ArgumentCountError: arsort() expects at least 1 argument, 0 given","ArgumentCountError: arsort() expects at most 2 arguments, 3 given"],["ArgumentCountError: asort() expects at least 1 argument, 0 given","ArgumentCountError: asort() expects at most 2 arguments, 3 given"],["ArgumentCountError: call_user_func() expects at least 1 argument, 0 given",null],["ArgumentCountError: call_user_func_array() expects exactly 2 arguments, 0 given","ArgumentCountError: call_user_func_array() expects exactly 2 arguments, 3 given"],["ArgumentCountError: ceil() expects exactly 1 argument, 0 given","ArgumentCountError: ceil() expects exactly 1 argument, 2 given"],["ArgumentCountError: chunk_split() expects at least 1 argument, 0 given","ArgumentCountError: chunk_split() expects at most 3 arguments, 4 given"],["ArgumentCountError: class_exists() expects at least 1 argument, 0 given","ArgumentCountError: class_exists() expects at most 2 arguments, 3 given"],["ArgumentCountError: count() expects at least 1 argument, 0 given","ArgumentCountError: count() expects at most 2 arguments, 3 given"],["ArgumentCountError: ctype_digit() expects exactly 1 argument, 0 given","ArgumentCountError: ctype_digit() expects exactly 1 argument, 2 given"],["ArgumentCountError: ctype_space() expects exactly 1 argument, 0 given","ArgumentCountError: ctype_space() expects exactly 1 argument, 2 given"],["ArgumentCountError: end() expects exactly 1 argument, 0 given","ArgumentCountError: end() expects exactly 1 argument, 2 given"],["ArgumentCountError: explode() expects at least 2 arguments, 0 given","ArgumentCountError: explode() expects at most 3 arguments, 4 given"],["ArgumentCountError: file_get_contents() expects at least 1 argument, 0 given","ArgumentCountError: file_get_contents() expects at most 5 arguments, 6 given"],["ArgumentCountError: filter_var() expects at least 1 argument, 0 given","ArgumentCountError: filter_var() expects at most 3 arguments, 4 given"],["ArgumentCountError: floor() expects exactly 1 argument, 0 given","ArgumentCountError: floor() expects exactly 1 argument, 2 given"],["ArgumentCountError: function_exists() expects exactly 1 argument, 0 given","ArgumentCountError: function_exists() expects exactly 1 argument, 2 given"],["ArgumentCountError: get_debug_type() expects exactly 1 argument, 0 given","ArgumentCountError: get_debug_type() expects exactly 1 argument, 2 given"],[null,"ArgumentCountError: getenv() expects at most 2 arguments, 3 given"],["ArgumentCountError: gettype() expects exactly 1 argument, 0 given","ArgumentCountError: gettype() expects exactly 1 argument, 2 given"],["ArgumentCountError: http_build_query() expects at least 1 argument, 0 given","ArgumentCountError: http_build_query() expects at most 4 arguments, 5 given"],["ArgumentCountError: implode() expects at least 1 argument, 0 given","ArgumentCountError: implode() expects at most 2 arguments, 3 given"],["ArgumentCountError: in_array() expects at least 2 arguments, 0 given","ArgumentCountError: in_array() expects at most 3 arguments, 4 given"],["ArgumentCountError: intdiv() expects exactly 2 arguments, 0 given","ArgumentCountError: intdiv() expects exactly 2 arguments, 3 given"],["ArgumentCountError: is_a() expects at least 2 arguments, 0 given","ArgumentCountError: is_a() expects at most 3 arguments, 4 given"],["ArgumentCountError: is_array() expects exactly 1 argument, 0 given","ArgumentCountError: is_array() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_bool() expects exactly 1 argument, 0 given","ArgumentCountError: is_bool() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_callable() expects at least 1 argument, 0 given","ArgumentCountError: is_callable() expects at most 3 arguments, 4 given"],["ArgumentCountError: is_float() expects exactly 1 argument, 0 given","ArgumentCountError: is_float() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_int() expects exactly 1 argument, 0 given","ArgumentCountError: is_int() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_iterable() expects exactly 1 argument, 0 given","ArgumentCountError: is_iterable() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_null() expects exactly 1 argument, 0 given","ArgumentCountError: is_null() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_numeric() expects exactly 1 argument, 0 given","ArgumentCountError: is_numeric() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_object() expects exactly 1 argument, 0 given","ArgumentCountError: is_object() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_scalar() expects exactly 1 argument, 0 given","ArgumentCountError: is_scalar() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_string() expects exactly 1 argument, 0 given","ArgumentCountError: is_string() expects exactly 1 argument, 2 given"],["ArgumentCountError: is_subclass_of() expects at least 2 arguments, 0 given","ArgumentCountError: is_subclass_of() expects at most 3 arguments, 4 given"],["ArgumentCountError: iterator_count() expects exactly 1 argument, 0 given","ArgumentCountError: iterator_count() expects exactly 1 argument, 2 given"],["ArgumentCountError: iterator_to_array() expects at least 1 argument, 0 given","ArgumentCountError: iterator_to_array() expects at most 2 arguments, 3 given"],[null,"ArgumentCountError: json_last_error() expects exactly 0 arguments, 1 given"],["ArgumentCountError: key() expects exactly 1 argument, 0 given","ArgumentCountError: key() expects exactly 1 argument, 2 given"],["ArgumentCountError: krsort() expects at least 1 argument, 0 given","ArgumentCountError: krsort() expects at most 2 arguments, 3 given"],["ArgumentCountError: ksort() expects at least 1 argument, 0 given","ArgumentCountError: ksort() expects at most 2 arguments, 3 given"],["ArgumentCountError: lcfirst() expects exactly 1 argument, 0 given","ArgumentCountError: lcfirst() expects exactly 1 argument, 2 given"],["ArgumentCountError: ltrim() expects at least 1 argument, 0 given","ArgumentCountError: ltrim() expects at most 2 arguments, 3 given"],["ArgumentCountError: max() expects at least 1 argument, 0 given",null],["ArgumentCountError: mb_convert_encoding() expects at least 2 arguments, 0 given","ArgumentCountError: mb_convert_encoding() expects at most 3 arguments, 4 given"],["ArgumentCountError: mb_encoding_aliases() expects exactly 1 argument, 0 given","ArgumentCountError: mb_encoding_aliases() expects exactly 1 argument, 2 given"],[null,"ArgumentCountError: mb_list_encodings() expects exactly 0 arguments, 1 given"],["ArgumentCountError: mb_strlen() expects at least 1 argument, 0 given","ArgumentCountError: mb_strlen() expects at most 2 arguments, 3 given"],["ArgumentCountError: mb_strpos() expects at least 2 arguments, 0 given","ArgumentCountError: mb_strpos() expects at most 4 arguments, 5 given"],["ArgumentCountError: mb_substr() expects at least 2 arguments, 0 given","ArgumentCountError: mb_substr() expects at most 4 arguments, 5 given"],["ArgumentCountError: method_exists() expects exactly 2 arguments, 0 given","ArgumentCountError: method_exists() expects exactly 2 arguments, 3 given"],["ArgumentCountError: min() expects at least 1 argument, 0 given",null],["ArgumentCountError: ord() expects exactly 1 argument, 0 given","ArgumentCountError: ord() expects exactly 1 argument, 2 given"],[null,"ArgumentCountError: preg_last_error() expects exactly 0 arguments, 1 given"],[null,"ArgumentCountError: preg_last_error_msg() expects exactly 0 arguments, 1 given"],["ArgumentCountError: preg_match() expects at least 2 arguments, 0 given","ArgumentCountError: preg_match() expects at most 5 arguments, 6 given"],["ArgumentCountError: preg_match_all() expects at least 2 arguments, 0 given","ArgumentCountError: preg_match_all() expects at most 5 arguments, 6 given"],["ArgumentCountError: preg_replace_callback() expects at least 3 arguments, 0 given","ArgumentCountError: preg_replace_callback() expects at most 6 arguments, 7 given"],["ArgumentCountError: preg_split() expects at least 2 arguments, 0 given","ArgumentCountError: preg_split() expects at most 4 arguments, 5 given"],["ArgumentCountError: property_exists() expects exactly 2 arguments, 0 given","ArgumentCountError: property_exists() expects exactly 2 arguments, 3 given"],["ArgumentCountError: putenv() expects exactly 1 argument, 0 given","ArgumentCountError: putenv() expects exactly 1 argument, 2 given"],["ArgumentCountError: range() expects at least 2 arguments, 0 given","ArgumentCountError: range() expects at most 3 arguments, 4 given"],["ArgumentCountError: rawurldecode() expects exactly 1 argument, 0 given","ArgumentCountError: rawurldecode() expects exactly 1 argument, 2 given"],["ArgumentCountError: reset() expects exactly 1 argument, 0 given","ArgumentCountError: reset() expects exactly 1 argument, 2 given"],["ArgumentCountError: round() expects at least 1 argument, 0 given","ArgumentCountError: round() expects at most 3 arguments, 4 given"],["ArgumentCountError: rsort() expects at least 1 argument, 0 given","ArgumentCountError: rsort() expects at most 2 arguments, 3 given"],["ArgumentCountError: rtrim() expects at least 1 argument, 0 given","ArgumentCountError: rtrim() expects at most 2 arguments, 3 given"],["ArgumentCountError: setlocale() expects at least 2 arguments, 0 given",null],["ArgumentCountError: sort() expects at least 1 argument, 0 given","ArgumentCountError: sort() expects at most 2 arguments, 3 given"],["ArgumentCountError: spl_object_id() expects exactly 1 argument, 0 given","ArgumentCountError: spl_object_id() expects exactly 1 argument, 2 given"],["ArgumentCountError: sprintf() expects at least 1 argument, 0 given",null],["ArgumentCountError: str_contains() expects exactly 2 arguments, 0 given","ArgumentCountError: str_contains() expects exactly 2 arguments, 3 given"],["ArgumentCountError: str_replace() expects at least 3 arguments, 0 given","ArgumentCountError: str_replace() expects at most 4 arguments, 5 given"],["ArgumentCountError: str_starts_with() expects exactly 2 arguments, 0 given","ArgumentCountError: str_starts_with() expects exactly 2 arguments, 3 given"],["ArgumentCountError: strcasecmp() expects exactly 2 arguments, 0 given","ArgumentCountError: strcasecmp() expects exactly 2 arguments, 3 given"],["ArgumentCountError: strcmp() expects exactly 2 arguments, 0 given","ArgumentCountError: strcmp() expects exactly 2 arguments, 3 given"],["ArgumentCountError: strcoll() expects exactly 2 arguments, 0 given","ArgumentCountError: strcoll() expects exactly 2 arguments, 3 given"],["ArgumentCountError: stripcslashes() expects exactly 1 argument, 0 given","ArgumentCountError: stripcslashes() expects exactly 1 argument, 2 given"],["ArgumentCountError: strlen() expects exactly 1 argument, 0 given","ArgumentCountError: strlen() expects exactly 1 argument, 2 given"],["ArgumentCountError: strnatcasecmp() expects exactly 2 arguments, 0 given","ArgumentCountError: strnatcasecmp() expects exactly 2 arguments, 3 given"],["ArgumentCountError: strnatcmp() expects exactly 2 arguments, 0 given","ArgumentCountError: strnatcmp() expects exactly 2 arguments, 3 given"],["ArgumentCountError: strpos() expects at least 2 arguments, 0 given","ArgumentCountError: strpos() expects at most 3 arguments, 4 given"],["ArgumentCountError: strrev() expects exactly 1 argument, 0 given","ArgumentCountError: strrev() expects exactly 1 argument, 2 given"],["ArgumentCountError: strtok() expects at least 1 argument, 0 given","ArgumentCountError: strtok() expects at most 2 arguments, 3 given"],["ArgumentCountError: strtolower() expects exactly 1 argument, 0 given","ArgumentCountError: strtolower() expects exactly 1 argument, 2 given"],["ArgumentCountError: strtoupper() expects exactly 1 argument, 0 given","ArgumentCountError: strtoupper() expects exactly 1 argument, 2 given"],["ArgumentCountError: substr() expects at least 2 arguments, 0 given","ArgumentCountError: substr() expects at most 3 arguments, 4 given"],["ArgumentCountError: trait_exists() expects at least 1 argument, 0 given","ArgumentCountError: trait_exists() expects at most 2 arguments, 3 given"],["ArgumentCountError: trim() expects at least 1 argument, 0 given","ArgumentCountError: trim() expects at most 2 arguments, 3 given"],["ArgumentCountError: uasort() expects exactly 2 arguments, 0 given","ArgumentCountError: uasort() expects exactly 2 arguments, 3 given"],["ArgumentCountError: uksort() expects exactly 2 arguments, 0 given","ArgumentCountError: uksort() expects exactly 2 arguments, 3 given"]]
++resolver.exports	{"abs":true,"abstractClass":false,"addcslashes":true,"allOf":false,"arrayAppend":false,"arrayEntries":false,"arrayFromEntries":false,"arrayUnion":false,"array_all":true,"array_any":true,"array_chunk":true,"array_column":true,"array_combine":true,"array_diff":true,"array_diff_assoc":true,"array_diff_key":true,"array_diff_uassoc":true,"array_diff_ukey":true,"array_filter":true,"array_find_key":true,"array_first":true,"array_flip":true,"array_intersect":true,"array_intersect_assoc":true,"array_intersect_key":true,"array_intersect_uassoc":true,"array_is_list":true,"array_key_exists":true,"array_key_first":true,"array_key_last":true,"array_keys":true,"array_last":true,"array_map":true,"array_merge":true,"array_merge_recursive":true,"array_pad":true,"array_pop":true,"array_push":true,"array_reduce":true,"array_replace":true,"array_replace_recursive":true,"array_reverse":true,"array_search":true,"array_shift":true,"array_slice":true,"array_splice":true,"array_sum":true,"array_udiff":true,"array_uintersect":true,"array_unique":true,"array_unshift":true,"array_values":true,"arsort":true,"asort":true,"attribute":false,"attributed":false,"bindPhpArguments":false,"bindToFrame":false,"bootTraits":false,"callMethod":false,"callUnpacked":false,"call_user_func":true,"call_user_func_array":true,"ceil":true,"chunk_split":true,"classUsesRecursive":false,"class_exists":true,"clearBootedTraits":false,"count":true,"ctype_digit":true,"ctype_space":true,"currentApplication":false,"currentFrame":false,"divide":false,"end":true,"enumExists":false,"explode":true,"file_get_contents":true,"filter_var":true,"float":false,"floor":true,"fqcn":false,"frameAsyncGenerator":false,"frameDefer":false,"frameKinds":false,"frameOverlay":false,"frameSlot":false,"frameStatic":false,"frameStreamSource":false,"function_exists":true,"getDebugType":false,"get_debug_type":true,"getenv":true,"gettype":true,"hasBrand":false,"http_build_query":true,"identical":false,"implode":true,"in_array":true,"initializeTraits":false,"inject":false,"intdiv":true,"interfaceExists":false,"interleave":false,"isContractToken":false,"isFloat":false,"isNumeric":false,"is_a":true,"is_array":true,"is_bool":true,"is_callable":true,"is_float":true,"is_int":true,"is_iterable":true,"is_null":true,"is_numeric":true,"is_object":true,"is_scalar":true,"is_string":true,"is_subclass_of":true,"iterator_count":true,"iterator_to_array":true,"jsonDecode":false,"jsonEncode":false,"jsonLastError":false,"jsonLastErrorMsg":false,"json_last_error":true,"key":true,"keyed":false,"krsort":true,"ksort":true,"lcfirst":true,"loadAutoload":false,"loadClassmap":false,"looseEquals":false,"ltrim":true,"max":true,"mb_convert_encoding":true,"mb_encoding_aliases":true,"mb_list_encodings":true,"mb_strlen":true,"mb_strpos":true,"mb_substr":true,"method_exists":true,"min":true,"minus":false,"mixin":false,"normalizeKey":false,"normalizeNull":false,"nullable":false,"offsetAssign":false,"offsetReference":false,"oneOf":false,"optional":false,"ord":true,"parameterAttribute":false,"phpFunction":false,"phpReturn":false,"phpSerialize":false,"phpUnserialize":false,"plus":false,"preg_last_error":true,"preg_last_error_msg":true,"preg_match":true,"preg_match_all":true,"preg_replace_callback":true,"preg_split":true,"property_exists":true,"putenv":true,"range":true,"rawurldecode":true,"readInjectMetadata":false,"readReturnMetadata":false,"referenceAt":false,"registerClass":false,"registerContractToken":false,"registerTestClass":false,"registerTrait":false,"reset":true,"resolveCallable":false,"resolveClass":false,"resolveClassAsync":false,"returns":false,"round":true,"rsort":true,"rtrim":true,"runInFrame":false,"runInNarrowFrame":false,"runInRootFrame":false,"setDefaultApplication":false,"setlocale":true,"sort":true,"spaceship":false,"spl_object_id":true,"sprintf":true,"str_contains":true,"str_replace":true,"str_starts_with":true,"strcasecmp":true,"strcmp":true,"strcoll":true,"stripcslashes":true,"strlen":true,"strnatcasecmp":true,"strnatcmp":true,"strpos":true,"strrev":true,"strtok":true,"strtolower":true,"strtoupper":true,"substr":true,"toBool":false,"toFloat":false,"toInt":false,"toPhpArray":false,"toPhpString":false,"trait_exists":true,"trim":true,"uasort":true,"uksort":true,"unhandledMatch":false,"valueCopy":false,"variadic":false,"writeClassmap":false,"yieldFrom":false}
+diff --git a/packages/runtime/tests/xaravel/php-set-functions.test.ts b/packages/runtime/tests/xaravel/php-set-functions.test.ts
+index 025851ab..a7c72f6e 100644
+--- a/packages/runtime/tests/xaravel/php-set-functions.test.ts
++++ b/packages/runtime/tests/xaravel/php-set-functions.test.ts
+@@ -691,7 +691,7 @@ xaravelTest(
+     // (ESC-15.2-1 parts a-e), the 6 PCRE functions (ESC-15.2-1 part f) and the 3 process-environment functions getenv,
+     // putenv and file_get_contents (ESC-15.2-1 part g, ESC-15.2-3), array_reduce (ESC-15.2-6), trait_exists
+     // (epic-15-retro-item-10-runtime-trait-registry), and array_column and rawurldecode (ESC-16.1-2).
+-    Assert.assertSame(136, registry().length);
++    Assert.assertSame(138, registry().length);
+ 
+     // Xaravel-only: the helpers, classes and constants are never resolved; a non-string is no name.
+     for (const helper of ["arrayUnion", "arrayEntries", "offsetAssign", "phpFunction", "bindPhpArguments", "phpReturn", "ArrayObject", "SORT_STRING", "Foo::bar", "strlen::x"]) {

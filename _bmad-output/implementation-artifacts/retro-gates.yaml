@@ -135,5 +135,6 @@ epic-16:
 epic-17:
   # No retrospective yet: this entry routed epic-17-item-1 (runtime Container reflection, ESC-17.1-3) until the
   # ESC-17.1-2 settled defaults and nullability (DIV-3.5); decisions/MAINT-2026-11-21-epic-17-item-1-contracts.md
-  # settled parameter attributes (DIV-3.6) and abstract classes (DIV-12.23), so the item resumes planning.
-  waiting_on_maintainer: []
+  # settled parameter attributes and abstract classes; class-only ReflectionProperty discovery now needs a ruling.
+  waiting_on_maintainer:
+    - epic-17-item-1-runtime-container-reflection
