@@ -179,7 +179,7 @@ development_status:
   epic-16-retrospective: done
 
   epic-17: in-progress
-  17-1-binding-and-resolution-core: blocked  # ESC-17.1-1..3: consequence row, injection defaults/nullability and runtime reflection; planning intent gap
+  17-1-binding-and-resolution-core: in-progress  # ESC-17.1-1..3 all ruled (ESC-17.1-2 by the Maintainer 2026-11-21, DIV-3.5); resumes once epic-17-item-1-runtime-container-reflection is done
   17-2-contextual-binding-and-contextual-attributes: backlog
   17-3-calling-extending-tagging-and-resolving-hooks: backlog
   17-4-scoped-bindings-and-scope-frame-write-rules: backlog
@@ -2592,8 +2592,10 @@ action_items:
       getConstructor and isInstantiable; ReflectionProperty with getValue for the
       properties the port represents; call_user_func and spl_object_id sharing the
       runtime callable resolution and object identity. XT-runtime cases against PHP
-      8.5.11; existing exports and readers stay. Waits in epic 17 waiting_on_maintainer
-      until the ESC-17.1-2 ruling, whose PR takes it out"
+      8.5.11; existing exports and readers stay. ESC-17.1-2 ruled 2026-11-21 (DIV-3.5):
+      the same scope also adds the nullable(<Spec>) and optional(<Spec>, () => default)
+      Spec values in packages/runtime/src/metadata/specs.ts, which the ReflectionParameter
+      readers read, with their DIV-3.5 TypeErrors and XT-runtime cases"
     owner: "orchestrator"
     status: open
     ref: "decisions/ESC-17.1-3.md"
