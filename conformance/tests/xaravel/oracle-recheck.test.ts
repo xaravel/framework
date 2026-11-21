@@ -198,17 +198,18 @@ xaravelTest("XT-conformance-188", "the nightly re-evaluates each committed reque
       .map(([component, request]) => `${component}/${request.id}`),
   );
 
-  // Fresh fixtures: one evaluation in the image, each request once, readable by the image user; exit 0.
+  // Fresh fixtures: each request evaluated once in the image, readable by the image user, in the pass it was signed in:
+  // the batch request in the batch pass, and Story 9.1's requests in their own pass in file order (as story.ts signs
+  // them; 9.2's shadowed LOWER is 9.1's); exit 0.
   const fresh = standIn();
   const ok = cliInProcess(["--root", dir, "--image", IMAGE], fresh.runner);
   expect(ok).toEqual({ code: 0, stdout: "Oracle recheck: 4 fixtures compared, 0 differ, 1 requests without a fixture\n", stderr: "" });
-  expect(fresh.calls).toHaveLength(1);
-  expect(fresh.calls[0]!.image).toBe(IMAGE);
-  expect(fresh.calls[0]!.command.slice(0, 5)).toEqual(["php", "/xaravel/evaluate.php", "/oracle/upstream/framework", PHP_VERSION, readFileSync(join(root, CLOCK_FILE), "utf8").trimEnd()]);
-  expect([...fresh.calls[0]!.requests].sort()).toEqual([LOWER.id, UPPER.id, XT.id].sort());
-  expect(fresh.calls[0]!.modes).toEqual([0o755, 0o644]);
-  expect(fresh.calls[0]!.requests).not.toContain(UUID.id);
-  expect(fresh.calls[0]!.requests).not.toContain(ECHO.id);
+  expect(fresh.calls.map((call) => call.requests)).toEqual([[UPPER.id], [LOWER.id, XT.id]]);
+  for (const call of fresh.calls) {
+    expect(call.image).toBe(IMAGE);
+    expect(call.command.slice(0, 5)).toEqual(["php", "/xaravel/evaluate.php", "/oracle/upstream/framework", PHP_VERSION, readFileSync(join(root, CLOCK_FILE), "utf8").trimEnd()]);
+    expect(call.modes).toEqual([0o755, 0o644]);
+  }
 
   // One tampered batch fixture: named exactly, with both digests; exit 1.
   const tampered: Json = { error: null, results: [{ value: "stale" }] };
@@ -239,7 +240,7 @@ xaravelTest("XT-conformance-188", "the nightly re-evaluates each committed reque
   expect(broken).toEqual({ code: 1, stdout: "", stderr: "Oracle recheck failed: evaluate.php failed: the image is not there\n" });
   const short = cliInProcess(["--root", dir, "--image", IMAGE], () => "");
   expect(short.code).toBe(1);
-  expect(short.stderr).toBe("Oracle recheck failed: recheck pass: evaluate.php printed 0 lines for 3 requests\n");
+  expect(short.stderr).toBe("Oracle recheck failed: recheck pass: evaluate.php printed 0 lines for 1 requests\n");
   writeFileSync(join(dir, fixturePath("validation", LOWER)), "not json\n");
   const unreadable = cliInProcess(["--root", dir, "--image", IMAGE], standIn().runner);
   expect(unreadable.code).toBe(1);
