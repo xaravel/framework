@@ -20,7 +20,11 @@
 // `parsePass`), in the Oracle image (default `oracleImage(root)`, the locally
 // built image at the current tag; or `--image <ref>`) or, with `--local <dir>`,
 // with the local PHP (or `--php <bin>`) against a locked install of the
-// framework snapshot. Its canonical JSON is compared with the fixture's
+// framework snapshot. It runs in the pass the fixture was signed in:
+// a per-Story request in its owning file's own pass, in file order (as
+// tools/oracle/story.ts signs it), and every other request in one batch pass,
+// because an output can depend on what ran earlier in the same pass (resource
+// IDs, object handles). Its canonical JSON is compared with the fixture's
 // `output`. Each differing fixture prints
 //
 //   stale fixture: conformance/fixtures/<c>/<sha>.json (<id>): committed <digest> vs evaluated <digest>
@@ -130,23 +134,46 @@ export function recheck(rootArg: string, options: RecheckOptions = {}): RecheckR
   if (options.local !== undefined) {
     checkLocalInstall(root, options.local);
   }
-  // Each request is evaluated once, however many Components hold its fixture.
-  const unique = new Map<string, OracleRequest>();
-  for (const { item } of withFixture) {
-    unique.set(item.request.sha256, item.request);
+  // Each request is evaluated once, however many Components hold its fixture, in the pass it was signed in: a per-Story
+  // request in its owning file's pass, in that file's order (tools/oracle/story.ts signs each file alone), and every
+  // other request in one batch pass. A request's output can depend on what ran before it in the same evaluate.php run
+  // (resource IDs, object handles), so one combined pass would report fixtures that are not stale.
+  const needed = new Set(withFixture.map(({ item }) => item.request.sha256));
+  const passes: { label: string; requests: OracleRequest[] }[] = [];
+  const placed = new Set<string>();
+  const storyPasses: { label: string; requests: OracleRequest[] }[] = [];
+  for (const story of readStoryRequests(root, readNondeterminism(root))) {
+    const requests = story.accepted.map(({ request }) => request).filter((request) => needed.has(request.sha256) && !placed.has(request.sha256));
+    requests.forEach((request) => placed.add(request.sha256));
+    if (requests.length > 0) {
+      storyPasses.push({ label: `recheck pass for ${story.file}`, requests });
+    }
   }
-  const requests = [...unique.values()];
-  const dir = mkdtempSync(join(tmpdir(), "xaravel-oracle-recheck-"));
-  let pass: Map<string, Json>;
-  try {
-    const name = "recheck.jsonl";
-    writeFileSync(join(dir, name), requests.map((request) => `${renderRequest(request)}\n`).join(""));
-    // The image runs as another user: the directory and file must be readable to it.
-    chmodSync(dir, 0o755);
-    chmodSync(join(dir, name), 0o644);
-    pass = parsePass(evaluateOnce(root, dir, [name], options), requests, "recheck pass");
-  } finally {
-    rmSync(dir, { recursive: true, force: true });
+  const batch = new Map<string, OracleRequest>();
+  for (const { item } of withFixture) {
+    if (!placed.has(item.request.sha256)) {
+      batch.set(item.request.sha256, item.request);
+    }
+  }
+  if (batch.size > 0) {
+    passes.push({ label: "recheck pass", requests: [...batch.values()] });
+  }
+  passes.push(...storyPasses);
+  const pass = new Map<string, Json>();
+  for (const { label, requests } of passes) {
+    const dir = mkdtempSync(join(tmpdir(), "xaravel-oracle-recheck-"));
+    try {
+      const name = "recheck.jsonl";
+      writeFileSync(join(dir, name), requests.map((request) => `${renderRequest(request)}\n`).join(""));
+      // The image runs as another user: the directory and file must be readable to it.
+      chmodSync(dir, 0o755);
+      chmodSync(join(dir, name), 0o644);
+      for (const [sha256, output] of parsePass(evaluateOnce(root, dir, [name], options), requests, label)) {
+        pass.set(sha256, output);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   }
   for (const { item, file, output } of withFixture) {
     const evaluated = pass.get(item.request.sha256)!;
