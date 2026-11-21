@@ -134,5 +134,7 @@ epic-16:
     - epic-16-retro-item-6-runtime-callunpacked-order-and-collections-tests
 epic-17:
   # No retrospective yet: this entry routed epic-17-item-1 (runtime Container reflection, ESC-17.1-3) until the
-  # Maintainer's ESC-17.1-2 ruling (2026-11-21, DIV-3.5) settled parameter defaults and nullability.
-  waiting_on_maintainer: []
+  # ESC-17.1-2 settled defaults and nullability; parameter-attribute and abstract-class contracts remain open.
+  # See spec-epic-17-item-1-runtime-container-reflection.md for the planning findings.
+  waiting_on_maintainer:
+    - epic-17-item-1-runtime-container-reflection
